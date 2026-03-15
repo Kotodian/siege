@@ -97,7 +97,13 @@
     "noReview": "No review yet",
     "findings": "Findings",
     "resolve": "Resolve",
-    "resolved": "Resolved"
+    "resolved": "Resolved",
+    "status": {
+      "pending": "Pending",
+      "in_progress": "In Progress",
+      "approved": "Approved",
+      "changes_requested": "Changes Requested"
+    }
   },
   "folder": {
     "create": "New Folder",

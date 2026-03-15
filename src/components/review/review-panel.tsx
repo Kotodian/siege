@@ -92,6 +92,7 @@ export function ReviewPanel({
       : planStatus === "executing" || planStatus === "code_review";
 
   const latestReview = reviews[reviews.length - 1];
+  const isStuck = latestReview?.status === "in_progress";
 
   return (
     <div className="space-y-4">
@@ -99,7 +100,7 @@ export function ReviewPanel({
         <h4 className="font-semibold">
           {type === "scheme" ? t("review.schemeReview") : t("review.codeReview")}
         </h4>
-        {canReview && (
+        {(canReview || isStuck) && (
           <Button onClick={handleGenerate} disabled={generating} size="sm">
             {generating
               ? t("common.loading")
@@ -120,7 +121,7 @@ export function ReviewPanel({
           <div className="flex items-center gap-2">
             <StatusBadge
               status={latestReview.status}
-              label={latestReview.status.replace("_", " ")}
+              label={t(`review.status.${latestReview.status}`)}
             />
             <span className="text-xs text-gray-400">
               {new Date(latestReview.createdAt).toLocaleString()}

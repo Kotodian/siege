@@ -113,6 +113,17 @@ export function SchemeCard({
           <Button
             variant="ghost"
             size="sm"
+            onClick={() => {
+              navigator.clipboard.writeText(
+                `# ${scheme.title}\n\n${scheme.content || ""}`
+              );
+            }}
+          >
+            {isZh ? "复制" : "Copy"}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => setVersionsOpen(true)}
           >
             {isZh ? "版本" : "Versions"}

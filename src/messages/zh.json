@@ -96,8 +96,14 @@
     "reReview": "重新审查",
     "noReview": "暂无审查记录",
     "findings": "发现",
-    "resolve": "已解决",
-    "resolved": "已解决"
+    "resolve": "标记已解决",
+    "resolved": "已解决",
+    "status": {
+      "pending": "待审查",
+      "in_progress": "审查中",
+      "approved": "已通过",
+      "changes_requested": "需修改"
+    }
   },
   "folder": {
     "create": "新建文件夹",

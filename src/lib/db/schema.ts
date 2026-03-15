@@ -4,6 +4,7 @@ import { sql } from "drizzle-orm";
 export const projects = sqliteTable("projects", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
+  icon: text("icon").default("📁"),
   description: text("description").default(""),
   guidelines: text("guidelines").default(""),
   targetRepoPath: text("target_repo_path").notNull(),

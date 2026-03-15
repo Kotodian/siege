@@ -28,12 +28,13 @@ export async function PUT(
 ) {
   const { projectId } = await params;
   const body = await req.json();
-  const { name, description, guidelines, targetRepoPath } = body;
+  const { name, icon, description, guidelines, targetRepoPath } = body;
   const db = getDb();
 
   db.update(projects)
     .set({
       ...(name !== undefined && { name }),
+      ...(icon !== undefined && { icon }),
       ...(description !== undefined && { description }),
       ...(guidelines !== undefined && { guidelines }),
       ...(targetRepoPath !== undefined && { targetRepoPath }),

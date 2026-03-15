@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { MarkdownRenderer } from "@/components/markdown/markdown-renderer";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { TimeAgo } from "@/components/ui/time-ago";
 import { Button } from "@/components/ui/button";
 import { SchemeEditor } from "./scheme-editor";
 
@@ -13,6 +14,7 @@ interface Scheme {
   title: string;
   content: string | null;
   sourceType: string;
+  updatedAt: string;
   createdAt: string;
 }
 
@@ -55,6 +57,7 @@ export function SchemeCard({
             status={scheme.sourceType}
             label={t(`scheme.sourceType.${scheme.sourceType}`)}
           />
+          <TimeAgo date={scheme.updatedAt || scheme.createdAt} />
         </div>
         {!readonly && (
           <div className="flex gap-2">

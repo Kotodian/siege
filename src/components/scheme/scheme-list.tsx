@@ -13,6 +13,7 @@ interface Scheme {
   title: string;
   content: string | null;
   sourceType: string;
+  updatedAt: string;
   createdAt: string;
 }
 

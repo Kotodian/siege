@@ -10,6 +10,7 @@ import { OnboardingGuide } from "@/components/onboarding/onboarding-guide";
 interface Project {
   id: string;
   name: string;
+  icon: string | null;
   description: string | null;
   targetRepoPath: string;
   updatedAt: string;
@@ -38,6 +39,7 @@ export function ProjectList({ locale }: ProjectListProps) {
 
   const handleCreate = async (data: {
     name: string;
+    icon: string;
     description: string;
     guidelines: string;
     targetRepoPath: string;

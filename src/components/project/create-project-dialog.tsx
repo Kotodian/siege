@@ -8,12 +8,14 @@ import { Button } from "@/components/ui/button";
 import { MarkdownEditor } from "@/components/markdown/markdown-editor";
 import { RepoPicker } from "@/components/repo-picker/repo-picker";
 import { AnalyzePrompt } from "./analyze-prompt";
+import { IconPicker } from "@/components/ui/icon-picker";
 
 interface CreateProjectDialogProps {
   open: boolean;
   onClose: () => void;
   onSubmit: (data: {
     name: string;
+    icon: string;
     description: string;
     guidelines: string;
     targetRepoPath: string;
@@ -28,6 +30,7 @@ export function CreateProjectDialog({
   const t = useTranslations();
   const locale = useLocale();
   const [name, setName] = useState("");
+  const [icon, setIcon] = useState("📁");
   const [description, setDescription] = useState("");
   const [guidelines, setGuidelines] = useState("");
   const [targetRepoPath, setTargetRepoPath] = useState("");
@@ -44,8 +47,9 @@ export function CreateProjectDialog({
 
   const handleSubmit = () => {
     if (!name || !targetRepoPath) return;
-    onSubmit({ name, description, guidelines, targetRepoPath });
+    onSubmit({ name, icon, description, guidelines, targetRepoPath });
     setName("");
+    setIcon("📁");
     setDescription("");
     setGuidelines("");
     setTargetRepoPath("");
@@ -55,12 +59,17 @@ export function CreateProjectDialog({
   return (
     <Dialog open={open} onClose={onClose} title={t("project.create")}>
       <div className="space-y-4">
-        <Input
-          label={t("project.name")}
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-        />
+        <div className="flex items-end gap-3">
+          <IconPicker value={icon} onChange={setIcon} />
+          <div className="flex-1">
+            <Input
+              label={t("project.name")}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+            />
+          </div>
+        </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             {t("project.description")}

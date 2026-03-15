@@ -7,11 +7,13 @@ import { Input } from "@/components/ui/input";
 import { MarkdownEditor } from "@/components/markdown/markdown-editor";
 import { RepoPicker } from "@/components/repo-picker/repo-picker";
 import { AnalyzePrompt } from "@/components/project/analyze-prompt";
+import { IconPicker } from "@/components/ui/icon-picker";
 
 interface OnboardingGuideProps {
   locale: string;
   onComplete: (project: {
     name: string;
+    icon: string;
     description: string;
     guidelines: string;
     targetRepoPath: string;
@@ -44,6 +46,7 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
   const t = useTranslations();
   const [step, setStep] = useState<Step>("welcome");
   const [name, setName] = useState("");
+  const [icon, setIcon] = useState("📁");
   const [description, setDescription] = useState("");
   const [guidelines, setGuidelines] = useState("");
   const [targetRepoPath, setTargetRepoPath] = useState("");
@@ -137,7 +140,7 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
 
   const handleCreate = () => {
     if (!name || !targetRepoPath) return;
-    onComplete({ name, description, guidelines, targetRepoPath });
+    onComplete({ name, icon, description, guidelines, targetRepoPath });
   };
 
   const anyAiConfigured =
@@ -473,13 +476,18 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
               </p>
             </div>
             <div className="rounded-lg border bg-white p-6 space-y-4">
-              <Input
-                label={t("project.name")}
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder={isZh ? "例如：My Awesome App" : "e.g., My Awesome App"}
-                required
-              />
+              <div className="flex items-end gap-3">
+                <IconPicker value={icon} onChange={setIcon} />
+                <div className="flex-1">
+                  <Input
+                    label={t("project.name")}
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder={isZh ? "例如：My Awesome App" : "e.g., My Awesome App"}
+                    required
+                  />
+                </div>
+              </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   {t("project.description")}

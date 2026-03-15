@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { TimeAgo } from "@/components/ui/time-ago";
 
 interface PlanCardProps {
   plan: {
@@ -43,17 +44,20 @@ export function PlanCard({ plan, locale, onDelete }: PlanCardProps) {
             label={t(`plan.status.${plan.status}`)}
           />
         </div>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            if (window.confirm(t("plan.deleteConfirm"))) {
-              onDelete(plan.id);
-            }
-          }}
-          className="text-gray-400 hover:text-red-500 text-sm"
-        >
-          {t("common.delete")}
-        </button>
+        <div className="flex items-center gap-3">
+          <TimeAgo date={plan.updatedAt} locale={locale} />
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              if (window.confirm(t("plan.deleteConfirm"))) {
+                onDelete(plan.id);
+              }
+            }}
+            className="text-gray-400 hover:text-red-500 text-sm"
+          >
+            {t("common.delete")}
+          </button>
+        </div>
       </div>
       {plan.description && (
         <p className="text-sm text-gray-500 mt-1 line-clamp-2">

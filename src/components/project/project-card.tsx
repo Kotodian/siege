@@ -2,11 +2,13 @@
 
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
+import { TimeAgo } from "@/components/ui/time-ago";
 
 interface ProjectCardProps {
   project: {
     id: string;
     name: string;
+    icon: string | null;
     description: string | null;
     targetRepoPath: string;
     updatedAt: string;
@@ -25,7 +27,10 @@ export function ProjectCard({ project, locale, onDelete }: ProjectCardProps) {
       onClick={() => router.push(`/${locale}/projects/${project.id}`)}
     >
       <div className="flex items-start justify-between">
-        <h3 className="font-semibold text-lg">{project.name}</h3>
+        <div className="flex items-center gap-2">
+          <span className="text-2xl">{project.icon || "📁"}</span>
+          <h3 className="font-semibold text-lg">{project.name}</h3>
+        </div>
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -43,9 +48,12 @@ export function ProjectCard({ project, locale, onDelete }: ProjectCardProps) {
           {project.description}
         </p>
       )}
-      <p className="text-xs text-gray-400 mt-3 font-mono">
-        {project.targetRepoPath}
-      </p>
+      <div className="flex items-center justify-between mt-3">
+        <p className="text-xs text-gray-400 font-mono truncate">
+          {project.targetRepoPath}
+        </p>
+        <TimeAgo date={project.updatedAt} locale={locale} />
+      </div>
     </div>
   );
 }

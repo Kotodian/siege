@@ -72,5 +72,26 @@
     "revokeConfirm": "撤回确认",
     "confirmed": "方案已确认，撤回后可编辑。",
     "deleteConfirm": "确定要删除这个方案吗？"
+  },
+  "generate": {
+    "provider": "AI 提供商",
+    "skills": "技能",
+    "skillsSelected": "已选 {count} 个",
+    "noSkills": "暂无可用技能"
+  },
+  "recentProjects": "最近打开",
+  "allProjects": "全部项目",
+  "guidelines": "架构与开发规范（可选）",
+  "guidelinesPlaceholder": "例如：使用 TDD、RESTful API 设计、ESLint 代码风格...",
+  "analyzeProject": "检测到项目包含代码，是否使用 AI 分析并生成描述？",
+  "analyzing": "AI 正在分析...",
+  "analyze": "分析项目",
+  "skip": "跳过",
+  "loadedFrom": "已从 {source} 读取",
+  "checkingProject": "检测项目...",
+  "folder": {
+    "create": "新建文件夹",
+    "name": "文件夹名称",
+    "deleteConfirm": "确定要删除文件夹「{name}」吗？"
   }
 }

@@ -66,7 +66,7 @@ export function GenerateSchemeDialog({
         {/* Provider */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            AI Provider
+            {t("generate.provider")}
           </label>
           <div className="flex gap-2">
             {["anthropic", "openai", "glm"].map((p) => (
@@ -90,7 +90,7 @@ export function GenerateSchemeDialog({
         {skills.length > 0 && (
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Skills ({selectedSkills.length} selected)
+              {t("generate.skills")} ({selectedSkills.length})
             </label>
             <div className="max-h-48 overflow-y-auto border rounded-md divide-y">
               {Object.entries(bySource).map(([source, items]) => (

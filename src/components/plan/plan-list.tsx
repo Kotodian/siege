@@ -165,13 +165,13 @@ export function PlanList({ projectId, locale }: PlanListProps) {
             size="sm"
             onClick={() => setImportDialogOpen(true)}
           >
-            Import
+            {locale === "zh" ? "导入" : "Import"}
           </Button>
           <Button
             variant="secondary"
             onClick={() => setFolderDialogOpen(true)}
           >
-            + Folder
+            {locale === "zh" ? "+ 文件夹" : "+ Folder"}
           </Button>
           <Button onClick={() => setPlanDialogOpen(true)}>
             {t("plan.create")}
@@ -245,11 +245,11 @@ export function PlanList({ projectId, locale }: PlanListProps) {
       <Dialog
         open={folderDialogOpen}
         onClose={() => setFolderDialogOpen(false)}
-        title="New Folder"
+        title={locale === "zh" ? "新建文件夹" : "New Folder"}
       >
         <div className="space-y-4">
           <Input
-            label="Folder Name"
+            label={locale === "zh" ? "文件夹名称" : "Folder Name"}
             value={newFolderName}
             onChange={(e) => setNewFolderName(e.target.value)}
             required
@@ -272,7 +272,7 @@ export function PlanList({ projectId, locale }: PlanListProps) {
       <Dialog
         open={importDialogOpen}
         onClose={() => setImportDialogOpen(false)}
-        title="Import Plan from Markdown"
+        title={locale === "zh" ? "从 Markdown 导入计划" : "Import Plan from Markdown"}
       >
         <div className="space-y-4">
           <Input
@@ -290,7 +290,7 @@ export function PlanList({ projectId, locale }: PlanListProps) {
               {t("common.cancel")}
             </Button>
             <Button onClick={handleImport} disabled={!importPath}>
-              Import
+              {locale === "zh" ? "导入" : "Import"}
             </Button>
           </div>
         </div>

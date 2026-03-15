@@ -72,5 +72,26 @@
     "revokeConfirm": "Revoke Confirmation",
     "confirmed": "Schemes confirmed. Revoke to edit.",
     "deleteConfirm": "Are you sure you want to delete this scheme?"
+  },
+  "generate": {
+    "provider": "AI Provider",
+    "skills": "Skills",
+    "skillsSelected": "{count} selected",
+    "noSkills": "No skills available"
+  },
+  "recentProjects": "Recently Opened",
+  "allProjects": "All Projects",
+  "guidelines": "Architecture & Guidelines (optional)",
+  "guidelinesPlaceholder": "e.g., Use TDD, follow RESTful design, ESLint for code style...",
+  "analyzeProject": "Use AI to analyze and generate description?",
+  "analyzing": "AI is analyzing...",
+  "analyze": "Analyze",
+  "skip": "Skip",
+  "loadedFrom": "Loaded from {source}",
+  "checkingProject": "Checking project...",
+  "folder": {
+    "create": "New Folder",
+    "name": "Folder Name",
+    "deleteConfirm": "Delete folder \"{name}\"?"
   }
 }

@@ -9,9 +9,7 @@ import {
   reviewItems,
 } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { hasApiKey } from "@/lib/ai/config";
-import { generateViaCli } from "@/lib/ai/cli-fallback";
-import { generateReview } from "@/lib/ai/review-generator";
+import { generateTextAuto } from "@/lib/ai/generate";
 import type { Provider } from "@/lib/ai/provider";
 import { parseJsonBody } from "@/lib/utils";
 
@@ -19,94 +17,26 @@ function buildReviewPrompt(
   type: "scheme" | "implementation",
   planName: string,
   items: Array<{ id: string; title: string; content: string }>
-): string {
+) {
   const contextLabel =
-    type === "scheme"
-      ? "technical schemes/proposals"
-      : "implemented code changes";
-
+    type === "scheme" ? "technical schemes/proposals" : "implemented code changes";
   const itemsSummary = items
     .map((item) => `### ${item.title} (id: ${item.id})\n${item.content}`)
     .join("\n\n");
 
-  return `You are a senior software engineer conducting a thorough review of ${contextLabel}.
+  return {
+    system: `You are a senior software engineer conducting a thorough review of ${contextLabel}.
 
-Review for:
-- Completeness: are all aspects covered?
-- Correctness: are there technical errors or flaws?
-- Quality: is the approach well-designed and maintainable?
-- Risks: are there potential issues or edge cases?
-- Security: are there security concerns?
+Review for: completeness, correctness, quality, risks, security.
 
 Output a JSON object with:
 - summary: overall review summary as markdown (string)
-- items: array of findings, each with:
-  - targetId: the id of the item this finding relates to (string)
-  - title: short finding title (string)
-  - content: detailed explanation as markdown (string)
-  - severity: "info", "warning", or "critical" (string)
-- approved: whether the review passes (boolean) — false if any critical items exist
+- items: array of findings, each with targetId (string), title (string), content (string), severity ("info"|"warning"|"critical")
+- approved: boolean (false if any critical items)
 
-Output ONLY the JSON object, no other text.
-
----
-
-Plan: ${planName}
-
-${itemsSummary}`;
-}
-
-function parseReviewJson(text: string) {
-  const jsonStr = text.startsWith("{")
-    ? text
-    : text.match(/\{[\s\S]*\}/)?.[0];
-  if (!jsonStr) return null;
-  try {
-    return JSON.parse(jsonStr);
-  } catch {
-    return null;
-  }
-}
-
-function saveReviewResult(
-  reviewId: string,
-  planId: string,
-  type: string,
-  result: { summary: string; items: any[]; approved: boolean }
-) {
-  const db = getDb();
-  const finalStatus = result.approved ? "approved" : "changes_requested";
-
-  db.update(reviews)
-    .set({
-      status: finalStatus,
-      content: result.summary,
-      updatedAt: new Date().toISOString(),
-    })
-    .where(eq(reviews.id, reviewId))
-    .run();
-
-  for (const item of result.items || []) {
-    db.insert(reviewItems)
-      .values({
-        id: crypto.randomUUID(),
-        reviewId,
-        targetType: type === "scheme" ? "scheme" : "schedule_item",
-        targetId: item.targetId || "",
-        title: item.title || "Finding",
-        content: item.content || "",
-        severity: item.severity || "info",
-        resolved: false,
-      })
-      .run();
-  }
-
-  if (type === "implementation" && result.approved) {
-    db.update(plans)
-      .set({ status: "testing", updatedAt: new Date().toISOString() })
-      .where(eq(plans.id, planId))
-      .run();
-  }
+Output ONLY the JSON object.`,
+    prompt: `Plan: ${planName}\n\n${itemsSummary}`,
+  };
 }
 
 export async function POST(req: NextRequest) {
@@ -120,10 +50,7 @@ export async function POST(req: NextRequest) {
   };
 
   if (!planId || !type) {
-    return NextResponse.json(
-      { error: "planId and type are required" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "planId and type are required" }, { status: 400 });
   }
 
   const db = getDb();
@@ -135,125 +62,93 @@ export async function POST(req: NextRequest) {
   let itemsToReview: Array<{ id: string; title: string; content: string }>;
 
   if (type === "scheme") {
-    const schemeList = db
+    itemsToReview = db
       .select()
       .from(schemes)
       .where(eq(schemes.planId, planId))
-      .all();
-    itemsToReview = schemeList.map((s) => ({
-      id: s.id,
-      title: s.title,
-      content: s.content || "",
-    }));
+      .all()
+      .map((s) => ({ id: s.id, title: s.title, content: s.content || "" }));
   } else {
-    const schedule = db
-      .select()
-      .from(schedules)
-      .where(eq(schedules.planId, planId))
-      .get();
+    const schedule = db.select().from(schedules).where(eq(schedules.planId, planId)).get();
     if (!schedule) {
       return NextResponse.json({ error: "No schedule found" }, { status: 400 });
     }
-    const items = db
+    itemsToReview = db
       .select()
       .from(scheduleItems)
       .where(eq(scheduleItems.scheduleId, schedule.id))
-      .all();
-    itemsToReview = items.map((i) => ({
-      id: i.id,
-      title: i.title,
-      content: `${i.description || ""}\n\n### Execution Log\n\`\`\`\n${i.executionLog || "No output"}\n\`\`\``,
-    }));
+      .all()
+      .map((i) => ({
+        id: i.id,
+        title: i.title,
+        content: `${i.description || ""}\n\n### Execution Log\n\`\`\`\n${i.executionLog || "No output"}\n\`\`\``,
+      }));
   }
 
   if (itemsToReview.length === 0) {
     return NextResponse.json({ error: "Nothing to review" }, { status: 400 });
   }
 
+  // Create review record immediately
   const reviewId = crypto.randomUUID();
   db.insert(reviews)
     .values({ id: reviewId, planId, type, status: "in_progress" })
     .run();
 
-  const useCliMode = !hasApiKey(provider || "anthropic");
+  // Start async generation — don't await, return immediately
+  const { system, prompt } = buildReviewPrompt(type, plan.name, itemsToReview);
 
-  if (useCliMode) {
-    // Stream via CLI
-    const prompt = buildReviewPrompt(type, plan.name, itemsToReview);
-    const cliStream = generateViaCli(prompt);
-    const [responseStream, collectStream] = cliStream.tee();
+  generateTextAuto({ provider: provider || "anthropic", model, system, prompt })
+    .then((text) => {
+      const jsonStr = text.startsWith("{") ? text : text.match(/\{[\s\S]*\}/)?.[0];
+      let parsed: any = null;
+      try {
+        if (jsonStr) parsed = JSON.parse(jsonStr);
+      } catch {}
 
-    // Collect and save in background
-    (async () => {
-      const reader = collectStream.getReader();
-      const decoder = new TextDecoder();
-      let fullText = "";
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        fullText += decoder.decode(value, { stream: true });
-      }
-
-      const parsed = parseReviewJson(fullText.trim());
       if (parsed) {
-        saveReviewResult(reviewId, planId, type, parsed);
-      } else {
-        // Couldn't parse JSON — save raw text as summary
+        const finalStatus = parsed.approved ? "approved" : "changes_requested";
         db.update(reviews)
-          .set({
-            status: "changes_requested",
-            content: fullText.trim() || "Review completed but output was not valid JSON.",
-            updatedAt: new Date().toISOString(),
-          })
+          .set({ status: finalStatus, content: parsed.summary, updatedAt: new Date().toISOString() })
+          .where(eq(reviews.id, reviewId))
+          .run();
+
+        for (const item of parsed.items || []) {
+          db.insert(reviewItems)
+            .values({
+              id: crypto.randomUUID(),
+              reviewId,
+              targetType: type === "scheme" ? "scheme" : "schedule_item",
+              targetId: item.targetId || "",
+              title: item.title || "Finding",
+              content: item.content || "",
+              severity: item.severity || "info",
+              resolved: false,
+            })
+            .run();
+        }
+
+        if (type === "implementation" && parsed.approved) {
+          db.update(plans)
+            .set({ status: "testing", updatedAt: new Date().toISOString() })
+            .where(eq(plans.id, planId))
+            .run();
+        }
+      } else {
+        db.update(reviews)
+          .set({ status: "changes_requested", content: text.trim() || "Review completed.", updatedAt: new Date().toISOString() })
           .where(eq(reviews.id, reviewId))
           .run();
       }
-    })().catch((err) => {
-      console.error("[review-generate] CLI save failed:", err);
+    })
+    .catch((err) => {
+      console.error("[review-generate] failed:", err);
       db.update(reviews)
-        .set({
-          status: "changes_requested",
-          content: `Review failed: ${err}`,
-          updatedAt: new Date().toISOString(),
-        })
+        .set({ status: "changes_requested", content: `Review failed: ${err}`, updatedAt: new Date().toISOString() })
         .where(eq(reviews.id, reviewId))
         .run();
     });
 
-    return new Response(responseStream, {
-      headers: {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache, no-transform",
-        Connection: "keep-alive",
-        "X-Accel-Buffering": "no",
-      },
-    });
-  }
-
-  // SDK mode — non-streaming (has API key, fast enough)
-  try {
-    const result = await generateReview({
-      type,
-      planName: plan.name,
-      items: itemsToReview,
-      provider: provider || "anthropic",
-      model,
-    });
-
-    saveReviewResult(reviewId, planId, type, result);
-
-    const review = db.select().from(reviews).where(eq(reviews.id, reviewId)).get();
-    const rItems = db.select().from(reviewItems).where(eq(reviewItems.reviewId, reviewId)).all();
-    return NextResponse.json({ ...review, items: rItems }, { status: 201 });
-  } catch (err) {
-    db.update(reviews)
-      .set({
-        status: "changes_requested",
-        content: `Review failed: ${err}`,
-        updatedAt: new Date().toISOString(),
-      })
-      .where(eq(reviews.id, reviewId))
-      .run();
-    return NextResponse.json({ error: `Review failed: ${err}` }, { status: 500 });
-  }
+  // Return immediately with the review ID — frontend will poll
+  return NextResponse.json({ id: reviewId, status: "in_progress" }, { status: 202 });
 }

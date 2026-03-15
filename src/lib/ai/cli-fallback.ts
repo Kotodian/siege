@@ -48,9 +48,17 @@ export function generateViaCli(prompt: string): ReadableStream<Uint8Array> {
             if (!line.trim()) continue;
             try {
               const event = JSON.parse(line);
-              if (event.type === "assistant" && event.subtype === "text" && event.content) {
-                controller.enqueue(encoder.encode(event.content));
+
+              // Format: {"type":"assistant","message":{"content":[{"type":"text","text":"..."}]}}
+              if (event.type === "assistant" && event.message?.content) {
+                for (const block of event.message.content) {
+                  if (block.type === "text" && block.text) {
+                    controller.enqueue(encoder.encode(block.text));
+                  }
+                }
               }
+
+              // Also handle content_block_delta (Anthropic API style)
               if (event.type === "content_block_delta" && event.delta?.text) {
                 controller.enqueue(encoder.encode(event.delta.text));
               }

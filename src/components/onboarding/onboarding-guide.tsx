@@ -409,11 +409,11 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
 
             <div className="flex justify-between">
               <Button variant="ghost" onClick={() => setStep("github")}>{t("common.back")}</Button>
-              <Button size="lg" onClick={() => setStep("concept")} disabled={!anyAiConfigured}>
+              <Button size="lg" onClick={() => setStep("concept")} disabled={aiStatus !== null && !anyAiConfigured}>
                 {isZh ? "继续" : "Continue"}
               </Button>
             </div>
-            {!anyAiConfigured && (
+            {!anyAiConfigured && !checkingAi && aiStatus !== null && (
               <p className="text-xs text-amber-600 text-center">
                 {isZh
                   ? "请至少配置一个 AI 提供商后再继续"

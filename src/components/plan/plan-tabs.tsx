@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { Tabs } from "@/components/ui/tabs";
 import { SchemeList } from "@/components/scheme/scheme-list";
 import { ScheduleView } from "@/components/schedule/schedule-view";
+import { TestView } from "@/components/test/test-view";
 
 interface PlanTabsProps {
   planId: string;
@@ -52,7 +53,11 @@ export function PlanTabs({
       id: "tests",
       label: t("plan.tabs.tests"),
       content: (
-        <p className="text-gray-500 py-8 text-center">Phase 3</p>
+        <TestView
+          planId={planId}
+          planStatus={planStatus}
+          onPlanStatusChange={onPlanStatusChange}
+        />
       ),
       disabled: !["testing", "completed"].includes(planStatus),
     },

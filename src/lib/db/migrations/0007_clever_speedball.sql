@@ -1,0 +1,1 @@
+ALTER TABLE `plans` ADD `session_id` text;

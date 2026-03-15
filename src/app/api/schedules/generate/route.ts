@@ -3,6 +3,7 @@ import { getDb } from "@/lib/db";
 import { plans, schemes, schedules, scheduleItems } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { generateSchedule } from "@/lib/ai/schedule-generator";
+import { getPlanSessionId, savePlanSessionId } from "@/lib/ai/session";
 import type { Provider } from "@/lib/ai/provider";
 
 export async function POST(req: NextRequest) {
@@ -38,6 +39,8 @@ export async function POST(req: NextRequest) {
     .where(eq(schemes.planId, planId))
     .all();
 
+  const sessionId = getPlanSessionId(planId);
+
   // Run async — return immediately
   generateSchedule({
     planName: plan.name,
@@ -48,8 +51,13 @@ export async function POST(req: NextRequest) {
     })),
     provider,
     model,
+    sessionId,
   })
-    .then((items) => {
+    .then((result) => {
+      const items = result.items;
+      if (result.sessionId) {
+        savePlanSessionId(planId, result.sessionId);
+      }
       const db = getDb();
 
       // Delete existing schedule

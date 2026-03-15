@@ -10,6 +10,7 @@ import {
 } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { generateTextAuto } from "@/lib/ai/generate";
+import { getPlanSessionId, savePlanSessionId } from "@/lib/ai/session";
 import type { Provider } from "@/lib/ai/provider";
 import { parseJsonBody } from "@/lib/utils";
 
@@ -98,8 +99,12 @@ export async function POST(req: NextRequest) {
   // Start async generation — don't await, return immediately
   const { system, prompt } = buildReviewPrompt(type, plan.name, itemsToReview);
 
-  generateTextAuto({ provider: provider || "anthropic", model, system, prompt })
-    .then((text) => {
+  const sessionId = getPlanSessionId(planId);
+
+  generateTextAuto({ provider: provider || "anthropic", model, system, prompt, sessionId })
+    .then((result) => {
+      if (result.sessionId) savePlanSessionId(planId, result.sessionId);
+      const text = result.text;
       const jsonStr = text.startsWith("{") ? text : text.match(/\{[\s\S]*\}/)?.[0];
       let parsed: any = null;
       try {

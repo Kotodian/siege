@@ -7,13 +7,17 @@ import type { Provider } from "./provider";
 /**
  * Generate text using SDK if API key available, otherwise fall back to claude CLI.
  * CLI calls are serialized through a queue to prevent process pile-up.
+ *
+ * Pass sessionId to resume an existing claude session (much faster).
+ * Returns { text, sessionId } — caller should store sessionId for next call.
  */
 export async function generateTextAuto(options: {
   provider?: Provider;
   model?: string;
   system: string;
   prompt: string;
-}): Promise<string> {
+  sessionId?: string;
+}): Promise<{ text: string; sessionId?: string }> {
   const provider = options.provider || "anthropic";
 
   if (hasApiKey(provider)) {
@@ -23,16 +27,18 @@ export async function generateTextAuto(options: {
       system: options.system,
       prompt: options.prompt,
     });
-    return result.text.trim();
+    return { text: result.text.trim() };
   }
 
   // Fallback to claude CLI — serialized through queue
-  const fullPrompt = `${options.system}\n\n---\n\n${options.prompt}`;
+  const fullPrompt = options.system
+    ? `${options.system}\n\n---\n\n${options.prompt}`
+    : options.prompt;
 
-  return new Promise<string>((resolve, reject) => {
+  return new Promise<{ text: string; sessionId?: string }>((resolve, reject) => {
     enqueueAiTask(async () => {
       try {
-        const result = await generateTextViaCli(fullPrompt);
+        const result = await generateTextViaCli(fullPrompt, options.sessionId);
         resolve(result);
       } catch (err) {
         reject(err);

@@ -50,6 +50,13 @@
       "when": 1773581563432,
       "tag": "0006_cool_king_cobra",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1773586949688,
+      "tag": "0007_clever_speedball",
+      "breakpoints": true
     }
   ]
 }

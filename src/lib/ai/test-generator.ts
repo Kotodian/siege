@@ -7,6 +7,7 @@ interface TestGenerationInput {
   targetRepoPath: string;
   provider: Provider;
   model?: string;
+  sessionId?: string;
 }
 
 interface GeneratedTestCase {
@@ -24,9 +25,10 @@ export async function generateTests(
     .map((s, i) => `### Scheme ${i + 1}: ${s.title}\n${s.content}`)
     .join("\n\n");
 
-  const text = await generateTextAuto({
+  const result = await generateTextAuto({
     provider: input.provider,
     model: input.model,
+    sessionId: input.sessionId,
     system: `You are a senior test engineer. Generate test cases for completed development work.
 
 Output a JSON array of test case objects with these fields:
@@ -41,7 +43,7 @@ Output ONLY the JSON array, no other text.`,
   });
 
   try {
-    const jsonStr = text.startsWith("[") ? text : text.match(/\[[\s\S]*\]/)?.[0];
+    const jsonStr = result.text.startsWith("[") ? result.text : result.text.match(/\[[\s\S]*\]/)?.[0];
     if (!jsonStr) throw new Error("No JSON array found in response");
     return JSON.parse(jsonStr);
   } catch {

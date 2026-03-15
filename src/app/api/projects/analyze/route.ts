@@ -104,7 +104,7 @@ export async function POST(req: NextRequest) {
 
   // Use AI to summarize
   try {
-    const description = await generateTextAuto({
+    const result = await generateTextAuto({
       system: `You are a senior developer analyzing a project. Write a concise project description in Markdown (3-5 sentences) covering:
 - What the project does
 - Main tech stack
@@ -116,7 +116,7 @@ Be factual and specific. Output ONLY the description, no headings or preamble.`,
 
     return NextResponse.json({
       empty: false,
-      description,
+      description: result.text,
       hasAgentDocs: false,
     });
   } catch (err) {

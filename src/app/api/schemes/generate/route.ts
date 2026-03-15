@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { generateSchemeStream } from "@/lib/ai/scheme-generator";
 import { hasApiKey } from "@/lib/ai/config";
 import { generateTextAuto } from "@/lib/ai/generate";
+import { getPlanSessionId, savePlanSessionId } from "@/lib/ai/session";
 import type { Provider } from "@/lib/ai/provider";
 import { parseJsonBody } from "@/lib/utils";
 
@@ -88,17 +89,20 @@ export async function POST(req: NextRequest) {
 
   const useCliMode = !hasApiKey(provider || "anthropic");
 
+  const sessionId = getPlanSessionId(planId);
+
   if (useCliMode) {
-    // Async: generate in background, return 202 immediately
     generateTextAuto({
       provider: provider || "anthropic",
       model,
       system: "",
       prompt,
+      sessionId,
     })
-      .then((text) => {
-        if (text.trim()) {
-          saveScheme(planId, text.trim(), plan.status);
+      .then((result) => {
+        if (result.sessionId) savePlanSessionId(planId, result.sessionId);
+        if (result.text.trim()) {
+          saveScheme(planId, result.text.trim(), plan.status);
         }
       })
       .catch((err) => {

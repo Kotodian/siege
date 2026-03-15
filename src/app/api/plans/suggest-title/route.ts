@@ -15,13 +15,13 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const title = await generateTextAuto({
+    const result = await generateTextAuto({
       system:
         "Generate a concise plan title (under 50 characters) from the given description. Output ONLY the title, nothing else. No quotes, no punctuation at the end.",
       prompt: description,
     });
 
-    return NextResponse.json({ title });
+    return NextResponse.json({ title: result.text });
   } catch (err) {
     console.error("[suggest-title] failed:", err);
     return NextResponse.json(

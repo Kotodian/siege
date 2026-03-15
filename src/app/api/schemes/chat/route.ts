@@ -41,10 +41,10 @@ Apply the requested changes and return the COMPLETE updated scheme in Markdown.
 Do NOT add explanations or comments about what you changed — just output the full updated scheme.`,
     prompt: `## Current Scheme\n\n${scheme.content}\n\n## Modification Request\n\n${message}`,
   })
-    .then((newContent) => {
+    .then((result) => {
       saveSchemeVersion(schemeId);
       db.update(schemes)
-        .set({ content: newContent, updatedAt: new Date().toISOString() })
+        .set({ content: result.text, updatedAt: new Date().toISOString() })
         .where(eq(schemes.id, schemeId))
         .run();
     })

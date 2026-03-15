@@ -7,6 +7,7 @@ interface ReviewInput {
   items: Array<{ id: string; title: string; content: string }>;
   provider: Provider;
   model?: string;
+  sessionId?: string;
 }
 
 interface GeneratedReviewItem {
@@ -34,7 +35,7 @@ export async function generateReview(
     .map((item) => `### ${item.title} (id: ${item.id})\n${item.content}`)
     .join("\n\n");
 
-  const text = await generateTextAuto({
+  const result = await generateTextAuto({
     provider: input.provider,
     model: input.model,
     system: `You are a senior software engineer conducting a thorough review of ${contextLabel}.
@@ -57,14 +58,15 @@ Output a JSON object with:
 
 Output ONLY the JSON object, no other text.`,
     prompt: `Plan: ${input.planName}\n\n${itemsSummary}`,
+    sessionId: input.sessionId,
   });
 
   try {
-    const jsonStr = text.startsWith("{")
-      ? text
-      : text.match(/\{[\s\S]*\}/)?.[0];
+    const jsonStr = result.text.startsWith("{")
+      ? result.text
+      : result.text.match(/\{[\s\S]*\}/)?.[0];
     if (!jsonStr) throw new Error("No JSON object found");
-    return JSON.parse(jsonStr);
+    return { ...JSON.parse(jsonStr), sessionId: result.sessionId };
   } catch {
     throw new Error("Failed to parse review from AI response");
   }

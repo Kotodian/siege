@@ -104,6 +104,35 @@ export function ReviewPanel({
     await fetchReviews();
   };
 
+  const [fixingItem, setFixingItem] = useState<string | null>(null);
+
+  const handleFix = async (item: ReviewItem) => {
+    if (!item.targetId || fixingItem) return;
+    setFixingItem(item.id);
+    try {
+      const res = await fetch("/api/schemes/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          schemeId: item.targetId,
+          message: `Fix the following issue:\n\n**${item.title}**\n\n${item.content}`,
+        }),
+      });
+      if (res.ok) {
+        // Mark as resolved
+        await fetch(`/api/review-items/${item.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ resolved: true }),
+        });
+        await fetchReviews();
+        onPlanStatusChange();
+      }
+    } finally {
+      setFixingItem(null);
+    }
+  };
+
   const canReview =
     type === "scheme"
       ? planStatus === "reviewing"
@@ -200,16 +229,29 @@ export function ReviewPanel({
                       <StatusBadge status={item.severity} label={item.severity} />
                       <span className="font-medium text-sm">{item.title}</span>
                     </div>
-                    <button
-                      onClick={() => handleResolve(item.id, !item.resolved)}
-                      className={`text-xs px-2 py-1 rounded ${
-                        item.resolved
-                          ? "bg-gray-200 text-gray-600"
-                          : "bg-white/50 text-gray-700 hover:bg-white"
-                      }`}
-                    >
-                      {item.resolved ? t("review.resolved") : t("review.resolve")}
-                    </button>
+                    <div className="flex gap-1">
+                      {!item.resolved && item.targetId && (
+                        <button
+                          onClick={() => handleFix(item)}
+                          disabled={fixingItem !== null}
+                          className="text-xs px-2 py-1 rounded bg-blue-100 text-blue-700 hover:bg-blue-200 disabled:opacity-50"
+                        >
+                          {fixingItem === item.id
+                            ? isZh ? "修复中..." : "Fixing..."
+                            : isZh ? "AI 修复" : "AI Fix"}
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleResolve(item.id, !item.resolved)}
+                        className={`text-xs px-2 py-1 rounded ${
+                          item.resolved
+                            ? "bg-gray-200 text-gray-600"
+                            : "bg-white/50 text-gray-700 hover:bg-white"
+                        }`}
+                      >
+                        {item.resolved ? t("review.resolved") : t("review.resolve")}
+                      </button>
+                    </div>
                   </div>
                   {item.content && (
                     <div className="mt-2 text-sm">

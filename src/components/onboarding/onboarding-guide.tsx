@@ -25,9 +25,17 @@ interface GithubStatus {
   username: string;
 }
 
+interface ProviderStatus {
+  configured: boolean;
+  masked: string;
+  baseURL: string;
+  mode: "apikey" | "proxy" | "none";
+}
+
 interface AiStatus {
-  anthropic: { configured: boolean; masked: string };
-  openai: { configured: boolean; masked: string };
+  anthropic: ProviderStatus;
+  openai: ProviderStatus;
+  glm: ProviderStatus;
 }
 
 export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
@@ -44,9 +52,15 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
   // AI state
   const [aiStatus, setAiStatus] = useState<AiStatus | null>(null);
   const [checkingAi, setCheckingAi] = useState(false);
+  const [savingProvider, setSavingProvider] = useState<string | null>(null);
+  // Per-provider form state
   const [anthropicKey, setAnthropicKey] = useState("");
+  const [anthropicUrl, setAnthropicUrl] = useState("");
   const [openaiKey, setOpenaiKey] = useState("");
-  const [savingKeys, setSavingKeys] = useState(false);
+  const [glmKey, setGlmKey] = useState("");
+  const [glmUrl, setGlmUrl] = useState("");
+  const [claudeStatus, setClaudeStatus] = useState<{ installed: boolean; loggedIn: boolean } | null>(null);
+  const [openaiUrl, setOpenaiUrl] = useState("");
 
   const isZh = locale === "zh";
 
@@ -65,27 +79,39 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
     setCheckingAi(true);
     try {
       const res = await fetch("/api/ai-config");
-      setAiStatus(await res.json());
+      const data = await res.json();
+      setAiStatus(data);
+      setClaudeStatus(data.claude || null);
     } catch {
       setAiStatus(null);
     }
     setCheckingAi(false);
   };
 
-  const saveAiKeys = async () => {
-    if (!anthropicKey && !openaiKey) return;
-    setSavingKeys(true);
+  const saveProvider = async (provider: "anthropic" | "openai" | "glm") => {
+    const keyMap = { anthropic: anthropicKey, openai: openaiKey, glm: glmKey };
+    const urlMap = { anthropic: anthropicUrl, openai: openaiUrl, glm: glmUrl };
+    const apiKey = keyMap[provider];
+    const baseURL = urlMap[provider];
+    if (!apiKey && !baseURL) return;
+
+    setSavingProvider(provider);
     try {
       await fetch("/api/ai-config", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ anthropicKey: anthropicKey || undefined, openaiKey: openaiKey || undefined }),
+        body: JSON.stringify({
+          provider,
+          apiKey: apiKey || undefined,
+          baseURL: baseURL || undefined,
+        }),
       });
-      setAnthropicKey("");
-      setOpenaiKey("");
+      if (provider === "anthropic") { setAnthropicKey(""); setAnthropicUrl(""); }
+      else if (provider === "openai") { setOpenaiKey(""); setOpenaiUrl(""); }
+      else { setGlmKey(""); setGlmUrl(""); }
       await checkAiConfig();
     } finally {
-      setSavingKeys(false);
+      setSavingProvider(null);
     }
   };
 
@@ -128,72 +154,94 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
           </div>
         )}
 
-        {/* Step 2: GitHub */}
+        {/* Step 2: GitHub — ask first, then check */}
         {step === "github" && (
           <div className="space-y-6">
             <div className="text-center">
               <h2 className="text-2xl font-bold">
-                {isZh ? "连接 GitHub" : "Connect GitHub"}
+                {isZh ? "是否关联 GitHub？" : "Connect GitHub?"}
               </h2>
               <p className="text-gray-500 mt-1">
                 {isZh
-                  ? "连接 GitHub 后可以直接从仓库列表选择项目。不连接也可以从本地目录选择。"
-                  : "Connect GitHub to select repos directly. You can also use local directories without GitHub."}
+                  ? "关联后可以直接从 GitHub 仓库列表选择项目并克隆。不关联可以从本地目录选择。"
+                  : "Connect to select and clone repos from GitHub. You can also use local directories."}
               </p>
             </div>
 
-            <div className="rounded-lg border bg-white p-6">
-              {checkingGithub ? (
-                <div className="text-center py-8 text-gray-400">
-                  {isZh ? "检查中..." : "Checking..."}
-                </div>
-              ) : !githubStatus?.ghInstalled ? (
-                <div className="text-center space-y-4 py-4">
-                  <div className="text-4xl">⚠️</div>
-                  <p className="text-gray-600">
-                    {isZh
-                      ? "未检测到 GitHub CLI (gh)。安装后可以连接 GitHub 仓库。"
-                      : "GitHub CLI (gh) not detected. Install it to connect GitHub repos."}
-                  </p>
-                  <a href="https://cli.github.com" target="_blank" rel="noopener noreferrer"
-                    className="text-blue-600 hover:underline text-sm">
-                    https://cli.github.com
-                  </a>
-                  <div className="pt-2">
+            {githubStatus === null ? (
+              // Initial: ask user if they want to connect
+              <div className="flex flex-col items-center gap-4 py-6">
+                <Button
+                  size="lg"
+                  onClick={() => checkGithubAuth()}
+                >
+                  {isZh ? "是，检测 GitHub 连接" : "Yes, check GitHub connection"}
+                </Button>
+                <Button
+                  size="lg"
+                  variant="ghost"
+                  onClick={() => { setStep("ai"); checkAiConfig(); }}
+                >
+                  {isZh ? "跳过，只用本地目录" : "Skip, use local directories only"}
+                </Button>
+              </div>
+            ) : (
+              // After checking
+              <div className="rounded-lg border bg-white p-6">
+                {checkingGithub ? (
+                  <div className="text-center py-8 text-gray-400">
+                    {isZh ? "检查中..." : "Checking..."}
+                  </div>
+                ) : !githubStatus.ghInstalled ? (
+                  <div className="text-center space-y-4 py-4">
+                    <div className="text-4xl">⚠️</div>
+                    <p className="text-gray-600">
+                      {isZh
+                        ? "未检测到 GitHub CLI (gh)。安装后可以连接。"
+                        : "GitHub CLI (gh) not detected."}
+                    </p>
+                    <a href="https://cli.github.com" target="_blank" rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline text-sm">
+                      https://cli.github.com
+                    </a>
+                    <div className="pt-2">
+                      <Button variant="secondary" onClick={checkGithubAuth}>
+                        {isZh ? "重新检测" : "Re-check"}
+                      </Button>
+                    </div>
+                  </div>
+                ) : githubStatus.authenticated ? (
+                  <div className="text-center space-y-3 py-4">
+                    <div className="text-4xl">✓</div>
+                    <p className="text-gray-800 font-medium">
+                      {isZh ? `已连接：${githubStatus.username}` : `Connected: ${githubStatus.username}`}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="text-center space-y-4 py-4">
+                    <div className="text-4xl">🔗</div>
+                    <p className="text-gray-600">
+                      {isZh ? "GitHub CLI 已安装，但未登录。在终端运行：" : "gh installed but not logged in. Run:"}
+                    </p>
+                    <code className="block bg-gray-100 rounded-md px-4 py-2 text-sm font-mono">
+                      gh auth login
+                    </code>
                     <Button variant="secondary" onClick={checkGithubAuth}>
-                      {isZh ? "重新检测" : "Re-check"}
+                      {isZh ? "登录后重新检测" : "Re-check after login"}
                     </Button>
                   </div>
-                </div>
-              ) : githubStatus.authenticated ? (
-                <div className="text-center space-y-3 py-4">
-                  <div className="text-4xl">✓</div>
-                  <p className="text-gray-800 font-medium">
-                    {isZh ? `已连接：${githubStatus.username}` : `Connected: ${githubStatus.username}`}
-                  </p>
-                </div>
-              ) : (
-                <div className="text-center space-y-4 py-4">
-                  <div className="text-4xl">🔗</div>
-                  <p className="text-gray-600">
-                    {isZh ? "GitHub CLI 已安装，但未登录。在终端运行：" : "GitHub CLI installed but not logged in. Run:"}
-                  </p>
-                  <code className="block bg-gray-100 rounded-md px-4 py-2 text-sm font-mono">
-                    gh auth login
-                  </code>
-                  <Button variant="secondary" onClick={checkGithubAuth}>
-                    {isZh ? "登录后点击重新检测" : "Re-check after login"}
-                  </Button>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
 
-            <div className="flex justify-between">
-              <Button variant="ghost" onClick={() => setStep("welcome")}>{t("common.back")}</Button>
-              <Button size="lg" onClick={() => { setStep("ai"); checkAiConfig(); }}>
-                {isZh ? "继续" : "Continue"}
-              </Button>
-            </div>
+            {githubStatus !== null && (
+              <div className="flex justify-between">
+                <Button variant="ghost" onClick={() => setStep("welcome")}>{t("common.back")}</Button>
+                <Button size="lg" onClick={() => { setStep("ai"); checkAiConfig(); }}>
+                  {isZh ? "继续" : "Continue"}
+                </Button>
+              </div>
+            )}
           </div>
         )}
 
@@ -206,12 +254,12 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
               </h2>
               <p className="text-gray-500 mt-1">
                 {isZh
-                  ? "至少配置一个 AI 提供商的 API Key，用于方案生成、排期、审查和测试。"
-                  : "Configure at least one AI provider API key for scheme generation, scheduling, review and testing."}
+                  ? "至少配置一个 AI 提供商，支持直连 API 或中转站代理。"
+                  : "Configure at least one AI provider. Supports direct API or proxy relay."}
               </p>
             </div>
 
-            <div className="rounded-lg border bg-white p-6 space-y-5">
+            <div className="space-y-4">
               {checkingAi ? (
                 <div className="text-center py-8 text-gray-400">
                   {isZh ? "检查中..." : "Checking..."}
@@ -219,71 +267,88 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
               ) : (
                 <>
                   {/* Anthropic */}
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <label className="text-sm font-medium">Anthropic (Claude)</label>
-                      {aiStatus?.anthropic.configured && (
-                        <span className="text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
-                          ✓ {aiStatus.anthropic.masked}
-                        </span>
+                  <ProviderConfigCard
+                    name="Anthropic (Claude)"
+                    status={aiStatus?.anthropic}
+                    apiKey={anthropicKey}
+                    baseURL={anthropicUrl}
+                    onApiKeyChange={setAnthropicKey}
+                    onBaseURLChange={setAnthropicUrl}
+                    onSave={() => saveProvider("anthropic")}
+                    saving={savingProvider === "anthropic"}
+                    isZh={isZh}
+                    keyPlaceholder="sk-ant-api03-..."
+                    urlPlaceholder="https://api.anthropic.com"
+                  />
+
+                  {/* Claude Login */}
+                  {claudeStatus?.installed && (
+                    <div className="rounded-lg border bg-white p-4">
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium text-sm">Claude Code Login</span>
+                        {claudeStatus.loggedIn ? (
+                          <span className="text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
+                            ✓ {isZh ? "已登录" : "Logged in"}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                            {isZh ? "未登录" : "Not logged in"}
+                          </span>
+                        )}
+                      </div>
+                      {!claudeStatus.loggedIn && (
+                        <div className="mt-2 space-y-2">
+                          <p className="text-xs text-gray-500">
+                            {isZh
+                              ? "通过 Claude Code 登录可免 API Key 使用 Anthropic 模型："
+                              : "Login via Claude Code to use Anthropic without API key:"}
+                          </p>
+                          <code className="block bg-gray-100 rounded px-3 py-1.5 text-xs font-mono">
+                            claude login
+                          </code>
+                          <Button variant="secondary" size="sm" onClick={checkAiConfig}>
+                            {isZh ? "重新检测" : "Re-check"}
+                          </Button>
+                        </div>
                       )}
                     </div>
-                    {aiStatus?.anthropic.configured ? (
-                      <p className="text-xs text-gray-500">
-                        {isZh ? "已配置，可在设置页修改。" : "Configured. Change in settings."}
-                      </p>
-                    ) : (
-                      <Input
-                        value={anthropicKey}
-                        onChange={(e) => setAnthropicKey(e.target.value)}
-                        placeholder="sk-ant-api03-..."
-                        type="password"
-                      />
-                    )}
-                  </div>
-
-                  {/* OpenAI */}
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <label className="text-sm font-medium">OpenAI (GPT)</label>
-                      {aiStatus?.openai.configured && (
-                        <span className="text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
-                          ✓ {aiStatus.openai.masked}
-                        </span>
-                      )}
-                    </div>
-                    {aiStatus?.openai.configured ? (
-                      <p className="text-xs text-gray-500">
-                        {isZh ? "已配置，可在设置页修改。" : "Configured. Change in settings."}
-                      </p>
-                    ) : (
-                      <Input
-                        value={openaiKey}
-                        onChange={(e) => setOpenaiKey(e.target.value)}
-                        placeholder="sk-..."
-                        type="password"
-                      />
-                    )}
-                  </div>
-
-                  {/* Save button */}
-                  {(!aiStatus?.anthropic.configured || !aiStatus?.openai.configured) && (
-                    <Button
-                      onClick={saveAiKeys}
-                      disabled={savingKeys || (!anthropicKey && !openaiKey)}
-                      className="w-full"
-                    >
-                      {savingKeys
-                        ? isZh ? "保存中..." : "Saving..."
-                        : isZh ? "保存密钥" : "Save Keys"}
-                    </Button>
                   )}
 
-                  {!anyAiConfigured && (
+                  {/* OpenAI */}
+                  <ProviderConfigCard
+                    name="OpenAI (GPT)"
+                    status={aiStatus?.openai}
+                    apiKey={openaiKey}
+                    baseURL={openaiUrl}
+                    onApiKeyChange={setOpenaiKey}
+                    onBaseURLChange={setOpenaiUrl}
+                    onSave={() => saveProvider("openai")}
+                    saving={savingProvider === "openai"}
+                    isZh={isZh}
+                    keyPlaceholder="sk-..."
+                    urlPlaceholder="https://api.openai.com/v1"
+                  />
+
+                  {/* GLM (ZhiPu) */}
+                  <ProviderConfigCard
+                    name="GLM (智谱)"
+                    status={aiStatus?.glm}
+                    apiKey={glmKey}
+                    baseURL={glmUrl}
+                    onApiKeyChange={setGlmKey}
+                    onBaseURLChange={setGlmUrl}
+                    onSave={() => saveProvider("glm")}
+                    saving={savingProvider === "glm"}
+                    isZh={isZh}
+                    keyPlaceholder="glm-api-key..."
+                    urlPlaceholder="https://open.bigmodel.cn/api/paas/v4"
+                  />
+
+                  {!anyAiConfigured && !claudeStatus?.loggedIn && (
                     <p className="text-xs text-amber-600 text-center">
                       {isZh
-                        ? "⚠️ 至少配置一个 API Key 才能使用 AI 功能"
-                        : "⚠️ At least one API key is required for AI features"}
+                        ? "⚠️ 至少配置一个提供商才能使用 AI 功能"
+                        : "⚠️ At least one provider is required for AI features"}
                     </p>
                   )}
                 </>
@@ -392,6 +457,116 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
         )}
 
       </div>
+    </div>
+  );
+}
+
+/* Sub-component for per-provider config */
+function ProviderConfigCard({
+  name,
+  status,
+  apiKey,
+  baseURL,
+  onApiKeyChange,
+  onBaseURLChange,
+  onSave,
+  saving,
+  isZh,
+  keyPlaceholder,
+  urlPlaceholder,
+}: {
+  name: string;
+  status?: ProviderStatus;
+  apiKey: string;
+  baseURL: string;
+  onApiKeyChange: (v: string) => void;
+  onBaseURLChange: (v: string) => void;
+  onSave: () => void;
+  saving: boolean;
+  isZh: boolean;
+  keyPlaceholder: string;
+  urlPlaceholder: string;
+}) {
+  const [mode, setMode] = useState<"apikey" | "proxy">(
+    status?.mode === "proxy" ? "proxy" : "apikey"
+  );
+
+  if (status?.configured) {
+    return (
+      <div className="rounded-lg border bg-white p-4">
+        <div className="flex items-center justify-between">
+          <span className="font-medium text-sm">{name}</span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-500">
+              {status.mode === "proxy"
+                ? isZh ? "中转站" : "Proxy"
+                : "API Key"}
+            </span>
+            <span className="text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
+              ✓ {status.masked || (status.baseURL ? status.baseURL.slice(0, 30) : "")}
+            </span>
+          </div>
+        </div>
+        {status.baseURL && (
+          <p className="text-xs text-gray-400 mt-1 font-mono truncate">
+            {status.baseURL}
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-lg border bg-white p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <span className="font-medium text-sm">{name}</span>
+        <div className="flex gap-1 bg-gray-100 rounded-md p-0.5">
+          <button
+            onClick={() => setMode("apikey")}
+            className={`px-2 py-1 text-xs rounded ${
+              mode === "apikey" ? "bg-white shadow-sm font-medium" : "text-gray-500"
+            }`}
+          >
+            API Key
+          </button>
+          <button
+            onClick={() => setMode("proxy")}
+            className={`px-2 py-1 text-xs rounded ${
+              mode === "proxy" ? "bg-white shadow-sm font-medium" : "text-gray-500"
+            }`}
+          >
+            {isZh ? "中转站" : "Proxy"}
+          </button>
+        </div>
+      </div>
+
+      <Input
+        value={apiKey}
+        onChange={(e) => onApiKeyChange(e.target.value)}
+        placeholder={keyPlaceholder}
+        type="password"
+        label="API Key"
+      />
+
+      {mode === "proxy" && (
+        <Input
+          value={baseURL}
+          onChange={(e) => onBaseURLChange(e.target.value)}
+          placeholder={urlPlaceholder}
+          label="Base URL"
+        />
+      )}
+
+      <Button
+        size="sm"
+        onClick={onSave}
+        disabled={saving || (!apiKey && !baseURL)}
+        className="w-full"
+      >
+        {saving
+          ? isZh ? "保存中..." : "Saving..."
+          : isZh ? "保存" : "Save"}
+      </Button>
     </div>
   );
 }

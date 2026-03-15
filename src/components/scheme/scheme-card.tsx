@@ -35,7 +35,7 @@ export function SchemeCard({
 }: SchemeCardProps) {
   const t = useTranslations();
   const isZh = t("common.back") === "返回";
-  const { startLoading, stopLoading } = useGlobalLoading();
+  const { startLoading, updateContent, stopLoading } = useGlobalLoading();
   const [editing, setEditing] = useState(false);
   const [versionsOpen, setVersionsOpen] = useState(false);
   const [chatInput, setChatInput] = useState("");
@@ -47,6 +47,9 @@ export function SchemeCard({
   const pollSchemeUpdate = async (originalUpdatedAt: string) => {
     for (let i = 0; i < 60; i++) {
       await new Promise((r) => setTimeout(r, 3000));
+      updateContent(isZh
+        ? `AI 正在修改方案，已等待 ${(i + 1) * 3} 秒...`
+        : `AI modifying scheme... ${(i + 1) * 3}s elapsed.`);
       const res = await fetch(`/api/schemes/${scheme.id}`);
       if (res.ok) {
         const data = await res.json();

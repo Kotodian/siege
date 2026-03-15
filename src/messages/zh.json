@@ -51,7 +51,7 @@
     },
     "tabs": {
       "schemes": "方案",
-      "schedule": "排期",
+      "schedule": "任务排期",
       "tests": "测试",
       "logs": "执行日志"
     },

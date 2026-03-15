@@ -32,7 +32,7 @@ export function SchemeList({
   onPlanStatusChange,
 }: SchemeListProps) {
   const t = useTranslations();
-  const { startLoading, stopLoading } = useGlobalLoading();
+  const { startLoading, updateContent, stopLoading } = useGlobalLoading();
   const [schemes, setSchemes] = useState<Scheme[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [generateDialogOpen, setGenerateDialogOpen] = useState(false);
@@ -129,6 +129,7 @@ export function SchemeList({
         if (done) break;
         content += decoder.decode(value, { stream: true });
         setStreamingContent(content);
+        updateContent(content);
       }
 
       await fetchSchemes();

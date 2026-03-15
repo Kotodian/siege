@@ -48,7 +48,7 @@ export function ReviewPanel({
   onPlanStatusChange,
 }: ReviewPanelProps) {
   const t = useTranslations();
-  const { startLoading, stopLoading } = useGlobalLoading();
+  const { startLoading, updateContent, stopLoading } = useGlobalLoading();
   const [reviews, setReviews] = useState<Review[]>([]);
   const [generating, setGenerating] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -69,11 +69,15 @@ export function ReviewPanel({
 
   const startPolling = () => {
     if (pollRef.current) clearInterval(pollRef.current);
+    let elapsed = 0;
     pollRef.current = setInterval(async () => {
+      elapsed += 3;
+      updateContent(isZh
+        ? `正在审查中，已等待 ${elapsed} 秒...\n\n审查完成后将自动显示结果。`
+        : `Reviewing... ${elapsed}s elapsed.\n\nResults will appear automatically.`);
       const data = await fetchReviews();
       const latest = data[data.length - 1];
       if (latest && latest.status !== "in_progress") {
-        // Done!
         if (pollRef.current) clearInterval(pollRef.current);
         pollRef.current = null;
         setGenerating(false);

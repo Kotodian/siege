@@ -55,7 +55,7 @@ export function ScheduleView({
     setSchedule(data);
   };
 
-  const { startLoading, stopLoading } = useGlobalLoading();
+  const { startLoading, updateContent, stopLoading } = useGlobalLoading();
 
   useEffect(() => {
     fetchSchedule();
@@ -78,6 +78,9 @@ export function ScheduleView({
 
       for (let i = 0; i < 60; i++) {
         await new Promise((r) => setTimeout(r, 3000));
+        updateContent(isZh
+          ? `正在生成排期，已等待 ${(i + 1) * 3} 秒...\n\nAI 正在分析方案并拆分为可执行任务。`
+          : `Generating schedule... ${(i + 1) * 3}s elapsed.\n\nAI is breaking schemes into executable tasks.`);
         const res = await fetch(`/api/schedules?planId=${planId}`);
         const data = await res.json();
         if (data && data.items && data.items.length > 0) {

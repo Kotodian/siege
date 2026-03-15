@@ -1,0 +1,45 @@
+{
+  "name": "siege",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@uiw/react-md-editor": "^4.0.11",
+    "better-sqlite3": "^12.8.0",
+    "drizzle-orm": "^0.45.1",
+    "next": "16.1.6",
+    "next-intl": "^4.8.3",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "react-markdown": "^10.1.0",
+    "rehype-highlight": "^7.0.2",
+    "remark-gfm": "^4.0.1",
+    "uuid": "^13.0.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/uuid": "^10.0.0",
+    "@vitejs/plugin-react": "^6.0.1",
+    "drizzle-kit": "^0.31.9",
+    "eslint": "^9",
+    "eslint-config-next": "16.1.6",
+    "jsdom": "^29.0.0",
+    "tailwindcss": "^4",
+    "typescript": "^5",
+    "vitest": "^4.1.0"
+  }
+}

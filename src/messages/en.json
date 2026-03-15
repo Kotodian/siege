@@ -34,6 +34,7 @@
       "confirmed": "Confirmed",
       "scheduled": "Scheduled",
       "executing": "Executing",
+      "code_review": "Code Review",
       "testing": "Testing",
       "completed": "Completed"
     },

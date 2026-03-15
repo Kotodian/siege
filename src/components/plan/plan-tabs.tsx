@@ -5,6 +5,7 @@ import { Tabs } from "@/components/ui/tabs";
 import { SchemeList } from "@/components/scheme/scheme-list";
 import { ScheduleView } from "@/components/schedule/schedule-view";
 import { TestView } from "@/components/test/test-view";
+import { ReviewPanel } from "@/components/review/review-panel";
 
 interface PlanTabsProps {
   planId: string;
@@ -45,6 +46,25 @@ export function PlanTabs({
         "confirmed",
         "scheduled",
         "executing",
+        "code_review",
+        "testing",
+        "completed",
+      ].includes(planStatus),
+    },
+    {
+      id: "code_review",
+      label: "Code Review",
+      content: (
+        <ReviewPanel
+          planId={planId}
+          type="implementation"
+          planStatus={planStatus}
+          onPlanStatusChange={onPlanStatusChange}
+        />
+      ),
+      disabled: ![
+        "executing",
+        "code_review",
         "testing",
         "completed",
       ].includes(planStatus),
@@ -65,9 +85,16 @@ export function PlanTabs({
       id: "logs",
       label: t("plan.tabs.logs"),
       content: (
-        <p className="text-gray-500 py-8 text-center">Phase 2</p>
+        <p className="text-gray-500 py-8 text-center">
+          View execution logs in Schedule tab
+        </p>
       ),
-      disabled: !["executing", "testing", "completed"].includes(planStatus),
+      disabled: ![
+        "executing",
+        "code_review",
+        "testing",
+        "completed",
+      ].includes(planStatus),
     },
   ];
 

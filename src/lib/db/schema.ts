@@ -40,6 +40,7 @@ export const plans = sqliteTable("plans", {
       "confirmed",
       "scheduled",
       "executing",
+      "code_review",
       "testing",
       "completed",
     ],
@@ -208,4 +209,45 @@ export const backupHistory = sqliteTable("backup_history", {
     .default("running"),
   itemsCount: integer("items_count").default(0),
   errorMessage: text("error_message"),
+});
+
+export const reviews = sqliteTable("reviews", {
+  id: text("id").primaryKey(),
+  planId: text("plan_id")
+    .notNull()
+    .references(() => plans.id, { onDelete: "cascade" }),
+  type: text("type", {
+    enum: ["scheme", "implementation"],
+  }).notNull(),
+  status: text("status", {
+    enum: ["pending", "in_progress", "approved", "changes_requested"],
+  })
+    .notNull()
+    .default("pending"),
+  content: text("content").default(""),
+  createdAt: text("created_at")
+    .default(sql`(datetime('now'))`)
+    .notNull(),
+  updatedAt: text("updated_at")
+    .default(sql`(datetime('now'))`)
+    .notNull(),
+});
+
+export const reviewItems = sqliteTable("review_items", {
+  id: text("id").primaryKey(),
+  reviewId: text("review_id")
+    .notNull()
+    .references(() => reviews.id, { onDelete: "cascade" }),
+  targetType: text("target_type", {
+    enum: ["scheme", "schedule_item", "code"],
+  }).notNull(),
+  targetId: text("target_id").notNull(),
+  title: text("title").notNull(),
+  content: text("content").default(""),
+  severity: text("severity", {
+    enum: ["info", "warning", "critical"],
+  })
+    .notNull()
+    .default("info"),
+  resolved: integer("resolved", { mode: "boolean" }).notNull().default(false),
 });

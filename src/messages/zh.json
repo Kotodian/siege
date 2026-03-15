@@ -34,6 +34,7 @@
       "confirmed": "已确认",
       "scheduled": "已排期",
       "executing": "执行中",
+      "code_review": "代码审查",
       "testing": "测试中",
       "completed": "已完成"
     },

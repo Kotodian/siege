@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { SchemeCard } from "./scheme-card";
 import { CreateSchemeDialog } from "./create-scheme-dialog";
+import { ReviewPanel } from "@/components/review/review-panel";
 
 interface Scheme {
   id: string;
@@ -142,6 +143,18 @@ export function SchemeList({
               onDelete={handleDelete}
             />
           ))}
+        </div>
+      )}
+
+      {/* Scheme Review */}
+      {schemes.length > 0 && (
+        <div className="mt-6 border-t pt-6">
+          <ReviewPanel
+            planId={planId}
+            type="scheme"
+            planStatus={planStatus}
+            onPlanStatusChange={onPlanStatusChange}
+          />
         </div>
       )}
 

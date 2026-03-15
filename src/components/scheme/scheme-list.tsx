@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { SchemeCard } from "./scheme-card";
+import { MarkdownRenderer } from "@/components/markdown/markdown-renderer";
 import { CreateSchemeDialog } from "./create-scheme-dialog";
 import { GenerateSchemeDialog } from "./generate-scheme-dialog";
 import { ReviewPanel } from "@/components/review/review-panel";
@@ -34,6 +35,7 @@ export function SchemeList({
   const [dialogOpen, setDialogOpen] = useState(false);
   const [generateDialogOpen, setGenerateDialogOpen] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [streamingContent, setStreamingContent] = useState("");
 
   const readonly = [
     "confirmed",
@@ -101,16 +103,37 @@ export function SchemeList({
   const handleGenerate = async (provider: string, skills: string[]) => {
     setGenerating(true);
     setGenerateDialogOpen(false);
+    setStreamingContent("");
     try {
-      await fetch("/api/schemes/generate", {
+      const res = await fetch("/api/schemes/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ planId, provider, skills }),
       });
+
+      if (!res.ok || !res.body) {
+        throw new Error("Generate failed");
+      }
+
+      // Consume the streaming response and show progress
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let content = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        content += decoder.decode(value, { stream: true });
+        setStreamingContent(content);
+      }
+
       await fetchSchemes();
       onPlanStatusChange();
+    } catch {
+      // ignore
     } finally {
       setGenerating(false);
+      setStreamingContent("");
     }
   };
 
@@ -155,7 +178,27 @@ export function SchemeList({
         </div>
       )}
 
-      {schemes.length === 0 ? (
+      {/* Streaming preview while generating */}
+      {generating && (
+        <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <svg className="animate-spin h-4 w-4 text-blue-600" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+            <span className="text-sm font-medium text-blue-700">
+              {t("scheme.generate")}...
+            </span>
+          </div>
+          {streamingContent && (
+            <div className="bg-white rounded p-3 max-h-60 overflow-y-auto">
+              <MarkdownRenderer content={streamingContent} />
+            </div>
+          )}
+        </div>
+      )}
+
+      {schemes.length === 0 && !generating ? (
         <p className="text-gray-500 text-center py-8">
           {t("common.noData")}
         </p>

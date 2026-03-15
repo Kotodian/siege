@@ -1,5 +1,5 @@
-import { generateText } from "ai";
-import { getModelId, type Provider } from "./provider";
+import { generateTextAuto } from "./generate";
+import type { Provider } from "./provider";
 
 interface ReviewInput {
   type: "scheme" | "implementation";
@@ -25,8 +25,6 @@ interface GeneratedReview {
 export async function generateReview(
   input: ReviewInput
 ): Promise<GeneratedReview> {
-  const modelId = getModelId(input.provider, input.model);
-
   const contextLabel =
     input.type === "scheme"
       ? "technical schemes/proposals"
@@ -36,8 +34,9 @@ export async function generateReview(
     .map((item) => `### ${item.title} (id: ${item.id})\n${item.content}`)
     .join("\n\n");
 
-  const result = await generateText({
-    model: modelId,
+  const text = await generateTextAuto({
+    provider: input.provider,
+    model: input.model,
     system: `You are a senior software engineer conducting a thorough review of ${contextLabel}.
 
 Review for:
@@ -57,13 +56,10 @@ Output a JSON object with:
 - approved: whether the review passes (boolean) — false if any critical items exist
 
 Output ONLY the JSON object, no other text.`,
-    prompt: `Plan: ${input.planName}
-
-${itemsSummary}`,
+    prompt: `Plan: ${input.planName}\n\n${itemsSummary}`,
   });
 
   try {
-    const text = result.text.trim();
     const jsonStr = text.startsWith("{")
       ? text
       : text.match(/\{[\s\S]*\}/)?.[0];

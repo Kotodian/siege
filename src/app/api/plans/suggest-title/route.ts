@@ -1,9 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generateText } from "ai";
-import { getModelId } from "@/lib/ai/provider";
-import { getDb } from "@/lib/db";
-import { appSettings } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { generateTextAuto } from "@/lib/ai/generate";
 import { parseJsonBody } from "@/lib/utils";
 
 export async function POST(req: NextRequest) {
@@ -18,27 +14,16 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const db = getDb();
-  const providerSetting = db
-    .select()
-    .from(appSettings)
-    .where(eq(appSettings.key, "default_provider"))
-    .get();
-  const provider = (providerSetting?.value || "anthropic") as "anthropic" | "openai";
-
-  const modelId = getModelId(provider);
-
   try {
-    const result = await generateText({
-      model: modelId,
+    const title = await generateTextAuto({
       system:
         "Generate a concise plan title (under 50 characters) from the given description. Output ONLY the title, nothing else. No quotes, no punctuation at the end.",
       prompt: description,
     });
 
-    return NextResponse.json({ title: result.text.trim() });
+    return NextResponse.json({ title });
   } catch (err) {
-    console.error("[suggest-title] generateText failed:", err);
+    console.error("[suggest-title] failed:", err);
     return NextResponse.json(
       { error: "Failed to generate title" },
       { status: 500 }

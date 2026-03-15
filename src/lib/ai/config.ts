@@ -20,6 +20,18 @@ const ENV_KEY_MAP: Record<Provider, string> = {
 };
 
 /**
+ * Check if a provider has an API key configured (env or DB).
+ */
+export function hasApiKey(provider?: Provider): boolean {
+  const resolvedProvider =
+    provider || (getSetting("default_provider") as Provider) || "anthropic";
+  const apiKey =
+    process.env[ENV_KEY_MAP[resolvedProvider]] ||
+    getSetting(`${resolvedProvider}_api_key`);
+  return !!apiKey;
+}
+
+/**
  * Get the configured model for a provider, respecting custom base URLs
  * and API keys stored in settings or env vars.
  */

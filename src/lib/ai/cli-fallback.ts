@@ -1,5 +1,4 @@
-import { spawn } from "child_process";
-import { execSync } from "child_process";
+import { spawn, execSync } from "child_process";
 
 type CliEngine = "claude" | "codex";
 
@@ -17,11 +16,18 @@ function detectAvailableCli(): CliEngine {
   }
 }
 
+// Strip ANSI escape codes and terminal control sequences
+function stripAnsi(text: string): string {
+  return text
+    .replace(/\x1B\[[0-9;]*[a-zA-Z]/g, "")
+    .replace(/\x1B\][^\x07]*\x07/g, "")
+    .replace(/\x1B\[[?][0-9;]*[a-zA-Z]/g, "")
+    .replace(/[\x00-\x09\x0B\x0C\x0E-\x1F]/g, "");
+}
+
 /**
- * Use claude or codex CLI with streaming.
- *
- * claude -p outputs all at once (not token-by-token streaming).
- * We send a "thinking" message first, then the full result.
+ * Use claude or codex CLI with real-time output via pseudo-tty.
+ * `script -qc` forces line-buffered output so we get data as it's produced.
  */
 export function generateViaCli(prompt: string): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
@@ -29,26 +35,29 @@ export function generateViaCli(prompt: string): ReadableStream<Uint8Array> {
 
   return new ReadableStream({
     start(controller) {
-      const args =
-        engine === "claude"
-          ? ["-p", prompt, "--output-format", "text"]
-          : ["--prompt", prompt];
+      let proc;
 
-      const proc = spawn(engine, args, {
-        stdio: ["pipe", "pipe", "pipe"],
-      });
-
-      // Send immediate feedback
-      controller.enqueue(
-        encoder.encode(
-          engine === "claude"
-            ? "**Claude is thinking...**\n\n"
-            : "**Codex is thinking...**\n\n"
-        )
-      );
+      if (engine === "claude") {
+        // Use script to force pseudo-tty for real-time output
+        const escapedPrompt = prompt.replace(/'/g, "'\\''");
+        proc = spawn(
+          "script",
+          ["-qc", `claude -p '${escapedPrompt}' --output-format text`, "/dev/null"],
+          { stdio: ["pipe", "pipe", "pipe"] }
+        );
+      } else {
+        proc = spawn("codex", ["--prompt", prompt], {
+          stdio: ["pipe", "pipe", "pipe"],
+        });
+      }
 
       proc.stdout?.on("data", (chunk: Buffer) => {
-        controller.enqueue(encoder.encode(chunk.toString()));
+        const text = engine === "claude"
+          ? stripAnsi(chunk.toString())
+          : chunk.toString();
+        if (text.trim()) {
+          controller.enqueue(encoder.encode(text));
+        }
       });
 
       proc.stderr?.on("data", () => {});

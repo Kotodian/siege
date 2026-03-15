@@ -92,14 +92,16 @@ export async function POST(req: NextRequest) {
         fullText += decoder.decode(value, { stream: true });
       }
 
-      if (fullText.trim()) {
+      const cleanText = fullText.trim();
+
+      if (cleanText) {
         const id = crypto.randomUUID();
         db.insert(schemes)
           .values({
             id,
             planId,
             title: "Generated Scheme",
-            content: fullText.trim(),
+            content: cleanText,
             sourceType: "web_search",
           })
           .run();

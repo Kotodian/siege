@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { SchemeCard } from "./scheme-card";
 import { CreateSchemeDialog } from "./create-scheme-dialog";
+import { GenerateSchemeDialog } from "./generate-scheme-dialog";
 import { ReviewPanel } from "@/components/review/review-panel";
 
 interface Scheme {
@@ -31,6 +32,8 @@ export function SchemeList({
   const t = useTranslations();
   const [schemes, setSchemes] = useState<Scheme[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [generateDialogOpen, setGenerateDialogOpen] = useState(false);
+  const [generating, setGenerating] = useState(false);
 
   const readonly = [
     "confirmed",
@@ -95,6 +98,22 @@ export function SchemeList({
     onPlanStatusChange();
   };
 
+  const handleGenerate = async (provider: string, skills: string[]) => {
+    setGenerating(true);
+    setGenerateDialogOpen(false);
+    try {
+      await fetch("/api/schemes/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ planId, provider, skills }),
+      });
+      await fetchSchemes();
+      onPlanStatusChange();
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
@@ -102,6 +121,13 @@ export function SchemeList({
         <div className="flex gap-2">
           {!readonly && (
             <>
+              <Button
+                variant="secondary"
+                onClick={() => setGenerateDialogOpen(true)}
+                disabled={generating}
+              >
+                {generating ? t("common.loading") : t("scheme.generate")}
+              </Button>
               <Button
                 variant="secondary"
                 onClick={() => setDialogOpen(true)}
@@ -163,6 +189,13 @@ export function SchemeList({
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
         onSubmit={handleCreate}
+      />
+
+      <GenerateSchemeDialog
+        open={generateDialogOpen}
+        onClose={() => setGenerateDialogOpen(false)}
+        onGenerate={handleGenerate}
+        generating={generating}
       />
     </div>
   );

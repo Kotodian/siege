@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -64,6 +64,23 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
 
   const isZh = locale === "zh";
 
+  // Auto-detect all configs on mount
+  useEffect(() => {
+    // Check GitHub
+    fetch("/api/github/auth")
+      .then((r) => r.json())
+      .then((d) => setGithubStatus(d))
+      .catch(() => {});
+    // Check AI
+    fetch("/api/ai-config")
+      .then((r) => r.json())
+      .then((d) => {
+        setAiStatus(d);
+        setClaudeStatus(d.claude || null);
+      })
+      .catch(() => {});
+  }, []);
+
   const checkGithubAuth = async () => {
     setCheckingGithub(true);
     try {
@@ -120,7 +137,11 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
     onComplete({ name, description, targetRepoPath });
   };
 
-  const anyAiConfigured = aiStatus?.anthropic.configured || aiStatus?.openai.configured;
+  const anyAiConfigured =
+    aiStatus?.anthropic.configured ||
+    aiStatus?.openai.configured ||
+    aiStatus?.glm?.configured ||
+    claudeStatus?.loggedIn;
 
   return (
     <div className="min-h-[60vh] flex items-center justify-center">
@@ -137,13 +158,42 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
                 ? "AI 驱动的智能体开发工具，从方案设计到代码实现的完整工作流。"
                 : "AI-powered agent development tool. From design to implementation, all in one place."}
             </p>
+
+            {/* Show detected status */}
+            {(githubStatus || aiStatus) && (
+              <div className="flex justify-center gap-4 text-xs">
+                {githubStatus?.authenticated && (
+                  <span className="text-green-600 bg-green-50 px-2 py-1 rounded-full">
+                    ✓ GitHub: {githubStatus.username}
+                  </span>
+                )}
+                {aiStatus?.anthropic.configured && (
+                  <span className="text-green-600 bg-green-50 px-2 py-1 rounded-full">
+                    ✓ Anthropic
+                  </span>
+                )}
+                {claudeStatus?.loggedIn && !aiStatus?.anthropic.configured && (
+                  <span className="text-green-600 bg-green-50 px-2 py-1 rounded-full">
+                    ✓ Claude Login
+                  </span>
+                )}
+                {aiStatus?.openai.configured && (
+                  <span className="text-green-600 bg-green-50 px-2 py-1 rounded-full">
+                    ✓ OpenAI
+                  </span>
+                )}
+                {aiStatus?.glm?.configured && (
+                  <span className="text-green-600 bg-green-50 px-2 py-1 rounded-full">
+                    ✓ GLM
+                  </span>
+                )}
+              </div>
+            )}
+
             <div className="flex justify-center gap-3 pt-4">
               <Button
                 size="lg"
-                onClick={() => {
-                  setStep("github");
-                  checkGithubAuth();
-                }}
+                onClick={() => setStep("github")}
               >
                 {isZh ? "开始设置" : "Get Started"}
               </Button>

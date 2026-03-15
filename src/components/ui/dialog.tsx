@@ -16,9 +16,9 @@ export function Dialog({ open, onClose, title, children }: DialogProps) {
     const dialog = dialogRef.current;
     if (!dialog) return;
 
-    if (open) {
+    if (open && !dialog.open) {
       dialog.showModal();
-    } else {
+    } else if (!open && dialog.open) {
       dialog.close();
     }
   }, [open]);

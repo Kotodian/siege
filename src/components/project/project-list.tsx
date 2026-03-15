@@ -39,6 +39,7 @@ export function ProjectList({ locale }: ProjectListProps) {
   const handleCreate = async (data: {
     name: string;
     description: string;
+    guidelines: string;
     targetRepoPath: string;
   }) => {
     await fetch("/api/projects", {

@@ -29,7 +29,25 @@ export async function POST(req: NextRequest) {
     (e) => !e.startsWith(".") && e !== "node_modules"
   );
   if (meaningfulFiles.length === 0) {
-    return NextResponse.json({ empty: true, description: "" });
+    return NextResponse.json({ empty: true, description: "", hasAgentDocs: false });
+  }
+
+  // Check for CLAUDE.md or AGENTS.md — if present, use as description directly
+  for (const agentDoc of ["CLAUDE.md", "AGENTS.md", "claude.md", "agents.md"]) {
+    const docPath = path.join(repoPath, agentDoc);
+    if (fs.existsSync(docPath)) {
+      try {
+        const content = fs.readFileSync(docPath, "utf-8").slice(0, 5000);
+        return NextResponse.json({
+          empty: false,
+          description: content,
+          hasAgentDocs: true,
+          source: agentDoc,
+        });
+      } catch {
+        // fall through
+      }
+    }
   }
 
   // Gather project info
@@ -82,7 +100,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (!projectInfo) {
-    return NextResponse.json({ empty: false, description: "" });
+    return NextResponse.json({ empty: false, description: "", hasAgentDocs: false });
   }
 
   // Use AI to summarize
@@ -102,11 +120,13 @@ Be factual and specific. Output ONLY the description, no headings or preamble.`,
     return NextResponse.json({
       empty: false,
       description: result.text.trim(),
+      hasAgentDocs: false,
     });
   } catch (err) {
     return NextResponse.json({
       empty: false,
       description: "",
+      hasAgentDocs: false,
       error: `AI analysis failed: ${err instanceof Error ? err.message : err}`,
     });
   }

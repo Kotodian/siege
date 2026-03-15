@@ -15,6 +15,7 @@ interface CreateProjectDialogProps {
   onSubmit: (data: {
     name: string;
     description: string;
+    guidelines: string;
     targetRepoPath: string;
   }) => void;
 }
@@ -28,6 +29,7 @@ export function CreateProjectDialog({
   const locale = useLocale();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [guidelines, setGuidelines] = useState("");
   const [targetRepoPath, setTargetRepoPath] = useState("");
   const [githubAuthed, setGithubAuthed] = useState(false);
 
@@ -42,9 +44,10 @@ export function CreateProjectDialog({
 
   const handleSubmit = () => {
     if (!name || !targetRepoPath) return;
-    onSubmit({ name, description, targetRepoPath });
+    onSubmit({ name, description, guidelines, targetRepoPath });
     setName("");
     setDescription("");
+    setGuidelines("");
     setTargetRepoPath("");
     onClose();
   };
@@ -66,6 +69,19 @@ export function CreateProjectDialog({
             value={description}
             onChange={setDescription}
             height={150}
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            {locale === "zh" ? "架构与开发规范（可选）" : "Architecture & Guidelines (optional)"}
+          </label>
+          <MarkdownEditor
+            value={guidelines}
+            onChange={setGuidelines}
+            height={120}
+            placeholder={locale === "zh"
+              ? "例如：使用 TDD、遵循 RESTful 设计、代码风格用 ESLint..."
+              : "e.g., Use TDD, follow RESTful design, ESLint for code style..."}
           />
         </div>
         <div>

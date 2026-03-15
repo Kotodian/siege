@@ -15,7 +15,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { name, description, targetRepoPath } = body;
+  const { name, description, guidelines, targetRepoPath } = body;
 
   if (!name || !targetRepoPath) {
     return NextResponse.json(
@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
 
   const db = getDb();
   const id = crypto.randomUUID();
-  db.insert(projects).values({ id, name, description, targetRepoPath }).run();
+  db.insert(projects).values({ id, name, description, guidelines, targetRepoPath }).run();
 
   const project = db
     .select()

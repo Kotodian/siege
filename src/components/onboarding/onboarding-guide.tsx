@@ -13,6 +13,7 @@ interface OnboardingGuideProps {
   onComplete: (project: {
     name: string;
     description: string;
+    guidelines: string;
     targetRepoPath: string;
   }) => void;
 }
@@ -44,6 +45,7 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
   const [step, setStep] = useState<Step>("welcome");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [guidelines, setGuidelines] = useState("");
   const [targetRepoPath, setTargetRepoPath] = useState("");
 
   // GitHub state
@@ -135,7 +137,7 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
 
   const handleCreate = () => {
     if (!name || !targetRepoPath) return;
-    onComplete({ name, description, targetRepoPath });
+    onComplete({ name, description, guidelines, targetRepoPath });
   };
 
   const anyAiConfigured =
@@ -483,6 +485,19 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
                   {t("project.description")}
                 </label>
                 <MarkdownEditor value={description} onChange={setDescription} height={120} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {isZh ? "架构与开发规范（可选）" : "Architecture & Guidelines (optional)"}
+                </label>
+                <MarkdownEditor
+                  value={guidelines}
+                  onChange={setGuidelines}
+                  height={100}
+                  placeholder={isZh
+                    ? "例如：使用 TDD、RESTful API 设计、ESLint 代码风格..."
+                    : "e.g., Use TDD, RESTful API design, ESLint for code style..."}
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">

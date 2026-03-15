@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { TimeAgo } from "@/components/ui/time-ago";
+import { addRecentProject } from "@/lib/recent-projects";
 
 interface ProjectCardProps {
   project: {
@@ -24,7 +25,10 @@ export function ProjectCard({ project, locale, onDelete }: ProjectCardProps) {
   return (
     <div
       className="rounded-lg border bg-white p-5 hover:shadow-md transition-shadow cursor-pointer"
-      onClick={() => router.push(`/${locale}/projects/${project.id}`)}
+      onClick={() => {
+        addRecentProject(project.id);
+        router.push(`/${locale}/projects/${project.id}`);
+      }}
     >
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-2">

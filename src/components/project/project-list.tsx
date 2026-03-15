@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ProjectCard } from "./project-card";
 import { CreateProjectDialog } from "./create-project-dialog";
 import { OnboardingGuide } from "@/components/onboarding/onboarding-guide";
+import { getRecentProjectIds } from "@/lib/recent-projects";
 
 interface Project {
   id: string;
@@ -73,6 +74,14 @@ export function ProjectList({ locale }: ProjectListProps) {
     );
   }
 
+  const recentIds = getRecentProjectIds();
+  const recentProjects = recentIds
+    .map((id) => projects.find((p) => p.id === id))
+    .filter(Boolean) as Project[];
+  const otherProjects = projects.filter(
+    (p) => !recentIds.includes(p.id)
+  );
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
@@ -82,16 +91,43 @@ export function ProjectList({ locale }: ProjectListProps) {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {projects.map((project) => (
-          <ProjectCard
-            key={project.id}
-            project={project}
-            locale={locale}
-            onDelete={handleDelete}
-          />
-        ))}
-      </div>
+      {recentProjects.length > 0 && (
+        <div className="mb-6">
+          <h3 className="text-sm font-medium text-gray-500 mb-3">
+            {locale === "zh" ? "最近打开" : "Recently Opened"}
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {recentProjects.map((project) => (
+              <ProjectCard
+                key={project.id}
+                project={project}
+                locale={locale}
+                onDelete={handleDelete}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {otherProjects.length > 0 && (
+        <>
+          {recentProjects.length > 0 && (
+            <h3 className="text-sm font-medium text-gray-500 mb-3">
+              {locale === "zh" ? "全部项目" : "All Projects"}
+            </h3>
+          )}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {otherProjects.map((project) => (
+              <ProjectCard
+                key={project.id}
+                project={project}
+                locale={locale}
+                onDelete={handleDelete}
+              />
+            ))}
+          </div>
+        </>
+      )}
 
       <CreateProjectDialog
         open={dialogOpen}

@@ -1,10 +1,5 @@
 "use client";
 
-import dynamic from "next/dynamic";
-import { useState, useEffect } from "react";
-
-const MDEditor = dynamic(() => import("@uiw/react-md-editor"), { ssr: false });
-
 interface MarkdownEditorProps {
   value: string;
   onChange: (value: string) => void;
@@ -15,39 +10,18 @@ interface MarkdownEditorProps {
 export function MarkdownEditor({
   value,
   onChange,
-  height = 300,
+  height = 200,
   placeholder,
 }: MarkdownEditorProps) {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) {
-    // Render a matching placeholder during SSR and initial client render
-    return (
-      <div data-color-mode="light">
-        <textarea
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder}
-          className="w-full border rounded-md p-3 text-sm font-mono"
-          style={{ height }}
-        />
-      </div>
-    );
-  }
-
   return (
-    <div data-color-mode="light">
-      <MDEditor
-        value={value}
-        onChange={(val) => onChange(val || "")}
-        height={height}
-        preview="edit"
-        textareaProps={{ placeholder }}
-      />
-    </div>
+    <textarea
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm font-mono
+        focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500
+        resize-y"
+      style={{ minHeight: height }}
+    />
   );
 }

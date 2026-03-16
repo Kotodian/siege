@@ -214,7 +214,7 @@ export function ScheduleView({
                   onClick={() => setSelectedItem(item)}
                 >
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-sm text-gray-400">
                         #{item.order}
                       </span>
@@ -223,6 +223,9 @@ export function ScheduleView({
                         status={item.status}
                         label={item.status}
                       />
+                      <span className="text-xs text-gray-400 font-mono">
+                        {item.startDate} → {item.endDate}
+                      </span>
                       <span className="text-xs text-gray-400">
                         {item.engine || "claude-code"}
                       </span>

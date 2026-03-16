@@ -55,6 +55,20 @@ export async function POST(req: NextRequest) {
       .run();
   }
 
+  // Gather context from previously completed tasks
+  const allItems = db.select().from(scheduleItems)
+    .where(eq(scheduleItems.scheduleId, item.scheduleId))
+    .all()
+    .sort((a, b) => a.order - b.order);
+
+  let previousContext = "";
+  for (const prev of allItems) {
+    if (prev.id === item.id) break;
+    if (prev.status === "completed" && prev.executionLog) {
+      previousContext += `\n### Completed Task #${prev.order}: ${prev.title}\n${prev.executionLog.slice(0, 3000)}\n`;
+    }
+  }
+
   // Build prompt
   const taskPrompt = `<IMPORTANT>
 You are being called as an API to implement a development task.
@@ -66,12 +80,14 @@ Output Markdown with code blocks.
 Project: ${project.name}
 Repository: ${project.targetRepoPath}
 
-Task: ${item.title}
+${previousContext ? `## Previously Completed Tasks\nThe following tasks have already been implemented. Build on their work.\n${previousContext}\n---\n` : ""}
+
+## Current Task #${item.order}: ${item.title}
 ${item.description || ""}
 
 ${skillsContent ? `\nSkills context:\n${skillsContent}` : ""}
 
-Implement this task. Show the exact code changes needed.`;
+Implement this task. Reference and build upon the previous tasks' output where relevant.`;
 
   const model = getConfiguredModel();
   const result = streamText({ model, prompt: taskPrompt });

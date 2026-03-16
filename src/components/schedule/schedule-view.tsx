@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { GanttChart } from "@/components/gantt/gantt-chart";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { MarkdownRenderer } from "@/components/markdown/markdown-renderer";
@@ -78,21 +80,29 @@ export function ScheduleView({
 
   const isZh = t("common.back") === "返回";
 
+  const [branchDialogOpen, setBranchDialogOpen] = useState(false);
+  const [branchName, setBranchName] = useState("");
+  const [creatingBranch, setCreatingBranch] = useState(false);
+
   const handleCreateBranch = async () => {
-    const branchName = prompt(isZh ? "输入分支名:" : "Branch name:", `feat/plan-${planId.slice(0, 8)}`);
-    if (!branchName) return;
-    const projRes = await fetch(`/api/projects/${projectId}`);
-    const proj = await projRes.json();
-    const res = await fetch("/api/git", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ repoPath: proj.targetRepoPath, branchName }),
-    });
-    const data = await res.json();
-    if (data.success) {
-      setGitInfo((prev) => prev ? { ...prev, currentBranch: data.branch } : prev);
-    } else {
-      alert(data.error);
+    if (!branchName.trim()) return;
+    setCreatingBranch(true);
+    try {
+      const projRes = await fetch(`/api/projects/${projectId}`);
+      const proj = await projRes.json();
+      const res = await fetch("/api/git", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ repoPath: proj.targetRepoPath, branchName: branchName.trim() }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setGitInfo((prev) => prev ? { ...prev, currentBranch: data.branch } : prev);
+        setBranchDialogOpen(false);
+        setBranchName("");
+      }
+    } finally {
+      setCreatingBranch(false);
     }
   };
 
@@ -215,7 +225,7 @@ export function ScheduleView({
               <span className="text-gray-400 font-mono">
                 {gitInfo.currentBranch}
               </span>
-              <Button variant="ghost" size="sm" onClick={handleCreateBranch}>
+              <Button variant="ghost" size="sm" onClick={() => { setBranchName(`feat/plan-${planId.slice(0, 8)}`); setBranchDialogOpen(true); }}>
                 {isZh ? "创建分支" : "New Branch"}
               </Button>
             </div>
@@ -314,6 +324,29 @@ export function ScheduleView({
           </div>
         </>
       )}
+      <Dialog
+        open={branchDialogOpen}
+        onClose={() => setBranchDialogOpen(false)}
+        title={isZh ? "创建 Git 分支" : "Create Git Branch"}
+      >
+        <div className="space-y-4">
+          <Input
+            label={isZh ? "分支名称" : "Branch Name"}
+            value={branchName}
+            onChange={(e) => setBranchName(e.target.value)}
+            placeholder="feat/my-feature"
+            onKeyDown={(e) => e.key === "Enter" && handleCreateBranch()}
+          />
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setBranchDialogOpen(false)}>
+              {t("common.cancel")}
+            </Button>
+            <Button onClick={handleCreateBranch} disabled={!branchName.trim() || creatingBranch}>
+              {creatingBranch ? t("common.loading") : (isZh ? "创建并切换" : "Create & Checkout")}
+            </Button>
+          </div>
+        </div>
+      </Dialog>
     </div>
   );
 }

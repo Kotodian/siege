@@ -83,6 +83,8 @@ Read the relevant files, implement the changes, and run tests if applicable.`;
   const proc = spawn("claude", ["-p", prompt, "--output-format", "stream-json", "--verbose"], {
     cwd: project.targetRepoPath,
     stdio: ["pipe", "pipe", "pipe"],
+    env: { ...process.env, PATH: process.env.PATH || "/usr/local/bin:/usr/bin:/bin" },
+    shell: true,
   });
 
   const encoder = new TextEncoder();

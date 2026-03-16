@@ -83,7 +83,7 @@ function GanttChartInner({
     return null;
   }
 
-  return <div ref={containerRef} className="overflow-x-auto" />;
+  return <div ref={containerRef} className="overflow-x-auto bg-white rounded-lg border" />;
 }
 
 // Wrap in dynamic to avoid SSR

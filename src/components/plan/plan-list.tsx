@@ -239,6 +239,7 @@ export function PlanList({ projectId, locale }: PlanListProps) {
         open={planDialogOpen}
         onClose={() => setPlanDialogOpen(false)}
         onSubmit={handleCreatePlan}
+        projectId={projectId}
       />
 
       {/* Create Folder Dialog */}

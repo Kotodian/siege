@@ -7,6 +7,7 @@ export const projects = sqliteTable("projects", {
   icon: text("icon").default("📁"),
   description: text("description").default(""),
   guidelines: text("guidelines").default(""),
+  sessionId: text("session_id"),
   targetRepoPath: text("target_repo_path").notNull(),
   createdAt: text("created_at")
     .default(sql`(datetime('now'))`)

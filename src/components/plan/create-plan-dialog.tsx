@@ -12,12 +12,14 @@ interface CreatePlanDialogProps {
   open: boolean;
   onClose: () => void;
   onSubmit: (data: { name: string; description: string; tag: string }) => void;
+  projectId?: string;
 }
 
 export function CreatePlanDialog({
   open,
   onClose,
   onSubmit,
+  projectId,
 }: CreatePlanDialogProps) {
   const t = useTranslations();
   const isZh = t("common.back") === "返回";
@@ -35,7 +37,7 @@ export function CreatePlanDialog({
       const res = await fetch("/api/plans/suggest-title", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ description }),
+        body: JSON.stringify({ description, projectId }),
       });
       const { requestId } = await res.json();
 

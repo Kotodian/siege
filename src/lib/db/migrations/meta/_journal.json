@@ -57,6 +57,13 @@
       "when": 1773586949688,
       "tag": "0007_clever_speedball",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1773651552789,
+      "tag": "0008_steady_frightful_four",
+      "breakpoints": true
     }
   ]
 }

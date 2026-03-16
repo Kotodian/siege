@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generateTextAuto } from "@/lib/ai/generate";
+import { generateTextViaCli } from "@/lib/ai/cli-fallback";
+import { hasApiKey, getConfiguredModel } from "@/lib/ai/config";
 import { getProjectSessionId, saveProjectSessionId } from "@/lib/ai/session";
+import { createAiTask, getAiTaskStatus } from "@/lib/ai/queue";
 import { parseJsonBody } from "@/lib/utils";
-
-// In-memory store for pending title results
-const pendingTitles = new Map<string, { status: "pending" | "done" | "error"; title?: string }>();
+import { generateText } from "ai";
 
 export async function POST(req: NextRequest) {
   const [body, errRes] = await parseJsonBody(req);
@@ -18,30 +18,34 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const id = crypto.randomUUID();
-  pendingTitles.set(id, { status: "pending" });
-
+  const taskId = crypto.randomUUID();
   const sessionId = projectId ? getProjectSessionId(projectId) : undefined;
 
-  generateTextAuto({
-    system:
-      "Generate a concise plan title (under 50 characters) from the given description. Output ONLY the title, nothing else. No quotes, no punctuation at the end.",
-    prompt: description,
-    sessionId,
-  })
-    .then((result) => {
-      pendingTitles.set(id, { status: "done", title: result.text });
-      if (result.sessionId && projectId) {
-        saveProjectSessionId(projectId, result.sessionId);
-      }
-      setTimeout(() => pendingTitles.delete(id), 300000);
-    })
-    .catch(() => {
-      pendingTitles.set(id, { status: "error" });
-      setTimeout(() => pendingTitles.delete(id), 60000);
-    });
+  if (hasApiKey()) {
+    try {
+      const model = getConfiguredModel();
+      const result = await generateText({
+        model,
+        system: "Generate a concise plan title (under 50 characters). Output ONLY the title.",
+        prompt: description,
+      });
+      return NextResponse.json({ requestId: taskId, status: "done", title: result.text.trim() });
+    } catch {
+      return NextResponse.json({ error: "Failed" }, { status: 500 });
+    }
+  }
 
-  return NextResponse.json({ requestId: id, status: "pending" }, { status: 202 });
+  // CLI mode — async via DB-backed queue
+  createAiTask(taskId, "suggest-title", async () => {
+    const prompt = "Generate a concise plan title (under 50 characters) from the given description. Output ONLY the title, nothing else.\n\n---\n\n" + description;
+    const result = await generateTextViaCli(prompt, sessionId);
+    if (result.sessionId && projectId) {
+      saveProjectSessionId(projectId, result.sessionId);
+    }
+    return result.text.trim();
+  });
+
+  return NextResponse.json({ requestId: taskId, status: "pending" }, { status: 202 });
 }
 
 export async function GET(req: NextRequest) {
@@ -50,10 +54,16 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "requestId required" }, { status: 400 });
   }
 
-  const result = pendingTitles.get(requestId);
-  if (!result) {
+  const task = getAiTaskStatus(requestId);
+  if (!task) {
     return NextResponse.json({ status: "not_found" }, { status: 404 });
   }
 
-  return NextResponse.json(result);
+  if (task.status === "done") {
+    return NextResponse.json({ status: "done", title: task.result });
+  }
+  if (task.status === "error") {
+    return NextResponse.json({ status: "error" });
+  }
+  return NextResponse.json({ status: task.status });
 }

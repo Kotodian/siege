@@ -64,6 +64,13 @@
       "when": 1773651552789,
       "tag": "0008_steady_frightful_four",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1773654323056,
+      "tag": "0009_neat_lady_bullseye",
+      "breakpoints": true
     }
   ]
 }

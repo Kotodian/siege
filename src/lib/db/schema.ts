@@ -269,3 +269,15 @@ export const reviewItems = sqliteTable("review_items", {
     .default("info"),
   resolved: integer("resolved", { mode: "boolean" }).notNull().default(false),
 });
+
+export const aiTasks = sqliteTable("ai_tasks", {
+  id: text("id").primaryKey(),
+  type: text("type").notNull(),
+  status: text("status", {
+    enum: ["pending", "running", "done", "error"],
+  }).notNull().default("pending"),
+  result: text("result"),
+  createdAt: text("created_at")
+    .default(sql`(datetime('now'))`)
+    .notNull(),
+});

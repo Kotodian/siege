@@ -86,8 +86,11 @@ Output ONLY a JSON array. No conversation, no markdown fences, no explanation.
 Start directly with [ and end with ].
 </IMPORTANT>
 
-Break these confirmed schemes into executable schedule items.
+Break these confirmed schemes into executable IMPLEMENTATION tasks only.
 Estimate effort in hours (1-8 hours per task).
+
+IMPORTANT: Do NOT include testing tasks. Testing is handled in a separate phase.
+Focus only on implementation: code changes, new files, refactoring, configuration.
 
 JSON array format — each object has:
 - schemeId: scheme ID string or null

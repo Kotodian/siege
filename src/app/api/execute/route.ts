@@ -14,7 +14,7 @@ import { parseJsonBody } from "@/lib/utils";
 export async function POST(req: NextRequest) {
   const [body, errRes] = await parseJsonBody(req);
   if (errRes) return errRes;
-  const { itemId } = body as { itemId: string };
+  const { itemId, skills: requestSkills } = body as { itemId: string; skills?: string[] };
 
   if (!itemId) {
     return NextResponse.json({ error: "itemId is required" }, { status: 400 });
@@ -34,11 +34,13 @@ export async function POST(req: NextRequest) {
   if (!project) return NextResponse.json({ error: "Project not found" }, { status: 404 });
 
   // Skills
-  const skillNames: string[] = JSON.parse(item.skills || "[]");
+  // Merge skills from item config and request
+  const itemSkills: string[] = JSON.parse(item.skills || "[]");
+  const allSkillNames = [...new Set([...itemSkills, ...(requestSkills || [])])];
   let skillsContent = "";
-  if (skillNames.length > 0) {
+  if (allSkillNames.length > 0) {
     const allSkills = scanAllSkills();
-    skillsContent = getSkillContent(allSkills, skillNames);
+    skillsContent = getSkillContent(allSkills, allSkillNames);
   }
 
   // Update status
@@ -79,11 +81,14 @@ ${skillsContent ? `Skills context:\n${skillsContent}` : ""}
 
 Read the relevant files, implement the changes, and run tests if applicable.`;
 
+  // Validate cwd exists
+  const fs = await import("fs");
+  const cwd = fs.existsSync(project.targetRepoPath) ? project.targetRepoPath : process.cwd();
+
   // Use claude CLI with tool use, streaming output
   const proc = spawn("claude", ["-p", prompt, "--output-format", "stream-json", "--verbose"], {
-    cwd: project.targetRepoPath,
+    cwd,
     stdio: ["pipe", "pipe", "pipe"],
-    env: { ...process.env, PATH: process.env.PATH || "/usr/local/bin:/usr/bin:/bin" },
     shell: true,
   });
 

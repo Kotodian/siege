@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { RunTaskDialog } from "./run-task-dialog";
 import { GanttChart } from "@/components/gantt/gantt-chart";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { MarkdownRenderer } from "@/components/markdown/markdown-renderer";
@@ -53,6 +54,7 @@ export function ScheduleView({
   const [generating, setGenerating] = useState(false);
   const [selectedItem, setSelectedItem] = useState<ScheduleItem | null>(null);
   const [executing, setExecuting] = useState<string | null>(null);
+  const [runDialogItem, setRunDialogItem] = useState<ScheduleItem | null>(null);
 
   const fetchSchedule = async () => {
     const res = await fetch(`/api/schedules?planId=${planId}`);
@@ -139,15 +141,15 @@ export function ScheduleView({
     }
   };
 
-  const handleExecuteItem = async (itemId: string) => {
+  const handleExecuteItem = async (itemId: string, skills: string[] = []) => {
     setExecuting(itemId);
-    startLoading(isZh ? "AI 正在执行任务..." : "AI executing task...");
+    startLoading(isZh ? "AI 正在执行任务（使用 Claude CLI）..." : "AI executing task (Claude CLI)...");
 
     try {
       const res = await fetch("/api/execute", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ itemId }),
+        body: JSON.stringify({ itemId, skills }),
       });
 
       if (res.ok && res.body) {
@@ -293,7 +295,7 @@ export function ScheduleView({
                             size="sm"
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleExecuteItem(item.id);
+                              setRunDialogItem(item);
                             }}
                             disabled={executing !== null}
                           >
@@ -324,6 +326,15 @@ export function ScheduleView({
           </div>
         </>
       )}
+      {runDialogItem && (
+        <RunTaskDialog
+          open={!!runDialogItem}
+          onClose={() => setRunDialogItem(null)}
+          onRun={(skills) => handleExecuteItem(runDialogItem.id, skills)}
+          taskTitle={runDialogItem.title}
+        />
+      )}
+
       <Dialog
         open={branchDialogOpen}
         onClose={() => setBranchDialogOpen(false)}

@@ -26,9 +26,16 @@ export function CreatePlanDialog({
   const [userEditedName, setUserEditedName] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const abortRef = useRef<AbortController | null>(null);
+
   const suggestTitle = useCallback(
     async (desc: string) => {
       if (userEditedName || desc.trim().length < 10) return;
+
+      // Cancel previous request
+      if (abortRef.current) abortRef.current.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
 
       setSuggesting(true);
       try {
@@ -36,17 +43,20 @@ export function CreatePlanDialog({
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ description: desc }),
+          signal: controller.signal,
         });
-        if (res.ok) {
+        if (res.ok && !controller.signal.aborted) {
           const data = await res.json();
           if (!userEditedName) {
             setName(data.title);
           }
         }
       } catch {
-        // ignore errors
+        // ignore abort/errors
       } finally {
-        setSuggesting(false);
+        if (!controller.signal.aborted) {
+          setSuggesting(false);
+        }
       }
     },
     [userEditedName]
@@ -67,6 +77,8 @@ export function CreatePlanDialog({
   const handleNameChange = (value: string) => {
     setName(value);
     setUserEditedName(true);
+    setSuggesting(false);
+    if (abortRef.current) abortRef.current.abort();
   };
 
   const handleSubmit = () => {
@@ -86,7 +98,9 @@ export function CreatePlanDialog({
     setDescription("");
     setTag("feature");
     setUserEditedName(false);
+    setSuggesting(false);
     if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (abortRef.current) abortRef.current.abort();
     onClose();
   };
 
@@ -105,11 +119,15 @@ export function CreatePlanDialog({
               t("plan.description") + "..."
             }
           />
-          <p className="text-xs text-gray-400 mt-1">
-            {suggesting
-              ? t("common.loading")
-              : ""}
-          </p>
+          {suggesting && (
+            <p className="text-xs text-blue-500 mt-1 flex items-center gap-1">
+              <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              AI 正在生成标题...
+            </p>
+          )}
         </div>
         <div>
           <Input
@@ -152,7 +170,7 @@ export function CreatePlanDialog({
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={!name || suggesting}
+            disabled={!name}
           >
             {t("common.create")}
           </Button>

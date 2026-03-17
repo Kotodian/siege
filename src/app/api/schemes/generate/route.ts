@@ -73,6 +73,19 @@ Write in the same language as the description.`;
   const responseStream = new ReadableStream({
     start(controller) {
       let buffer = "";
+      let hasContent = false;
+
+      // Send heartbeat every 3s until first real content arrives
+      const heartbeat = setInterval(() => {
+        if (!hasContent) {
+          controller.enqueue(encoder.encode(""));  // empty chunk keeps connection alive
+        } else {
+          clearInterval(heartbeat);
+        }
+      }, 3000);
+
+      // Send immediate status
+      controller.enqueue(encoder.encode("*Claude 正在启动并读取项目代码...*\n\n"));
 
       proc.stdout?.on("data", (chunk: Buffer) => {
         buffer += chunk.toString();
@@ -89,11 +102,14 @@ Write in the same language as the description.`;
             if (event.type === "assistant" && event.message?.content) {
               for (const block of event.message.content) {
                 if (block.type === "text" && block.text) {
+                  if (!hasContent) { hasContent = true; clearInterval(heartbeat); }
                   fullText += block.text;
                   controller.enqueue(encoder.encode(block.text));
                 }
                 if (block.type === "tool_use") {
-                  const msg = `\n> **${block.name}**\n`;
+                  if (!hasContent) { hasContent = true; clearInterval(heartbeat); }
+                  const msg = `\n> **Tool: ${block.name}**\n`;
+                  fullText += msg;
                   controller.enqueue(encoder.encode(msg));
                 }
               }
@@ -105,6 +121,7 @@ Write in the same language as the description.`;
       proc.stderr?.on("data", () => {});
 
       proc.on("close", () => {
+        clearInterval(heartbeat);
         // Save session for reuse
         if (detectedSessionId) savePlanSessionId(planId, detectedSessionId);
 

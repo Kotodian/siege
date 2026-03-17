@@ -98,6 +98,12 @@ Read the relevant files, implement the changes, and run tests if applicable.`;
   const responseStream = new ReadableStream({
     start(controller) {
       let buffer = "";
+      let hasContent = false;
+      const heartbeat = setInterval(() => {
+        if (!hasContent) controller.enqueue(encoder.encode(""));
+        else clearInterval(heartbeat);
+      }, 3000);
+      controller.enqueue(encoder.encode("*Claude 正在启动，读取项目代码中...*\n\n"));
 
       proc.stdout?.on("data", (chunk: Buffer) => {
         buffer += chunk.toString();
@@ -113,10 +119,12 @@ Read the relevant files, implement the changes, and run tests if applicable.`;
             if (event.type === "assistant" && event.message?.content) {
               for (const block of event.message.content) {
                 if (block.type === "text" && block.text) {
+                  if (!hasContent) { hasContent = true; clearInterval(heartbeat); }
                   fullLog += block.text;
                   controller.enqueue(encoder.encode(block.text));
                 }
                 if (block.type === "tool_use") {
+                  if (!hasContent) { hasContent = true; clearInterval(heartbeat); }
                   const toolMsg = `\n> **Tool: ${block.name}**\n`;
                   fullLog += toolMsg;
                   controller.enqueue(encoder.encode(toolMsg));
@@ -139,6 +147,7 @@ Read the relevant files, implement the changes, and run tests if applicable.`;
       proc.stderr?.on("data", () => {});
 
       proc.on("close", (code) => {
+        clearInterval(heartbeat);
         // Save log and update status
         const db = getDb();
         db.update(scheduleItems)

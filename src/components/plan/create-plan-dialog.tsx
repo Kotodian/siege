@@ -107,7 +107,7 @@ export function CreatePlanDialog({
               variant="secondary"
               size="sm"
               onClick={handleSuggestTitle}
-              disabled={description.trim().length < 5}
+              disabled={!description.trim()}
             >
               {isZh ? "AI 生成" : "AI Title"}
             </Button>

@@ -8,9 +8,9 @@ export async function POST(req: NextRequest) {
   if (errRes) return errRes;
   const { description } = body;
 
-  if (!description || description.trim().length < 5) {
+  if (!description || !description.trim()) {
     return NextResponse.json(
-      { error: "description must be at least 5 characters" },
+      { error: "description is required" },
       { status: 400 }
     );
   }

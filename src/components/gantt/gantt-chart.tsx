@@ -33,7 +33,7 @@ export function GanttChart({ tasks, onClick }: GanttChartProps) {
 
   const formatDate = (d: string) => {
     const date = new Date(d);
-    return `${date.getMonth() + 1}/${date.getDate()}`;
+    return `${date.getMonth() + 1}/${date.getDate()} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
   };
 
   return (

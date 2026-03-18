@@ -3,6 +3,8 @@
   <p align="center">
     AI-Powered Agent Development Tool
     <br />
+    <a href="README_CN.md">中文文档</a>
+    <br />
     <em>From design to implementation, all in one place.</em>
   </p>
 </p>

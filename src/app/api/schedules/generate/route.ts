@@ -18,35 +18,32 @@ function saveScheduleFromJson(planId: string, jsonText: string) {
   const existing = db.select().from(schedules).where(eq(schedules.planId, planId)).get();
   if (existing) db.delete(schedules).where(eq(schedules.id, existing.id)).run();
 
-  const today = new Date();
+  const now = new Date();
   let currentHour = 0;
   const scheduleId = crypto.randomUUID();
-  const totalHours = items.reduce((sum: number, item: any) => sum + (item.estimatedHours || item.durationDays * 8 || 4), 0);
-  const totalDays = Math.ceil(totalHours / 8);
-  const endDate = new Date(today);
-  endDate.setDate(endDate.getDate() + totalDays);
+  const totalHours = items.reduce((sum: number, item: any) => sum + (item.estimatedHours || 4), 0);
+  const endDate = new Date(now);
+  endDate.setHours(endDate.getHours() + totalHours);
 
   db.insert(schedules).values({
     id: scheduleId, planId,
-    startDate: today.toISOString().split("T")[0],
-    endDate: endDate.toISOString().split("T")[0],
+    startDate: now.toISOString(),
+    endDate: endDate.toISOString(),
   }).run();
 
   for (const item of items) {
-    const hours = item.estimatedHours || item.durationDays * 8 || 4;
-    const startDay = Math.floor(currentHour / 8);
-    const endDay = Math.floor((currentHour + hours) / 8);
-    const itemStart = new Date(today);
-    itemStart.setDate(itemStart.getDate() + startDay);
-    const itemEnd = new Date(today);
-    itemEnd.setDate(itemEnd.getDate() + endDay);
+    const hours = item.estimatedHours || 4;
+    const itemStart = new Date(now);
+    itemStart.setHours(itemStart.getHours() + currentHour);
+    const itemEnd = new Date(now);
+    itemEnd.setHours(itemEnd.getHours() + currentHour + hours);
     currentHour += hours;
     db.insert(scheduleItems).values({
       id: crypto.randomUUID(), scheduleId,
       schemeId: item.schemeId || null,
       title: item.title, description: item.description || "",
-      startDate: itemStart.toISOString().split("T")[0],
-      endDate: itemEnd.toISOString().split("T")[0],
+      startDate: itemStart.toISOString(),
+      endDate: itemEnd.toISOString(),
       order: item.order || 0, status: "pending", progress: 0,
       engine: "claude-code", skills: "[]",
     }).run();

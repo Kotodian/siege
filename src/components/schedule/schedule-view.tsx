@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
@@ -32,6 +32,7 @@ interface Schedule {
   planId: string;
   startDate: string;
   endDate: string;
+  autoExecute: boolean;
   items: ScheduleItem[];
 }
 
@@ -55,6 +56,8 @@ export function ScheduleView({
   const [selectedItem, setSelectedItem] = useState<ScheduleItem | null>(null);
   const [executing, setExecuting] = useState<string | null>(null);
   const [runDialogItem, setRunDialogItem] = useState<ScheduleItem | null>(null);
+  const [autoExecute, setAutoExecute] = useState(false);
+  const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchSchedule = async () => {
     const res = await fetch(`/api/schedules?planId=${planId}`);
@@ -65,7 +68,10 @@ export function ScheduleView({
   const { startLoading, updateContent, stopLoading } = useGlobalLoading();
 
   useEffect(() => {
-    fetchSchedule();
+    fetchSchedule().then(() => {
+      // Sync autoExecute state from schedule
+      if (schedule?.autoExecute) setAutoExecute(true);
+    });
     // Check git status
     fetch(`/api/projects/${projectId}`)
       .then(r => r.json())
@@ -78,7 +84,50 @@ export function ScheduleView({
         }
       })
       .catch(() => {});
+    return () => {
+      if (tickRef.current) clearInterval(tickRef.current);
+    };
   }, [planId, projectId]);
+
+  // Sync autoExecute from fetched schedule
+  useEffect(() => {
+    if (schedule?.autoExecute !== undefined) {
+      setAutoExecute(schedule.autoExecute);
+    }
+  }, [schedule?.autoExecute]);
+
+  // Auto-execute polling
+  useEffect(() => {
+    if (tickRef.current) { clearInterval(tickRef.current); tickRef.current = null; }
+    if (!autoExecute || !schedule) return;
+    const tick = async () => {
+      try {
+        const res = await fetch("/api/schedules/tick", { method: "POST" });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.executed) {
+            // Refresh schedule to see status changes
+            await fetchSchedule();
+            onPlanStatusChange();
+          }
+        }
+      } catch { /* ignore */ }
+    };
+    tick(); // Run immediately
+    tickRef.current = setInterval(tick, 30000); // Then every 30s
+    return () => { if (tickRef.current) clearInterval(tickRef.current); };
+  }, [autoExecute, schedule?.id]);
+
+  const handleToggleAutoExecute = async () => {
+    if (!schedule) return;
+    const newValue = !autoExecute;
+    setAutoExecute(newValue);
+    await fetch("/api/schedules/auto-execute", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ scheduleId: schedule.id, enabled: newValue }),
+    });
+  };
 
   const isZh = t("common.back") === "返回";
 
@@ -190,11 +239,16 @@ export function ScheduleView({
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        startDate: start.toISOString().split("T")[0],
-        endDate: end.toISOString().split("T")[0],
+        startDate: start.toISOString(),
+        endDate: end.toISOString(),
       }),
     });
     await fetchSchedule();
+  };
+
+  const formatDateTime = (iso: string) => {
+    const d = new Date(iso);
+    return `${d.getMonth()+1}/${d.getDate()} ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
   };
 
   const canGenerate = planStatus === "confirmed";
@@ -237,6 +291,21 @@ export function ScheduleView({
                 {isZh ? "创建分支" : "New Branch"}
               </Button>
             </div>
+          )}
+          {schedule && canExecute && (
+            <button
+              onClick={handleToggleAutoExecute}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                autoExecute
+                  ? "bg-green-100 text-green-700 hover:bg-green-200"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              <span className={`w-2 h-2 rounded-full ${autoExecute ? "bg-green-500 animate-pulse" : "bg-gray-400"}`} />
+              {autoExecute
+                ? (isZh ? "自动执行中" : "Auto-Executing")
+                : (isZh ? "定时执行" : "Auto-Execute")}
+            </button>
           )}
           {(canGenerate || planStatus === "scheduled") && (
             <Button onClick={handleGenerate} disabled={generating}>
@@ -285,7 +354,7 @@ export function ScheduleView({
                         label={item.status}
                       />
                       <span className="text-xs text-gray-400 font-mono">
-                        {item.startDate} → {item.endDate}
+                        {formatDateTime(item.startDate)} → {formatDateTime(item.endDate)}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">

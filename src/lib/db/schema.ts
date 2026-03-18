@@ -105,6 +105,7 @@ export const schedules = sqliteTable("schedules", {
     .references(() => plans.id, { onDelete: "cascade" }),
   startDate: text("start_date").notNull(),
   endDate: text("end_date").notNull(),
+  autoExecute: integer("auto_execute", { mode: "boolean" }).notNull().default(false),
 });
 
 export const scheduleItems = sqliteTable("schedule_items", {

@@ -1,0 +1,1 @@
+ALTER TABLE `schedules` ADD `auto_execute` integer DEFAULT false NOT NULL;

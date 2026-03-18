@@ -7,9 +7,116 @@ import {
   projects,
 } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { spawn } from "child_process";
+import { execSync } from "child_process";
+import { streamText, tool, stepCountIs } from "ai";
+import { z } from "zod";
+import { getConfiguredModel } from "@/lib/ai/config";
 import { scanAllSkills, getSkillContent } from "@/lib/skills/registry";
 import { parseJsonBody } from "@/lib/utils";
+import fs from "fs";
+import path from "path";
+
+function createProjectTools(repoPath: string) {
+  return {
+    listDir: tool({
+      description: "List files and directories at a given path within the project",
+      inputSchema: z.object({
+        relativePath: z.string().describe("Relative path from project root, use '.' for root"),
+      }),
+      execute: async ({ relativePath }) => {
+        const targetPath = path.resolve(repoPath, relativePath);
+        if (!targetPath.startsWith(repoPath)) return "Access denied: path outside project";
+        try {
+          const entries = fs.readdirSync(targetPath, { withFileTypes: true });
+          return entries.map(e => `${e.isDirectory() ? "[dir]" : "[file]"} ${e.name}`).join("\n");
+        } catch (e) {
+          return `Error: ${e instanceof Error ? e.message : e}`;
+        }
+      },
+    }),
+    readFile: tool({
+      description: "Read the contents of a file within the project (max 500 lines)",
+      inputSchema: z.object({
+        relativePath: z.string().describe("Relative path to the file from project root"),
+      }),
+      execute: async ({ relativePath }) => {
+        const targetPath = path.resolve(repoPath, relativePath);
+        if (!targetPath.startsWith(repoPath)) return "Access denied: path outside project";
+        try {
+          const content = fs.readFileSync(targetPath, "utf-8");
+          const lines = content.split("\n");
+          if (lines.length > 500) {
+            return lines.slice(0, 500).join("\n") + `\n\n... (truncated, ${lines.length} total lines)`;
+          }
+          return content;
+        } catch (e) {
+          return `Error: ${e instanceof Error ? e.message : e}`;
+        }
+      },
+    }),
+    writeFile: tool({
+      description: "Write content to a file within the project (creates or overwrites)",
+      inputSchema: z.object({
+        relativePath: z.string().describe("Relative path to the file from project root"),
+        content: z.string().describe("File content to write"),
+      }),
+      execute: async ({ relativePath, content }) => {
+        const targetPath = path.resolve(repoPath, relativePath);
+        if (!targetPath.startsWith(repoPath)) return "Access denied: path outside project";
+        try {
+          const dir = path.dirname(targetPath);
+          if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+          fs.writeFileSync(targetPath, content, "utf-8");
+          return `Written ${content.length} bytes to ${relativePath}`;
+        } catch (e) {
+          return `Error: ${e instanceof Error ? e.message : e}`;
+        }
+      },
+    }),
+    editFile: tool({
+      description: "Replace a specific string in a file (for surgical edits)",
+      inputSchema: z.object({
+        relativePath: z.string().describe("Relative path to the file from project root"),
+        oldString: z.string().describe("The exact string to find and replace"),
+        newString: z.string().describe("The replacement string"),
+      }),
+      execute: async ({ relativePath, oldString, newString }) => {
+        const targetPath = path.resolve(repoPath, relativePath);
+        if (!targetPath.startsWith(repoPath)) return "Access denied: path outside project";
+        try {
+          const content = fs.readFileSync(targetPath, "utf-8");
+          if (!content.includes(oldString)) return `Error: old string not found in ${relativePath}`;
+          const updated = content.replace(oldString, newString);
+          fs.writeFileSync(targetPath, updated, "utf-8");
+          return `Edited ${relativePath} successfully`;
+        } catch (e) {
+          return `Error: ${e instanceof Error ? e.message : e}`;
+        }
+      },
+    }),
+    bash: tool({
+      description: "Run a shell command within the project directory (build, test, grep, etc.)",
+      inputSchema: z.object({
+        command: z.string().describe("Shell command to execute"),
+      }),
+      execute: async ({ command }) => {
+        try {
+          const output = execSync(command, {
+            cwd: repoPath,
+            encoding: "utf-8",
+            timeout: 60000,
+            maxBuffer: 1024 * 512,
+          });
+          return output.slice(0, 8000) || "(no output)";
+        } catch (e: unknown) {
+          const err = e as { stdout?: string; stderr?: string; message?: string };
+          const out = (err.stdout || "") + (err.stderr || "");
+          return out.slice(0, 8000) || `Error: ${err.message || e}`;
+        }
+      },
+    }),
+  };
+}
 
 export async function POST(req: NextRequest) {
   const [body, errRes] = await parseJsonBody(req);
@@ -34,7 +141,6 @@ export async function POST(req: NextRequest) {
   if (!project) return NextResponse.json({ error: "Project not found" }, { status: 404 });
 
   // Skills
-  // Merge skills from item config and request
   const itemSkills: string[] = JSON.parse(item.skills || "[]");
   const allSkillNames = [...new Set([...itemSkills, ...(requestSkills || [])])];
   let skillsContent = "";
@@ -70,7 +176,6 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Build prompt for claude CLI (with tool use)
   const prompt = `${previousContext ? `Previously completed tasks:\n${previousContext}\n---\n` : ""}
 
 Implement task #${item.order}: ${item.title}
@@ -79,94 +184,63 @@ ${item.description || ""}
 
 ${skillsContent ? `Skills context:\n${skillsContent}` : ""}
 
-Read the relevant files, implement the changes, and run tests if applicable.`;
+Use the provided tools to read the codebase, write/edit files, and run commands. Implement the changes and verify they work.`;
 
-  // Validate cwd exists
-  const fs = await import("fs");
   const cwd = fs.existsSync(project.targetRepoPath) ? project.targetRepoPath : process.cwd();
-
-  // Use claude CLI with tool use, streaming output
-  const proc = spawn("claude", ["-p", prompt, "--output-format", "stream-json", "--verbose", "--dangerously-skip-permissions"], {
-    cwd,
-    stdio: ["pipe", "pipe", "pipe"],
-    shell: true,
-  });
+  const configuredModel = getConfiguredModel();
+  const tools = createProjectTools(cwd);
 
   const encoder = new TextEncoder();
   let fullLog = "";
 
   const responseStream = new ReadableStream({
-    start(controller) {
-      let buffer = "";
-      let hasContent = false;
-      const heartbeat = setInterval(() => {
-        if (!hasContent) controller.enqueue(encoder.encode(""));
-        else clearInterval(heartbeat);
-      }, 3000);
-      controller.enqueue(encoder.encode("*Claude 正在启动，读取项目代码中...*\n\n"));
+    async start(controller) {
+      try {
+        const result = streamText({
+          model: configuredModel,
+          prompt,
+          tools,
+          stopWhen: stepCountIs(15),
+        });
 
-      proc.stdout?.on("data", (chunk: Buffer) => {
-        buffer += chunk.toString();
-        const lines = buffer.split("\n");
-        buffer = lines.pop() || "";
-
-        for (const line of lines) {
-          if (!line.trim()) continue;
-          try {
-            const event = JSON.parse(line);
-
-            // Extract text output from assistant messages
-            if (event.type === "assistant" && event.message?.content) {
-              for (const block of event.message.content) {
-                if (block.type === "text" && block.text) {
-                  if (!hasContent) { hasContent = true; clearInterval(heartbeat); }
-                  fullLog += block.text;
-                  controller.enqueue(encoder.encode(block.text));
-                }
-                if (block.type === "tool_use") {
-                  if (!hasContent) { hasContent = true; clearInterval(heartbeat); }
-                  const toolMsg = `\n> **Tool: ${block.name}**\n`;
-                  fullLog += toolMsg;
-                  controller.enqueue(encoder.encode(toolMsg));
-                }
-              }
-            }
-
-            // Tool results
-            if (event.type === "result" && event.result) {
-              const resultMsg = `\n> Result: ${String(event.result).slice(0, 200)}\n`;
-              fullLog += resultMsg;
-              controller.enqueue(encoder.encode(resultMsg));
-            }
-          } catch {
-            // skip non-JSON lines
+        for await (const part of result.fullStream) {
+          if (part.type === "text-delta") {
+            fullLog += part.text;
+            controller.enqueue(encoder.encode(part.text));
+          } else if (part.type === "tool-call") {
+            const msg = `\n> **Tool: ${part.toolName}**\n`;
+            fullLog += msg;
+            controller.enqueue(encoder.encode(msg));
           }
         }
-      });
 
-      proc.stderr?.on("data", () => {});
-
-      proc.on("close", (code) => {
-        clearInterval(heartbeat);
-        // Save log and update status
-        const db = getDb();
+        // Save log and mark completed
         db.update(scheduleItems)
           .set({
-            status: code === 0 ? "completed" : "failed",
-            progress: code === 0 ? 100 : 0,
+            status: "completed",
+            progress: 100,
             executionLog: fullLog || "No output",
           })
           .where(eq(scheduleItems.id, itemId))
           .run();
 
         controller.close();
-      });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        fullLog += `\nError: ${msg}`;
+        controller.enqueue(encoder.encode(`\nError: ${msg}`));
 
-      proc.on("error", (err) => {
-        fullLog += `\nError: ${err.message}`;
-        controller.enqueue(encoder.encode(`\nError: ${err.message}`));
+        db.update(scheduleItems)
+          .set({
+            status: "failed",
+            progress: 0,
+            executionLog: fullLog || "Error",
+          })
+          .where(eq(scheduleItems.id, itemId))
+          .run();
+
         controller.close();
-      });
+      }
     },
   });
 

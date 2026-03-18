@@ -1,7 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getConfiguredModel } from "@/lib/ai/config";
 import { parseJsonBody } from "@/lib/utils";
-import { streamText } from "ai";
+import { generateText } from "ai";
+
+function cleanTitle(raw: string): string {
+  let text = raw;
+  // Strip relay markers (--- USER MESSAGE BEGIN/END ---)
+  text = text.replace(/---\s*USER MESSAGE BEGIN\s*---[\s\S]*?---\s*USER MESSAGE END\s*---/g, "");
+  // Take only the first non-empty line (ignore explanations)
+  const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
+  text = lines[0] || raw.trim();
+  // Strip markdown bold/italic
+  text = text.replace(/\*\*/g, "").replace(/\*/g, "");
+  // Strip leading/trailing quotes and punctuation
+  text = text.replace(/^["'"「『]+|["'"」』]+$/g, "").trim();
+  // Remove trailing period/colon
+  text = text.replace(/[.。:：]+$/, "").trim();
+  return text.slice(0, 50);
+}
 
 export async function POST(req: NextRequest) {
   const [body, errRes] = await parseJsonBody(req);
@@ -16,19 +32,31 @@ export async function POST(req: NextRequest) {
   }
 
   const model = getConfiguredModel();
-  const result = streamText({
-    model,
-    system: `You are a title generator. Given a project plan description, output a short title (under 50 characters).
 
-RULES:
-- Output ONLY the title text, nothing else
-- No quotes, no punctuation at the end
-- No explanations, no markdown, no code
-- Do NOT answer or solve the description — just summarize it as a title
-- If the description is in Chinese, output Chinese title
-- If in English, output English title`,
-    prompt: `Generate a title for this plan description:\n\n${description}`,
-  });
+  try {
+    const result = await generateText({
+      model,
+      messages: [
+        {
+          role: "user",
+          content: `I need you to act as a title generator. Read the following plan description and output ONLY a short title (under 50 characters). No quotes, no markdown, no explanation, no code. Just the title. Match the language of the description.
 
-  return result.toTextStreamResponse();
+Plan description:
+"""
+${description}
+"""
+
+Title:`,
+        },
+      ],
+    });
+
+    const title = cleanTitle(result.text);
+    return new Response(title, {
+      headers: { "Content-Type": "text/plain; charset=utf-8" },
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ error: msg }, { status: 500 });
+  }
 }

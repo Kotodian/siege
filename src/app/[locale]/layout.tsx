@@ -25,7 +25,11 @@ export default async function LocaleLayout({
       <div className="min-h-screen bg-gray-50">
         <nav className="border-b bg-white px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-6">
-            <h1 className="text-xl font-bold">Siege</h1>
+            <a href={`/${locale}`} className="flex items-center gap-2">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/siege-logo.svg" alt="Siege" className="w-7 h-7" />
+              <h1 className="text-xl font-bold">Siege</h1>
+            </a>
             <a
               href={`/${locale}`}
               className="text-sm text-gray-600 hover:text-gray-900"

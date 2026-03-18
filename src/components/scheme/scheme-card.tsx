@@ -145,17 +145,7 @@ export function SchemeCard({
           <TimeAgo date={scheme.updatedAt || scheme.createdAt} />
         </div>
         <div className="flex gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              navigator.clipboard.writeText(
-                `# ${scheme.title}\n\n${scheme.content || ""}`
-              );
-            }}
-          >
-            {isZh ? "复制" : "Copy"}
-          </Button>
+          <CopyButton text={`# ${scheme.title}\n\n${scheme.content || ""}`} isZh={isZh} />
           <Button
             variant="ghost"
             size="sm"
@@ -261,5 +251,42 @@ export function SchemeCard({
         }}
       />
     </div>
+  );
+}
+
+function copyToClipboard(text: string): Promise<void> {
+  if (navigator.clipboard?.writeText) {
+    return navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
+  }
+  return fallbackCopy(text);
+}
+
+function fallbackCopy(text: string): Promise<void> {
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.style.position = "fixed";
+  textarea.style.opacity = "0";
+  document.body.appendChild(textarea);
+  textarea.select();
+  document.execCommand("copy");
+  document.body.removeChild(textarea);
+  return Promise.resolve();
+}
+
+function CopyButton({ text, isZh }: { text: string; isZh: boolean }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      onClick={() => {
+        copyToClipboard(text).then(() => {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        });
+      }}
+    >
+      {copied ? (isZh ? "已复制" : "Copied") : (isZh ? "复制" : "Copy")}
+    </Button>
   );
 }

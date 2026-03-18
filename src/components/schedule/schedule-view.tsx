@@ -50,7 +50,7 @@ export function ScheduleView({
 }: ScheduleViewProps) {
   const t = useTranslations();
   const [schedule, setSchedule] = useState<Schedule | null>(null);
-  const [gitInfo, setGitInfo] = useState<{ isGit: boolean; currentBranch?: string } | null>(null);
+  const [gitInfo, setGitInfo] = useState<{ isGit: boolean; currentBranch?: string; branches?: string[] } | null>(null);
   const [generating, setGenerating] = useState(false);
   const [selectedItem, setSelectedItem] = useState<ScheduleItem | null>(null);
   const [executing, setExecuting] = useState<string | null>(null);
@@ -84,6 +84,7 @@ export function ScheduleView({
 
   const [branchDialogOpen, setBranchDialogOpen] = useState(false);
   const [branchName, setBranchName] = useState("");
+  const [baseBranch, setBaseBranch] = useState("");
   const [creatingBranch, setCreatingBranch] = useState(false);
 
   const handleCreateBranch = async () => {
@@ -95,13 +96,18 @@ export function ScheduleView({
       const res = await fetch("/api/git", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ repoPath: proj.targetRepoPath, branchName: branchName.trim() }),
+        body: JSON.stringify({
+          repoPath: proj.targetRepoPath,
+          branchName: branchName.trim(),
+          baseBranch: baseBranch || undefined,
+        }),
       });
       const data = await res.json();
       if (data.success) {
         setGitInfo((prev) => prev ? { ...prev, currentBranch: data.branch } : prev);
         setBranchDialogOpen(false);
         setBranchName("");
+        setBaseBranch("");
       }
     } finally {
       setCreatingBranch(false);
@@ -281,9 +287,6 @@ export function ScheduleView({
                       <span className="text-xs text-gray-400 font-mono">
                         {item.startDate} → {item.endDate}
                       </span>
-                      <span className="text-xs text-gray-400">
-                        {item.engine || "claude-code"}
-                      </span>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-sm text-gray-500">
@@ -341,8 +344,23 @@ export function ScheduleView({
         title={isZh ? "创建 Git 分支" : "Create Git Branch"}
       >
         <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              {isZh ? "基于分支" : "Base Branch"}
+            </label>
+            <select
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              value={baseBranch}
+              onChange={(e) => setBaseBranch(e.target.value)}
+            >
+              <option value="">{gitInfo?.currentBranch ? `${isZh ? "当前分支" : "Current"}: ${gitInfo.currentBranch}` : (isZh ? "当前 HEAD" : "Current HEAD")}</option>
+              {gitInfo?.branches?.filter(b => b !== gitInfo.currentBranch).map(b => (
+                <option key={b} value={b}>{b}</option>
+              ))}
+            </select>
+          </div>
           <Input
-            label={isZh ? "分支名称" : "Branch Name"}
+            label={isZh ? "新分支名称" : "New Branch Name"}
             value={branchName}
             onChange={(e) => setBranchName(e.target.value)}
             placeholder="feat/my-feature"

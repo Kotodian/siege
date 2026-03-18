@@ -8,7 +8,71 @@ import {
   projects,
 } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { spawn } from "child_process";
+import { execSync } from "child_process";
+import { generateText, tool, stepCountIs } from "ai";
+import { z } from "zod";
+import { getConfiguredModel } from "@/lib/ai/config";
+import fs from "fs";
+import path from "path";
+
+function createTestTools(repoPath: string) {
+  return {
+    readFile: tool({
+      description: "Read a file within the project",
+      inputSchema: z.object({
+        relativePath: z.string().describe("Relative path from project root"),
+      }),
+      execute: async ({ relativePath }) => {
+        const targetPath = path.resolve(repoPath, relativePath);
+        if (!targetPath.startsWith(repoPath)) return "Access denied";
+        try {
+          return fs.readFileSync(targetPath, "utf-8").slice(0, 10000);
+        } catch (e) {
+          return `Error: ${e instanceof Error ? e.message : e}`;
+        }
+      },
+    }),
+    writeFile: tool({
+      description: "Write content to a file within the project",
+      inputSchema: z.object({
+        relativePath: z.string().describe("Relative path from project root"),
+        content: z.string().describe("File content"),
+      }),
+      execute: async ({ relativePath, content }) => {
+        const targetPath = path.resolve(repoPath, relativePath);
+        if (!targetPath.startsWith(repoPath)) return "Access denied";
+        try {
+          const dir = path.dirname(targetPath);
+          if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+          fs.writeFileSync(targetPath, content, "utf-8");
+          return `Written to ${relativePath}`;
+        } catch (e) {
+          return `Error: ${e instanceof Error ? e.message : e}`;
+        }
+      },
+    }),
+    bash: tool({
+      description: "Run a shell command in the project directory",
+      inputSchema: z.object({
+        command: z.string().describe("Shell command to execute"),
+      }),
+      execute: async ({ command }) => {
+        try {
+          const output = execSync(command, {
+            cwd: repoPath,
+            encoding: "utf-8",
+            timeout: 60000,
+            maxBuffer: 1024 * 512,
+          });
+          return output.slice(0, 8000) || "(no output)";
+        } catch (e: unknown) {
+          const err = e as { stdout?: string; stderr?: string; message?: string };
+          return ((err.stdout || "") + (err.stderr || "")).slice(0, 8000) || `Error: ${err.message || e}`;
+        }
+      },
+    }),
+  };
+}
 
 export async function POST(
   _req: NextRequest,
@@ -17,61 +81,20 @@ export async function POST(
   const { caseId } = await params;
   const db = getDb();
 
-  const testCase = db
-    .select()
-    .from(testCases)
-    .where(eq(testCases.id, caseId))
-    .get();
-  if (!testCase) {
-    return NextResponse.json(
-      { error: "Test case not found" },
-      { status: 404 }
-    );
-  }
+  const testCase = db.select().from(testCases).where(eq(testCases.id, caseId)).get();
+  if (!testCase) return NextResponse.json({ error: "Test case not found" }, { status: 404 });
 
-  const suite = db
-    .select()
-    .from(testSuites)
-    .where(eq(testSuites.id, testCase.testSuiteId))
-    .get();
-  if (!suite) {
-    return NextResponse.json(
-      { error: "Test suite not found" },
-      { status: 404 }
-    );
-  }
+  const suite = db.select().from(testSuites).where(eq(testSuites.id, testCase.testSuiteId)).get();
+  if (!suite) return NextResponse.json({ error: "Test suite not found" }, { status: 404 });
 
-  const plan = db
-    .select()
-    .from(plans)
-    .where(eq(plans.id, suite.planId))
-    .get();
-  if (!plan) {
-    return NextResponse.json(
-      { error: "Plan not found" },
-      { status: 404 }
-    );
-  }
+  const plan = db.select().from(plans).where(eq(plans.id, suite.planId)).get();
+  if (!plan) return NextResponse.json({ error: "Plan not found" }, { status: 404 });
 
-  const project = db
-    .select()
-    .from(projects)
-    .where(eq(projects.id, plan.projectId))
-    .get();
-  if (!project) {
-    return NextResponse.json(
-      { error: "Project not found" },
-      { status: 404 }
-    );
-  }
+  const project = db.select().from(projects).where(eq(projects.id, plan.projectId)).get();
+  if (!project) return NextResponse.json({ error: "Project not found" }, { status: 404 });
 
-  // Update case status
-  db.update(testCases)
-    .set({ status: "running" })
-    .where(eq(testCases.id, caseId))
-    .run();
+  db.update(testCases).set({ status: "running" }).where(eq(testCases.id, caseId)).run();
 
-  // Build test command using Claude Code
   const prompt = `Run the following test and report the results.
 
 Test file: ${testCase.filePath || "auto-detect"}
@@ -85,83 +108,47 @@ ${testCase.generatedCode || ""}
 If the test file doesn't exist, create it first, then run it. Report pass/fail status.`;
 
   const startTime = Date.now();
+  const repoPath = fs.existsSync(project.targetRepoPath) ? project.targetRepoPath : process.cwd();
 
-  return new Promise<Response>((resolve) => {
-    let output = "";
-    let errorOutput = "";
+  try {
+    const configuredModel = getConfiguredModel();
+    const tools = createTestTools(repoPath);
 
-    const proc = spawn("claude", ["-p", prompt, "--output-format", "text"], {
-      cwd: project.targetRepoPath,
-      env: { ...process.env },
+    const result = await generateText({
+      model: configuredModel,
+      prompt,
+      tools,
+      stopWhen: stepCountIs(10),
     });
 
-    proc.stdout?.on("data", (chunk: Buffer) => {
-      output += chunk.toString();
-    });
+    const durationMs = Date.now() - startTime;
+    const output = result.text;
+    const passed = /pass/i.test(output) && !/fail/i.test(output);
+    const status = passed ? "passed" : "failed";
 
-    proc.stderr?.on("data", (chunk: Buffer) => {
-      errorOutput += chunk.toString();
-    });
+    const resultId = crypto.randomUUID();
+    db.insert(testResults).values({
+      id: resultId, testCaseId: caseId, status,
+      output: output || "No output", errorMessage: null, durationMs,
+    }).run();
 
-    proc.on("close", (code) => {
-      const durationMs = Date.now() - startTime;
-      const status = code === 0 ? "passed" : "failed";
+    db.update(testCases).set({ status }).where(eq(testCases.id, caseId)).run();
 
-      // Create test result
-      const resultId = crypto.randomUUID();
-      db.insert(testResults)
-        .values({
-          id: resultId,
-          testCaseId: caseId,
-          status,
-          output: output || "No output",
-          errorMessage: errorOutput || null,
-          durationMs,
-        })
-        .run();
+    return NextResponse.json(
+      db.select().from(testResults).where(eq(testResults.id, resultId)).get()
+    );
+  } catch (err) {
+    const durationMs = Date.now() - startTime;
+    const resultId = crypto.randomUUID();
+    db.insert(testResults).values({
+      id: resultId, testCaseId: caseId, status: "error",
+      output: "", errorMessage: `Error: ${err instanceof Error ? err.message : err}`, durationMs,
+    }).run();
 
-      // Update case status
-      db.update(testCases)
-        .set({ status })
-        .where(eq(testCases.id, caseId))
-        .run();
+    db.update(testCases).set({ status: "failed" }).where(eq(testCases.id, caseId)).run();
 
-      const result = db
-        .select()
-        .from(testResults)
-        .where(eq(testResults.id, resultId))
-        .get();
-
-      resolve(NextResponse.json(result));
-    });
-
-    proc.on("error", (err) => {
-      const durationMs = Date.now() - startTime;
-
-      const resultId = crypto.randomUUID();
-      db.insert(testResults)
-        .values({
-          id: resultId,
-          testCaseId: caseId,
-          status: "error",
-          output: "",
-          errorMessage: `Failed to start: ${err.message}`,
-          durationMs,
-        })
-        .run();
-
-      db.update(testCases)
-        .set({ status: "failed" })
-        .where(eq(testCases.id, caseId))
-        .run();
-
-      const result = db
-        .select()
-        .from(testResults)
-        .where(eq(testResults.id, resultId))
-        .get();
-
-      resolve(NextResponse.json(result));
-    });
-  });
+    return NextResponse.json(
+      db.select().from(testResults).where(eq(testResults.id, resultId)).get()
+    );
+  }
 }

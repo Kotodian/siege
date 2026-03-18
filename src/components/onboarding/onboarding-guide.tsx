@@ -9,6 +9,14 @@ import { RepoPicker } from "@/components/repo-picker/repo-picker";
 import { AnalyzePrompt } from "@/components/project/analyze-prompt";
 import { IconPicker } from "@/components/ui/icon-picker";
 
+function GitHubIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z" />
+    </svg>
+  );
+}
+
 interface OnboardingGuideProps {
   locale: string;
   onComplete: (project: {
@@ -87,6 +95,11 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
       .catch(() => {});
   }, []);
 
+  // GitHub login flow state
+  const [githubLoginCode, setGithubLoginCode] = useState<string | null>(null);
+  const [githubLoginError, setGithubLoginError] = useState<string | null>(null);
+  const [githubLoggingIn, setGithubLoggingIn] = useState(false);
+
   const checkGithubAuth = async () => {
     setCheckingGithub(true);
     try {
@@ -96,6 +109,59 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
       setGithubStatus({ authenticated: false, ghInstalled: false, username: "" });
     }
     setCheckingGithub(false);
+  };
+
+  // Start GitHub SSO login flow
+  const startGithubLogin = async () => {
+    setGithubLoggingIn(true);
+    setGithubLoginError(null);
+    setGithubLoginCode(null);
+    try {
+      const res = await fetch("/api/github/auth", { method: "POST" });
+      const data = await res.json();
+      if (data.status === "already_authenticated") {
+        setGithubStatus({ authenticated: true, ghInstalled: true, username: data.username });
+        setGithubLoggingIn(false);
+        return;
+      }
+      if (data.error === "gh_not_installed") {
+        setGithubStatus({ authenticated: false, ghInstalled: false, username: "" });
+        setGithubLoggingIn(false);
+        return;
+      }
+      if (data.code) {
+        setGithubLoginCode(data.code);
+        // Open GitHub device auth page
+        window.open(data.verificationUrl, "_blank");
+        // Poll for completion
+        const poll = setInterval(async () => {
+          try {
+            const r = await fetch("/api/github/auth");
+            const s = await r.json();
+            if (s.authenticated) {
+              clearInterval(poll);
+              setGithubStatus(s);
+              setGithubLoggingIn(false);
+              setGithubLoginCode(null);
+            }
+          } catch { /* keep polling */ }
+        }, 2000);
+        // Stop polling after 5 minutes
+        setTimeout(() => {
+          clearInterval(poll);
+          if (githubLoggingIn) {
+            setGithubLoggingIn(false);
+            setGithubLoginError(isZh ? "授权超时，请重试" : "Authorization timed out, please retry");
+          }
+        }, 300000);
+      } else {
+        setGithubLoggingIn(false);
+        setGithubLoginError(data.error || (isZh ? "登录失败" : "Login failed"));
+      }
+    } catch {
+      setGithubLoggingIn(false);
+      setGithubLoginError(isZh ? "请求失败" : "Request failed");
+    }
   };
 
   const checkAiConfig = async () => {
@@ -169,8 +235,8 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
             {(githubStatus || aiStatus) && (
               <div className="flex justify-center gap-4 text-xs">
                 {githubStatus?.authenticated && (
-                  <span className="text-green-600 bg-green-50 px-2 py-1 rounded-full">
-                    ✓ GitHub: {githubStatus.username}
+                  <span className="text-green-600 bg-green-50 px-2 py-1 rounded-full inline-flex items-center gap-1">
+                    <GitHubIcon className="w-3 h-3" /> {githubStatus.username}
                   </span>
                 )}
                 {aiStatus?.anthropic.configured && (
@@ -216,8 +282,9 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
         {step === "github" && (
           <div className="space-y-6">
             <div className="text-center">
-              <h2 className="text-2xl font-bold">
-                {isZh ? "是否关联 GitHub？" : "Connect GitHub?"}
+              <h2 className="text-2xl font-bold inline-flex items-center gap-2 justify-center w-full">
+                <GitHubIcon className="w-7 h-7" />
+                {isZh ? "关联 GitHub" : "Connect GitHub"}
               </h2>
               <p className="text-gray-500 mt-1">
                 {isZh
@@ -226,73 +293,103 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
               </p>
             </div>
 
-            {githubStatus === null ? (
-              // Initial: ask user if they want to connect
-              <div className="flex flex-col items-center gap-4 py-6">
-                <Button
-                  size="lg"
-                  onClick={() => checkGithubAuth()}
-                >
-                  {isZh ? "是，检测 GitHub 连接" : "Yes, check GitHub connection"}
-                </Button>
-                <Button
-                  size="lg"
-                  variant="ghost"
-                  onClick={() => { setStep("ai"); checkAiConfig(); }}
-                >
-                  {isZh ? "跳过，只用本地目录" : "Skip, use local directories only"}
-                </Button>
-              </div>
-            ) : (
-              // After checking
-              <div className="rounded-lg border bg-white p-6">
-                {checkingGithub ? (
-                  <div className="text-center py-8 text-gray-400">
-                    {isZh ? "检查中..." : "Checking..."}
-                  </div>
-                ) : !githubStatus.ghInstalled ? (
-                  <div className="text-center space-y-4 py-4">
-                    <div className="text-4xl">⚠️</div>
-                    <p className="text-gray-600">
-                      {isZh
-                        ? "未检测到 GitHub CLI (gh)。安装后可以连接。"
-                        : "GitHub CLI (gh) not detected."}
-                    </p>
-                    <a href="https://cli.github.com" target="_blank" rel="noopener noreferrer"
-                      className="text-blue-600 hover:underline text-sm">
-                      https://cli.github.com
-                    </a>
-                    <div className="pt-2">
-                      <Button variant="secondary" onClick={checkGithubAuth}>
-                        {isZh ? "重新检测" : "Re-check"}
-                      </Button>
+            <div className="rounded-lg border bg-white p-6">
+              {checkingGithub ? (
+                <div className="text-center py-8 text-gray-400">
+                  {isZh ? "检查中..." : "Checking..."}
+                </div>
+              ) : githubStatus?.authenticated ? (
+                <div className="text-center space-y-3 py-4">
+                  <div className="flex justify-center">
+                    <div className="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center">
+                      <GitHubIcon className="w-7 h-7 text-green-600" />
                     </div>
                   </div>
-                ) : githubStatus.authenticated ? (
-                  <div className="text-center space-y-3 py-4">
-                    <div className="text-4xl">✓</div>
-                    <p className="text-gray-800 font-medium">
-                      {isZh ? `已连接：${githubStatus.username}` : `Connected: ${githubStatus.username}`}
-                    </p>
-                  </div>
-                ) : (
-                  <div className="text-center space-y-4 py-4">
-                    <div className="text-4xl">🔗</div>
-                    <p className="text-gray-600">
-                      {isZh ? "GitHub CLI 已安装，但未登录。在终端运行：" : "gh installed but not logged in. Run:"}
-                    </p>
-                    <code className="block bg-gray-100 rounded-md px-4 py-2 text-sm font-mono">
-                      gh auth login
-                    </code>
+                  <p className="text-gray-800 font-medium">
+                    {isZh ? `已连接：${githubStatus.username}` : `Connected: ${githubStatus.username}`}
+                  </p>
+                </div>
+              ) : githubStatus && !githubStatus.ghInstalled ? (
+                <div className="text-center space-y-4 py-4">
+                  <div className="text-4xl">⚠️</div>
+                  <p className="text-gray-600">
+                    {isZh
+                      ? "未检测到 GitHub CLI (gh)。安装后可以连接。"
+                      : "GitHub CLI (gh) not detected."}
+                  </p>
+                  <a href="https://cli.github.com" target="_blank" rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline text-sm">
+                    https://cli.github.com
+                  </a>
+                  <div className="pt-2">
                     <Button variant="secondary" onClick={checkGithubAuth}>
-                      {isZh ? "登录后重新检测" : "Re-check after login"}
+                      {isZh ? "重新检测" : "Re-check"}
                     </Button>
                   </div>
-                )}
-              </div>
-            )}
+                </div>
+              ) : githubLoggingIn && githubLoginCode ? (
+                <div className="text-center space-y-4 py-4">
+                  <div className="flex justify-center">
+                    <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center animate-pulse">
+                      <GitHubIcon className="w-7 h-7 text-gray-700" />
+                    </div>
+                  </div>
+                  <p className="text-gray-600">
+                    {isZh
+                      ? "已在浏览器中打开 GitHub 授权页面，请输入以下验证码："
+                      : "GitHub authorization page opened. Enter this code:"}
+                  </p>
+                  <div className="flex items-center justify-center gap-2">
+                    <code className="text-2xl font-bold font-mono tracking-widest bg-gray-100 rounded-lg px-6 py-3">
+                      {githubLoginCode}
+                    </code>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => navigator.clipboard.writeText(githubLoginCode)}
+                    >
+                      {isZh ? "复制" : "Copy"}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-gray-400">
+                    {isZh ? "等待授权完成..." : "Waiting for authorization..."}
+                  </p>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => window.open("https://github.com/login/device", "_blank")}
+                  >
+                    {isZh ? "重新打开授权页面" : "Re-open authorization page"}
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-4 py-6">
+                  {githubLoginError && (
+                    <p className="text-sm text-red-500">{githubLoginError}</p>
+                  )}
+                  <Button
+                    size="lg"
+                    onClick={startGithubLogin}
+                    disabled={githubLoggingIn}
+                    className="inline-flex items-center gap-2"
+                  >
+                    <GitHubIcon className="w-5 h-5" />
+                    {githubLoggingIn
+                      ? (isZh ? "正在启动..." : "Starting...")
+                      : (isZh ? "登录 GitHub" : "Login with GitHub")}
+                  </Button>
+                  <Button
+                    size="lg"
+                    variant="ghost"
+                    onClick={() => { setStep("ai"); checkAiConfig(); }}
+                  >
+                    {isZh ? "跳过，只用本地目录" : "Skip, use local directories only"}
+                  </Button>
+                </div>
+              )}
+            </div>
 
-            {githubStatus !== null && (
+            {githubStatus?.authenticated && (
               <div className="flex justify-between">
                 <Button variant="ghost" onClick={() => setStep("welcome")}>{t("common.back")}</Button>
                 <Button size="lg" onClick={() => { setStep("ai"); checkAiConfig(); }}>
@@ -515,7 +612,11 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 rounded-md border px-3 py-2 bg-gray-50">
                       <span className="text-sm font-mono flex-1 truncate">{targetRepoPath}</span>
-                      <Button variant="ghost" size="sm" onClick={() => setTargetRepoPath("")}>
+                      <Button variant="ghost" size="sm" onClick={() => {
+                        const oldAutoName = targetRepoPath.split("/").pop() || "";
+                        if (name === oldAutoName) setName("");
+                        setTargetRepoPath("");
+                      }}>
                         {isZh ? "重选" : "Change"}
                       </Button>
                     </div>
@@ -533,7 +634,10 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
                     githubAuthed={githubStatus?.authenticated || false}
                     onSelect={(path) => {
                       setTargetRepoPath(path);
-                      if (!name) setName(path.split("/").pop() || "");
+                      const newName = path.split("/").pop() || "";
+                      if (!name || name === targetRepoPath.split("/").pop()) {
+                        setName(newName);
+                      }
                     }}
                   />
                 )}

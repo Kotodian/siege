@@ -15,6 +15,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Siege",
   description: "AI-powered agent development tool",
+  icons: {
+    icon: "/siege-logo.svg",
+  },
 };
 
 export default function RootLayout({

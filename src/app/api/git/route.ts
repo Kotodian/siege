@@ -24,14 +24,19 @@ export async function GET(req: NextRequest) {
 // POST: create and checkout a new branch
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { repoPath, branchName } = body;
+  const { repoPath, branchName, baseBranch } = body;
 
   if (!repoPath || !branchName) {
     return NextResponse.json({ error: "repoPath and branchName required" }, { status: 400 });
   }
 
   try {
-    execSync(`git checkout -b "${branchName}"`, { cwd: repoPath, encoding: "utf-8", timeout: 10000 });
+    // Create branch from specified base, or from current HEAD
+    if (baseBranch) {
+      execSync(`git checkout -b "${branchName}" "${baseBranch}"`, { cwd: repoPath, encoding: "utf-8", timeout: 10000 });
+    } else {
+      execSync(`git checkout -b "${branchName}"`, { cwd: repoPath, encoding: "utf-8", timeout: 10000 });
+    }
     const current = execSync("git branch --show-current", { cwd: repoPath, encoding: "utf-8", timeout: 5000 }).trim();
     return NextResponse.json({ success: true, branch: current });
   } catch (err) {

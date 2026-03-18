@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { computeDiff } from "@/lib/diff";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -124,8 +124,60 @@ export function DiffViewer({
   onCommentAdded,
 }: DiffViewerProps) {
   const t = useTranslations();
+  const isZh = t("common.back") === "返回";
   const [commentLine, setCommentLine] = useState<number | null>(null);
+  const [fixingId, setFixingId] = useState<string | null>(null);
+  const [fixResults, setFixResults] = useState<Record<string, { aiResponse: string; commentId: string; applied?: boolean }>>({});
   const diffLines = computeDiff(contentBefore, contentAfter);
+
+  const handleAiFix = useCallback(async (finding: ReviewItem) => {
+    if (fixingId || !finding.lineNumber) return;
+    setFixingId(finding.id);
+    try {
+      const res = await fetch("/api/review-comments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          reviewId,
+          filePath,
+          lineNumber: finding.lineNumber,
+          content: `[AI Fix] ${finding.title}\n\n${finding.content || ""}`,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.aiResponse) {
+          setFixResults((prev) => ({
+            ...prev,
+            [finding.id]: { aiResponse: data.aiResponse, commentId: data.id },
+          }));
+        }
+        onCommentAdded();
+      }
+    } finally {
+      setFixingId(null);
+    }
+  }, [fixingId, reviewId, filePath, onCommentAdded]);
+
+  const handleApplyFix = useCallback(async (findingId: string) => {
+    const result = fixResults[findingId];
+    if (!result) return;
+    setFixingId(findingId);
+    try {
+      const res = await fetch(`/api/review-comments/${result.commentId}/apply`, {
+        method: "POST",
+      });
+      if (res.ok) {
+        setFixResults((prev) => ({
+          ...prev,
+          [findingId]: { ...prev[findingId], applied: true },
+        }));
+        onCommentAdded();
+      }
+    } finally {
+      setFixingId(null);
+    }
+  }, [fixResults, onCommentAdded]);
 
   const lang = getLanguage(filePath);
 
@@ -220,24 +272,64 @@ export function DiffViewer({
               </div>
 
               {/* Inline findings */}
-              {lineFindings?.map((finding) => (
-                <div
-                  key={finding.id}
-                  className={`mx-12 my-1 p-2 rounded border text-xs ${
-                    finding.resolved
-                      ? "bg-gray-50 border-gray-200 opacity-60"
-                      : severityColors[finding.severity] || severityColors.info
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <StatusBadge status={finding.severity} label={finding.severity} />
-                    <span className="font-semibold">{finding.title}</span>
+              {lineFindings?.map((finding) => {
+                const fixResult = fixResults[finding.id];
+                return (
+                  <div
+                    key={finding.id}
+                    className={`mx-12 my-1 p-2 rounded border text-xs ${
+                      finding.resolved
+                        ? "bg-gray-50 border-gray-200 opacity-60"
+                        : severityColors[finding.severity] || severityColors.info
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <StatusBadge status={finding.severity} label={finding.severity} />
+                        <span className="font-semibold">{finding.title}</span>
+                      </div>
+                      {!finding.resolved && reviewId && (
+                        <div className="flex gap-1">
+                          {!fixResult ? (
+                            <button
+                              onClick={() => handleAiFix(finding)}
+                              disabled={fixingId !== null}
+                              className="px-2 py-0.5 rounded bg-blue-100 text-blue-700 hover:bg-blue-200 disabled:opacity-50 font-medium"
+                            >
+                              {fixingId === finding.id
+                                ? isZh ? "修复中..." : "Fixing..."
+                                : isZh ? "AI 修复" : "AI Fix"}
+                            </button>
+                          ) : !fixResult.applied ? (
+                            <button
+                              onClick={() => handleApplyFix(finding.id)}
+                              disabled={fixingId !== null}
+                              className="px-2 py-0.5 rounded bg-green-100 text-green-700 hover:bg-green-200 disabled:opacity-50 font-medium"
+                            >
+                              {fixingId === finding.id
+                                ? isZh ? "应用中..." : "Applying..."
+                                : t("review.applyFix")}
+                            </button>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded bg-green-50 text-green-600 font-medium">
+                              {t("review.fixApplied")}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    {finding.content && (
+                      <p className="mt-1 text-gray-700">{finding.content}</p>
+                    )}
+                    {fixResult && !fixResult.applied && (
+                      <div className="mt-2 p-2 bg-white rounded border border-blue-100">
+                        <span className="font-semibold text-blue-700">{t("review.aiSuggestion")}:</span>
+                        <pre className="mt-1 text-gray-700 whitespace-pre-wrap text-xs">{fixResult.aiResponse}</pre>
+                      </div>
+                    )}
                   </div>
-                  {finding.content && (
-                    <p className="mt-1 text-gray-700">{finding.content}</p>
-                  )}
-                </div>
-              ))}
+                );
+              })}
 
               {/* Existing comments */}
               {lineComments?.map((comment) => (

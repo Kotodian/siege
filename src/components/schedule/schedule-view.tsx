@@ -43,6 +43,17 @@ interface ScheduleViewProps {
   onPlanStatusChange: () => void;
 }
 
+function toLocalDatetime(iso: string): string {
+  const d = new Date(iso);
+  const pad = (n: number) => n.toString().padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function formatDateTime(iso: string): string {
+  const d = new Date(iso);
+  return `${d.getMonth() + 1}/${d.getDate()} ${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}`;
+}
+
 export function ScheduleView({
   planId,
   planStatus,
@@ -59,6 +70,14 @@ export function ScheduleView({
   const [autoExecute, setAutoExecute] = useState(false);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Edit state
+  const [editingItem, setEditingItem] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ title: "", description: "", startDate: "", endDate: "" });
+
+  // Add task state
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [addForm, setAddForm] = useState({ title: "", description: "", startDate: "", endDate: "", estimatedHours: "2" });
+
   const fetchSchedule = async () => {
     const res = await fetch(`/api/schedules?planId=${planId}`);
     const data = await res.json();
@@ -68,11 +87,7 @@ export function ScheduleView({
   const { startLoading, updateContent, stopLoading } = useGlobalLoading();
 
   useEffect(() => {
-    fetchSchedule().then(() => {
-      // Sync autoExecute state from schedule
-      if (schedule?.autoExecute) setAutoExecute(true);
-    });
-    // Check git status
+    fetchSchedule();
     fetch(`/api/projects/${projectId}`)
       .then(r => r.json())
       .then(p => {
@@ -89,11 +104,8 @@ export function ScheduleView({
     };
   }, [planId, projectId]);
 
-  // Sync autoExecute from fetched schedule
   useEffect(() => {
-    if (schedule?.autoExecute !== undefined) {
-      setAutoExecute(schedule.autoExecute);
-    }
+    if (schedule?.autoExecute !== undefined) setAutoExecute(schedule.autoExecute);
   }, [schedule?.autoExecute]);
 
   // Auto-execute polling
@@ -106,15 +118,14 @@ export function ScheduleView({
         if (res.ok) {
           const data = await res.json();
           if (data.executed) {
-            // Refresh schedule to see status changes
             await fetchSchedule();
             onPlanStatusChange();
           }
         }
       } catch { /* ignore */ }
     };
-    tick(); // Run immediately
-    tickRef.current = setInterval(tick, 30000); // Then every 30s
+    tick();
+    tickRef.current = setInterval(tick, 30000);
     return () => { if (tickRef.current) clearInterval(tickRef.current); };
   }, [autoExecute, schedule?.id]);
 
@@ -199,7 +210,6 @@ export function ScheduleView({
   const handleExecuteItem = async (itemId: string, skills: string[] = []) => {
     setExecuting(itemId);
     startLoading(isZh ? "AI 正在执行任务..." : "AI executing task...");
-
     try {
       const res = await fetch("/api/execute", {
         method: "POST",
@@ -230,31 +240,108 @@ export function ScheduleView({
     }
   };
 
-  const handleDateChange = async (
-    taskId: string,
-    start: Date,
-    end: Date
-  ) => {
-    await fetch(`/api/schedule-items/${taskId}`, {
+  // Reschedule: shift all pending/failed tasks from now
+  const handleReschedule = async () => {
+    if (!schedule) return;
+    const pendingItems = schedule.items
+      .filter(i => i.status === "pending" || i.status === "failed")
+      .sort((a, b) => a.order - b.order);
+
+    if (pendingItems.length === 0) return;
+
+    const now = new Date();
+    let cursor = now;
+
+    for (const item of pendingItems) {
+      const originalDuration = new Date(item.endDate).getTime() - new Date(item.startDate).getTime();
+      const duration = originalDuration > 0 ? originalDuration : 2 * 3600000; // default 2h
+      const newStart = new Date(cursor);
+      const newEnd = new Date(cursor.getTime() + duration);
+      cursor = newEnd;
+
+      await fetch(`/api/schedule-items/${item.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          startDate: newStart.toISOString(),
+          endDate: newEnd.toISOString(),
+          ...(item.status === "failed" && { status: "pending" }),
+        }),
+      });
+    }
+
+    await fetchSchedule();
+  };
+
+  // Edit task
+  const startEditing = (item: ScheduleItem) => {
+    setEditingItem(item.id);
+    setEditForm({
+      title: item.title,
+      description: item.description || "",
+      startDate: toLocalDatetime(item.startDate),
+      endDate: toLocalDatetime(item.endDate),
+    });
+  };
+
+  const saveEdit = async () => {
+    if (!editingItem) return;
+    await fetch(`/api/schedule-items/${editingItem}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        startDate: start.toISOString(),
-        endDate: end.toISOString(),
+        title: editForm.title,
+        description: editForm.description,
+        startDate: new Date(editForm.startDate).toISOString(),
+        endDate: new Date(editForm.endDate).toISOString(),
       }),
+    });
+    setEditingItem(null);
+    await fetchSchedule();
+  };
+
+  // Delete task
+  const handleDeleteItem = async (itemId: string) => {
+    await fetch(`/api/schedule-items/${itemId}`, { method: "DELETE" });
+    setSelectedItem(null);
+    await fetchSchedule();
+  };
+
+  // Add task
+  const handleAddTask = async () => {
+    if (!addForm.title.trim()) return;
+    await fetch("/api/schedules", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        planId,
+        title: addForm.title,
+        description: addForm.description,
+        startDate: addForm.startDate ? new Date(addForm.startDate).toISOString() : undefined,
+        endDate: addForm.endDate ? new Date(addForm.endDate).toISOString() : undefined,
+        estimatedHours: Number(addForm.estimatedHours) || 2,
+      }),
+    });
+    setAddDialogOpen(false);
+    setAddForm({ title: "", description: "", startDate: "", endDate: "", estimatedHours: "2" });
+    await fetchSchedule();
+    onPlanStatusChange();
+  };
+
+  const handleDateChange = async (taskId: string, start: Date, end: Date) => {
+    await fetch(`/api/schedule-items/${taskId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ startDate: start.toISOString(), endDate: end.toISOString() }),
     });
     await fetchSchedule();
   };
 
-  const formatDateTime = (iso: string) => {
-    const d = new Date(iso);
-    return `${d.getMonth()+1}/${d.getDate()} ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
-  };
-
   const canGenerate = planStatus === "confirmed";
   const canExecute = planStatus === "scheduled" || planStatus === "executing";
+  const canEdit = planStatus === "scheduled" || planStatus === "confirmed" || planStatus === "executing";
 
-  if (!schedule && !canGenerate) {
+  if (!schedule && !canGenerate && planStatus !== "confirmed") {
     return (
       <p className="text-gray-500 text-center py-8">{t("common.noData")}</p>
     );
@@ -275,6 +362,8 @@ export function ScheduleView({
             : "",
     })) || [];
 
+  const pendingCount = schedule?.items.filter(i => i.status === "pending" || i.status === "failed").length || 0;
+
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
@@ -291,6 +380,16 @@ export function ScheduleView({
                 {isZh ? "创建分支" : "New Branch"}
               </Button>
             </div>
+          )}
+          {schedule && canEdit && (
+            <Button variant="ghost" size="sm" onClick={() => setAddDialogOpen(true)}>
+              {isZh ? "添加任务" : "Add Task"}
+            </Button>
+          )}
+          {schedule && pendingCount > 0 && canEdit && (
+            <Button variant="secondary" size="sm" onClick={handleReschedule}>
+              {isZh ? "重新排期" : "Reschedule"}
+            </Button>
           )}
           {schedule && canExecute && (
             <button
@@ -333,71 +432,124 @@ export function ScheduleView({
           <div className="mt-6 space-y-3">
             {schedule.items
               .sort((a, b) => a.order - b.order)
-              .map((item) => (
-                <div
-                  key={item.id}
-                  className={`rounded-lg border bg-white p-4 ${
-                    selectedItem?.id === item.id
-                      ? "ring-2 ring-blue-500"
-                      : ""
-                  }`}
-                  onClick={() => setSelectedItem(item)}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm text-gray-400">
-                        #{item.order}
-                      </span>
-                      <h4 className="font-medium">{item.title}</h4>
-                      <StatusBadge
-                        status={item.status}
-                        label={item.status}
-                      />
-                      <span className="text-xs text-gray-400 font-mono">
-                        {formatDateTime(item.startDate)} → {formatDateTime(item.endDate)}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-gray-500">
-                        {item.progress}%
-                      </span>
-                      {canExecute &&
-                        item.status === "pending" && (
-                          <Button
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setRunDialogItem(item);
-                            }}
-                            disabled={executing !== null}
-                          >
-                            {executing === item.id
-                              ? t("common.loading")
-                              : "Run"}
+              .map((item) => {
+                const isEditing = editingItem === item.id;
+                const isSelected = selectedItem?.id === item.id;
+
+                return (
+                  <div
+                    key={item.id}
+                    className={`rounded-lg border bg-white p-4 ${
+                      isSelected ? "ring-2 ring-blue-500" : ""
+                    }`}
+                    onClick={() => setSelectedItem(item)}
+                  >
+                    {isEditing ? (
+                      /* Inline edit form */
+                      <div className="space-y-3" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          className="w-full border rounded px-2 py-1 text-sm font-medium"
+                          value={editForm.title}
+                          onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                        />
+                        <textarea
+                          className="w-full border rounded px-2 py-1 text-sm resize-y min-h-[60px]"
+                          value={editForm.description}
+                          onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                          placeholder={isZh ? "任务描述..." : "Task description..."}
+                        />
+                        <div className="flex gap-3">
+                          <label className="flex-1">
+                            <span className="text-xs text-gray-500">{isZh ? "开始时间" : "Start"}</span>
+                            <input
+                              type="datetime-local"
+                              className="w-full border rounded px-2 py-1 text-sm"
+                              value={editForm.startDate}
+                              onChange={(e) => setEditForm({ ...editForm, startDate: e.target.value })}
+                            />
+                          </label>
+                          <label className="flex-1">
+                            <span className="text-xs text-gray-500">{isZh ? "结束时间" : "End"}</span>
+                            <input
+                              type="datetime-local"
+                              className="w-full border rounded px-2 py-1 text-sm"
+                              value={editForm.endDate}
+                              onChange={(e) => setEditForm({ ...editForm, endDate: e.target.value })}
+                            />
+                          </label>
+                        </div>
+                        <div className="flex gap-2 justify-end">
+                          <Button variant="secondary" size="sm" onClick={() => setEditingItem(null)}>
+                            {t("common.cancel")}
                           </Button>
+                          <Button size="sm" onClick={saveEdit}>
+                            {t("common.save")}
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      /* Normal display */
+                      <>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-sm text-gray-400">#{item.order}</span>
+                            <h4 className="font-medium">{item.title}</h4>
+                            <StatusBadge status={item.status} label={item.status} />
+                            <span className="text-xs text-gray-400 font-mono">
+                              {formatDateTime(item.startDate)} → {formatDateTime(item.endDate)}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm text-gray-500">{item.progress}%</span>
+                            {canEdit && item.status === "pending" && (
+                              <>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); startEditing(item); }}
+                                  className="text-xs px-2 py-1 rounded text-gray-500 hover:bg-gray-100"
+                                >
+                                  {t("common.edit")}
+                                </button>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleDeleteItem(item.id); }}
+                                  className="text-xs px-2 py-1 rounded text-red-500 hover:bg-red-50"
+                                >
+                                  {t("common.delete")}
+                                </button>
+                              </>
+                            )}
+                            {canExecute && item.status === "pending" && (
+                              <Button
+                                size="sm"
+                                onClick={(e) => { e.stopPropagation(); setRunDialogItem(item); }}
+                                disabled={executing !== null}
+                              >
+                                {executing === item.id ? t("common.loading") : "Run"}
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                        {isSelected && item.description && (
+                          <div className="mt-3 border-t pt-3">
+                            <MarkdownRenderer content={item.description} />
+                          </div>
                         )}
-                    </div>
+                        {isSelected && item.executionLog && (
+                          <div className="mt-3 border-t pt-3">
+                            <h5 className="text-sm font-medium mb-1">{t("plan.tabs.logs")}</h5>
+                            <pre className="text-xs bg-gray-50 p-3 rounded overflow-auto max-h-60">
+                              {item.executionLog}
+                            </pre>
+                          </div>
+                        )}
+                      </>
+                    )}
                   </div>
-                  {selectedItem?.id === item.id && item.description && (
-                    <div className="mt-3 border-t pt-3">
-                      <MarkdownRenderer content={item.description} />
-                    </div>
-                  )}
-                  {selectedItem?.id === item.id && item.executionLog && (
-                    <div className="mt-3 border-t pt-3">
-                      <h5 className="text-sm font-medium mb-1">
-                        {t("plan.tabs.logs")}
-                      </h5>
-                      <pre className="text-xs bg-gray-50 p-3 rounded overflow-auto max-h-60">
-                        {item.executionLog}
-                      </pre>
-                    </div>
-                  )}
-                </div>
-              ))}
+                );
+              })}
           </div>
         </>
       )}
+
       {runDialogItem && (
         <RunTaskDialog
           open={!!runDialogItem}
@@ -407,6 +559,71 @@ export function ScheduleView({
         />
       )}
 
+      {/* Add Task Dialog */}
+      <Dialog
+        open={addDialogOpen}
+        onClose={() => setAddDialogOpen(false)}
+        title={isZh ? "添加任务" : "Add Task"}
+      >
+        <div className="space-y-4">
+          <Input
+            label={isZh ? "任务标题" : "Task Title"}
+            value={addForm.title}
+            onChange={(e) => setAddForm({ ...addForm, title: e.target.value })}
+            placeholder={isZh ? "例如：实现用户认证模块" : "e.g., Implement user auth module"}
+          />
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              {isZh ? "任务描述" : "Description"}
+            </label>
+            <textarea
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 min-h-[80px]"
+              value={addForm.description}
+              onChange={(e) => setAddForm({ ...addForm, description: e.target.value })}
+              placeholder={isZh ? "描述任务的详细内容..." : "Describe what to implement..."}
+            />
+          </div>
+          <div className="flex gap-3">
+            <label className="flex-1">
+              <span className="block text-sm font-medium text-gray-700 mb-1">{isZh ? "开始时间" : "Start Time"}</span>
+              <input
+                type="datetime-local"
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                value={addForm.startDate}
+                onChange={(e) => setAddForm({ ...addForm, startDate: e.target.value })}
+              />
+            </label>
+            <label className="flex-1">
+              <span className="block text-sm font-medium text-gray-700 mb-1">{isZh ? "结束时间" : "End Time"}</span>
+              <input
+                type="datetime-local"
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                value={addForm.endDate}
+                onChange={(e) => setAddForm({ ...addForm, endDate: e.target.value })}
+              />
+            </label>
+          </div>
+          {!addForm.startDate && !addForm.endDate && (
+            <Input
+              label={isZh ? "预估工时（小时）" : "Estimated Hours"}
+              type="number"
+              value={addForm.estimatedHours}
+              onChange={(e) => setAddForm({ ...addForm, estimatedHours: e.target.value })}
+              placeholder="2"
+            />
+          )}
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setAddDialogOpen(false)}>
+              {t("common.cancel")}
+            </Button>
+            <Button onClick={handleAddTask} disabled={!addForm.title.trim()}>
+              {t("common.create")}
+            </Button>
+          </div>
+        </div>
+      </Dialog>
+
+      {/* Branch Dialog */}
       <Dialog
         open={branchDialogOpen}
         onClose={() => setBranchDialogOpen(false)}

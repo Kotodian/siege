@@ -181,7 +181,7 @@ export function ScheduleView({
       const res = await fetch("/api/schedules/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ planId, provider: "openai" }),
+        body: JSON.stringify({ planId }),
       });
 
       if (res.ok && res.body) {

@@ -149,7 +149,7 @@ export function ReviewPanel({
       const res = await fetch("/api/reviews/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ planId, type, provider: "anthropic" }),
+        body: JSON.stringify({ planId, type }),
       });
 
       if (res.ok && res.body) {

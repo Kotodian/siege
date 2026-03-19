@@ -72,19 +72,29 @@ export function GenerateSchemeDialog({
           <label className="block text-sm font-medium text-gray-700 mb-1">
             {t("generate.provider")}
           </label>
-          <div className="flex gap-2">
-            {["anthropic", "openai", "glm"].map((p) => (
+          <div className="flex gap-2 flex-wrap">
+            {[
+              { id: "acp", label: "Claude Code", badge: "ACP" },
+              { id: "anthropic", label: "Claude" },
+              { id: "openai", label: "GPT" },
+              { id: "glm", label: "GLM" },
+            ].map((p) => (
               <button
-                key={p}
+                key={p.id}
                 type="button"
-                onClick={() => setProvider(p)}
-                className={`px-3 py-1.5 text-sm rounded-md border ${
-                  provider === p
+                onClick={() => setProvider(p.id)}
+                className={`px-3 py-1.5 text-sm rounded-md border flex items-center gap-1 ${
+                  provider === p.id
                     ? "bg-blue-600 text-white border-blue-600"
                     : "bg-white text-gray-600 border-gray-300 hover:border-gray-400"
                 }`}
               >
-                {p === "anthropic" ? "Claude" : p === "openai" ? "GPT" : "GLM"}
+                {p.label}
+                {p.badge && (
+                  <span className={`text-[10px] px-1 rounded ${
+                    provider === p.id ? "bg-white/20" : "bg-purple-50 text-purple-600"
+                  }`}>{p.badge}</span>
+                )}
               </button>
             ))}
           </div>

@@ -7,6 +7,7 @@ import { streamText, tool, stepCountIs } from "ai";
 import { z } from "zod";
 import { getConfiguredModel } from "@/lib/ai/config";
 import type { Provider } from "@/lib/ai/provider";
+import { AcpClient } from "@/lib/acp/client";
 import { parseJsonBody } from "@/lib/utils";
 import fs from "fs";
 import path from "path";
@@ -142,7 +143,7 @@ function createProjectTools(repoPath: string) {
 export async function POST(req: NextRequest) {
   const [body, errRes] = await parseJsonBody(req);
   if (errRes) return errRes;
-  const { planId, provider, model } = body as { planId: string; provider?: Provider; model?: string };
+  const { planId, provider, model } = body as { planId: string; provider?: string; model?: string };
 
   if (!planId) return NextResponse.json({ error: "planId required" }, { status: 400 });
 
@@ -155,11 +156,62 @@ export async function POST(req: NextRequest) {
 
   const cwd = fs.existsSync(project.targetRepoPath) ? project.targetRepoPath : process.cwd();
   const prompt = buildPrompt(project, plan);
-  const configuredModel = getConfiguredModel(provider, model);
-  const tools = createProjectTools(cwd);
-
   const encoder = new TextEncoder();
   let fullText = "";
+
+  // ACP engine: use Claude Code via Agent Client Protocol
+  if (provider === "acp") {
+    const responseStream = new ReadableStream({
+      async start(controller) {
+        const acpClient = new AcpClient(cwd);
+        try {
+          await acpClient.start();
+
+          // Resume or create session
+          let session;
+          if (project.sessionId) {
+            session = await acpClient.resumeSession(project.sessionId);
+          } else {
+            session = await acpClient.createSession();
+          }
+
+          // Save session for reuse
+          if (session.sessionId !== project.sessionId) {
+            db.update(projects)
+              .set({ sessionId: session.sessionId })
+              .where(eq(projects.id, project.id))
+              .run();
+          }
+
+          await acpClient.prompt(session.sessionId, prompt, (type, text) => {
+            if (type === "text") {
+              fullText += text;
+              controller.enqueue(encoder.encode(text));
+            } else if (type === "tool") {
+              controller.enqueue(encoder.encode(text));
+            }
+          });
+
+          if (fullText.trim()) {
+            saveScheme(planId, fullText.trim(), plan.status);
+          }
+          controller.close();
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          controller.enqueue(encoder.encode(`\nError: ${msg}`));
+          controller.close();
+        }
+      },
+    });
+
+    return new Response(responseStream, {
+      headers: { "Content-Type": "text/plain; charset=utf-8" },
+    });
+  }
+
+  // Default: Vercel AI SDK
+  const configuredModel = getConfiguredModel((provider as Provider) || undefined, model);
+  const tools = createProjectTools(cwd);
 
   const responseStream = new ReadableStream({
     async start(controller) {

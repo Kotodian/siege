@@ -349,7 +349,7 @@ export default function SettingsPage({
         skills={skills}
         skillsBySource={skillsBySource}
         isZh={isZh}
-        hasAi={!!(aiConfig?.anthropic?.configured || aiConfig?.openai?.configured || aiConfig?.glm?.configured)}
+        hasAi={!!(aiConfig?.claude?.loggedIn || aiConfig?.anthropic?.configured || aiConfig?.openai?.configured || aiConfig?.glm?.configured)}
         onSkillsChange={() => fetch("/api/skills").then((r) => r.json()).then(setSkills)}
       />
     </div>

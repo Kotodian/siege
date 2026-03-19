@@ -83,7 +83,16 @@ Output the complete file content starting with the --- frontmatter block.`;
     async start(controller) {
       try {
         if (provider === "acp") {
-          let writtenSkill: { path: string; content: string } | null = null;
+          // Snapshot existing skill files before ACP runs
+          const skillsDir = path.join(process.env.HOME || "", ".claude", "skills");
+          const beforeFiles = new Set<string>();
+          if (fs.existsSync(skillsDir)) {
+            for (const f of fs.readdirSync(skillsDir, { recursive: true })) {
+              const fp = path.join(skillsDir, f.toString());
+              try { if (fs.statSync(fp).isFile()) beforeFiles.add(fp); } catch {}
+            }
+          }
+
           const acpClient = new AcpClient(process.cwd());
           await acpClient.start();
           const session = await acpClient.createSession();
@@ -92,16 +101,30 @@ Output the complete file content starting with the --- frontmatter block.`;
               fullText += text;
               controller.enqueue(encoder.encode(text));
             }
-          }, (filePath, content) => {
-            // Claude Code wrote a file — capture it if it looks like a skill
-            if (content.includes("---") && (filePath.endsWith(".md") || filePath.includes("skills"))) {
-              writtenSkill = { path: filePath, content };
-            }
           });
           await acpClient.stop();
-          // If Claude Code wrote the skill file directly, use that content instead
-          if (writtenSkill !== null) {
-            fullText = (writtenSkill as { path: string; content: string }).content;
+
+          // Check what new files appeared in ~/.claude/skills/
+          const newSkills: string[] = [];
+          if (fs.existsSync(skillsDir)) {
+            for (const f of fs.readdirSync(skillsDir, { recursive: true })) {
+              const fp = path.join(skillsDir, f.toString());
+              try { if (fs.statSync(fp).isFile() && !beforeFiles.has(fp)) newSkills.push(fp); } catch {}
+            }
+          }
+
+          if (newSkills.length > 0) {
+            // Claude Code installed skill files directly — report them
+            const names = newSkills.map(fp => path.basename(fp, ".md")).join(", ");
+            controller.enqueue(encoder.encode(`\n__SKILL_INSTALLED__:${names}`));
+          } else {
+            // No new files from Claude Code — try to extract from text output
+            const saved = saveSkillFile(fullText);
+            if (saved) {
+              controller.enqueue(encoder.encode(`\n__SKILL_INSTALLED__:${saved.name}`));
+            } else {
+              controller.enqueue(encoder.encode("\n__SKILL_ERROR__:AI could not install the skill"));
+            }
           }
         } else {
           const model = getConfiguredModel();
@@ -110,18 +133,17 @@ Output the complete file content starting with the --- frontmatter block.`;
             fullText += chunk;
             controller.enqueue(encoder.encode(chunk));
           }
-        }
 
-        // Save file and send result marker
-        if (fullText.trim()) {
-          const saved = saveSkillFile(fullText);
-          if (saved) {
-            controller.enqueue(encoder.encode(`\n__SKILL_INSTALLED__:${saved.name}`));
+          if (fullText.trim()) {
+            const saved = saveSkillFile(fullText);
+            if (saved) {
+              controller.enqueue(encoder.encode(`\n__SKILL_INSTALLED__:${saved.name}`));
+            } else {
+              controller.enqueue(encoder.encode("\n__SKILL_ERROR__:Invalid skill content"));
+            }
           } else {
-            controller.enqueue(encoder.encode("\n__SKILL_ERROR__:AI did not generate valid skill content (missing frontmatter)"));
+            controller.enqueue(encoder.encode("\n__SKILL_ERROR__:Empty response"));
           }
-        } else {
-          controller.enqueue(encoder.encode("\n__SKILL_ERROR__:Empty response"));
         }
       } catch (err) {
         controller.enqueue(encoder.encode(`\n__SKILL_ERROR__:${err instanceof Error ? err.message : "Generation failed"}`));

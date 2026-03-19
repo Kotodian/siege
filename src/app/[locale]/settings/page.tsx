@@ -372,30 +372,48 @@ function SkillsSection({
   const [prompt, setPrompt] = useState("");
   const [generating, setGenerating] = useState(false);
   const [result, setResult] = useState<string | null>(null);
+  const [streamContent, setStreamContent] = useState("");
 
   const handleGenerate = async () => {
     if (!prompt.trim() || generating) return;
     setGenerating(true);
     setResult(null);
+    setStreamContent("");
     try {
       const res = await fetch("/api/skills/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt }),
       });
-      if (res.ok) {
-        const data = await res.json();
-        setResult(isZh ? `已安装: ${data.name}` : `Installed: ${data.name}`);
-        setPrompt("");
-        onSkillsChange();
+      if (res.ok && res.body) {
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let content = "";
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          content += decoder.decode(value, { stream: true });
+          // Check for result markers
+          if (content.includes("__SKILL_INSTALLED__:")) {
+            const name = content.split("__SKILL_INSTALLED__:")[1]?.trim();
+            setResult(isZh ? `已安装: ${name}` : `Installed: ${name}`);
+            setPrompt("");
+            onSkillsChange();
+          } else if (content.includes("__SKILL_ERROR__:")) {
+            const err = content.split("__SKILL_ERROR__:")[1]?.trim();
+            setResult(err || (isZh ? "生成失败" : "Generation failed"));
+          } else {
+            setStreamContent(content);
+          }
+        }
       } else {
-        const err = await res.json();
-        setResult(err.error || "Failed");
+        setResult(isZh ? "生成失败" : "Generation failed");
       }
     } catch {
       setResult(isZh ? "生成失败" : "Generation failed");
     } finally {
       setGenerating(false);
+      setStreamContent("");
     }
   };
 
@@ -437,6 +455,12 @@ function SkillsSection({
             {generating ? (isZh ? "生成中..." : "Generating...") : (isZh ? "安装" : "Install")}
           </Button>
         </div>
+        {/* Streaming preview */}
+        {generating && streamContent && (
+          <div className="mt-2 max-h-40 overflow-y-auto rounded border bg-gray-50 p-3">
+            <pre className="text-xs text-gray-600 whitespace-pre-wrap font-mono">{streamContent}</pre>
+          </div>
+        )}
         {result && (
           <p className={`text-xs mt-2 ${result.startsWith("Installed") || result.startsWith("已安装") ? "text-green-600" : "text-red-500"}`}>
             {result}

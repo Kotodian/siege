@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getConfiguredModel, hasApiKey } from "@/lib/ai/config";
-import { generateText } from "ai";
+import { getConfiguredModel } from "@/lib/ai/config";
+import { streamText } from "ai";
 import { AcpClient } from "@/lib/acp/client";
 import { parseJsonBody } from "@/lib/utils";
 import { getDb } from "@/lib/db";
@@ -28,9 +28,14 @@ function getDefaultProvider(): string {
   return s?.value || "anthropic";
 }
 
-function saveSkillFile(text: string): { name: string; fileName: string; filePath: string } {
-  const nameMatch = text.match(/^---\n[\s\S]*?name:\s*(.+)\n[\s\S]*?---/);
-  const skillName = nameMatch?.[1]?.trim() || `skill-${Date.now()}`;
+function saveSkillFile(rawText: string): { name: string; fileName: string; filePath: string; text: string } {
+  // Strip markdown code fences if AI wrapped the output
+  let text = rawText.trim();
+  const fenceMatch = text.match(/^```(?:markdown|md)?\n([\s\S]*?)```\s*$/);
+  if (fenceMatch) text = fenceMatch[1].trim();
+
+  const nameMatch = text.match(/---\n[\s\S]*?name:\s*(.+)\n[\s\S]*?---/);
+  const skillName = nameMatch?.[1]?.trim().replace(/['"]/g, "") || `skill-${Date.now()}`;
   const fileName = `${skillName.replace(/[^a-zA-Z0-9-_]/g, "-")}.md`;
 
   const homeDir = process.env.HOME || process.env.USERPROFILE || "";
@@ -42,7 +47,7 @@ function saveSkillFile(text: string): { name: string; fileName: string; filePath
   const filePath = path.join(skillsDir, fileName);
   fs.writeFileSync(filePath, text, "utf-8");
 
-  return { name: skillName, fileName, filePath };
+  return { name: skillName, fileName, filePath, text };
 }
 
 export async function POST(req: NextRequest) {
@@ -55,40 +60,48 @@ export async function POST(req: NextRequest) {
   }
 
   const provider = getDefaultProvider();
+  const encoder = new TextEncoder();
+  let fullText = "";
 
-  try {
-    let text: string;
+  const responseStream = new ReadableStream({
+    async start(controller) {
+      try {
+        if (provider === "acp") {
+          const acpClient = new AcpClient(process.cwd());
+          await acpClient.start();
+          const session = await acpClient.createSession();
+          await acpClient.prompt(session.sessionId, `${SYSTEM_PROMPT}\n\n${prompt}`, (type, text) => {
+            if (type === "text") {
+              fullText += text;
+              controller.enqueue(encoder.encode(text));
+            }
+          });
+          await acpClient.stop();
+        } else {
+          const model = getConfiguredModel();
+          const result = streamText({ model, system: SYSTEM_PROMPT, prompt });
+          for await (const chunk of result.textStream) {
+            fullText += chunk;
+            controller.enqueue(encoder.encode(chunk));
+          }
+        }
 
-    if (provider === "acp") {
-      // Use ACP
-      const acpClient = new AcpClient(process.cwd());
-      await acpClient.start();
-      const session = await acpClient.createSession();
-      let result = "";
-      await acpClient.prompt(session.sessionId, `${SYSTEM_PROMPT}\n\n${prompt}`, (type, t) => {
-        if (type === "text") result += t;
-      });
-      await acpClient.stop();
-      text = result;
-    } else {
-      // Use SDK
-      const model = getConfiguredModel();
-      const { text: t } = await generateText({ model, system: SYSTEM_PROMPT, prompt });
-      text = t;
-    }
+        // Save file and send result marker
+        if (fullText.trim()) {
+          const { name } = saveSkillFile(fullText);
+          controller.enqueue(encoder.encode(`\n__SKILL_INSTALLED__:${name}`));
+        } else {
+          controller.enqueue(encoder.encode("\n__SKILL_ERROR__:Empty response"));
+        }
+      } catch (err) {
+        controller.enqueue(encoder.encode(`\n__SKILL_ERROR__:${err instanceof Error ? err.message : "Generation failed"}`));
+      } finally {
+        controller.close();
+      }
+    },
+  });
 
-    if (!text.trim()) {
-      return NextResponse.json({ error: "AI returned empty response" }, { status: 500 });
-    }
-
-    const { name, fileName, filePath } = saveSkillFile(text);
-
-    return NextResponse.json({ success: true, name, fileName, filePath, content: text });
-  } catch (err) {
-    console.error("[skills/generate] Error:", err);
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Generation failed" },
-      { status: 500 }
-    );
-  }
+  return new Response(responseStream, {
+    headers: { "Content-Type": "text/plain; charset=utf-8" },
+  });
 }

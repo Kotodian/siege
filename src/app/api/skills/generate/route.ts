@@ -60,22 +60,22 @@ export async function POST(req: NextRequest) {
   const encoder = new TextEncoder();
   let fullText = "";
 
-  // ACP-friendly prompt: frame as a clear user task, not a system override
-  const acpPrompt = `Please generate a skill file for me. The file should be a markdown document with YAML frontmatter.
+  // ACP-friendly prompt: explicitly tell Claude not to use tools
+  const acpPrompt = `IMPORTANT: Do NOT use any tools. Do NOT read files, fetch URLs, or run commands. Just write text output directly.
 
-Start the file with:
+I need you to write a markdown skill document from scratch based on your own knowledge. The document should have YAML frontmatter at the top.
+
+Format:
 ---
 name: <short-kebab-case-name>
 description: <one-line description>
 ---
 
-Then write the skill content as markdown — instructions, rules, patterns, or knowledge that a coding assistant can reference when working on tasks.
+<markdown content with headings, rules, patterns, code examples>
 
-Here is what I need the skill to cover:
+Topic to cover: ${prompt}
 
-${prompt}
-
-Please output only the file content, starting with the --- frontmatter block. No extra explanation.`;
+Write the complete document now. Start directly with --- on the first line. No explanation before or after.`;
 
   const responseStream = new ReadableStream({
     async start(controller) {

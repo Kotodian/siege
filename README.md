@@ -123,10 +123,20 @@ Describe   AI Gen    Gantt       Claude      Diff View   AI Gen
 - **SSE real-time progress** streaming
 - **Gantt chart** schedule visualization
 
+### Multi-Source Import
+- **Markdown** — import plans from local `.md` files
+- **Notion** — search pages/databases, import with blocks-to-markdown conversion
+- **Jira** — search Epics/Stories via JQL, sub-tasks become schemes
+- **Confluence** — search pages via CQL, H2 sections become schemes
+- **Feishu** — search wiki docs, import with block-level conversion
+- **GitHub Issues** — search issues by repo or globally, labels auto-map to plan tags
+- **GitLab Issues** — works with self-hosted instances, search by project or globally
+- **MCP Server** — connect any MCP server, import resources as plans
+- **Inline setup** — configure new import sources directly in the import dialog, no need to leave
+
 ### Data Management
 - **Auto-archive** completed plans after configurable days
 - **Backup** to Local filesystem, Obsidian vault, or Notion
-- **Import** plans from Markdown, Notion, Jira, Confluence, Feishu, GitHub Issues, GitLab Issues, or MCP servers
 - **SQLite** — zero-ops, single file database
 
 ### i18n

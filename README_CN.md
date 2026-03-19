@@ -115,10 +115,20 @@ Siege 将 Claude Code / Codex 包装成一个**完整的开发生命周期管理
 - 首页**最近打开**的项目
 - 自定义**项目图标**
 
+### 多来源导入
+- **Markdown** — 从本地 `.md` 文件导入计划
+- **Notion** — 搜索页面/数据库，blocks 自动转 markdown
+- **Jira** — 通过 JQL 搜索 Epic/Story，子任务自动变方案
+- **Confluence** — 通过 CQL 搜索页面，H2 分段变方案
+- **飞书** — 搜索知识库文档，block 级别内容转换
+- **GitHub Issues** — 按仓库或全局搜索 issues，label 自动映射计划标签
+- **GitLab Issues** — 支持自建实例，按项目或全局搜索
+- **MCP 服务器** — 连接任意 MCP 服务器，导入 resources 为计划
+- **内联配置** — 直接在导入对话框中配置新来源，无需跳转设置页
+
 ### 数据管理
 - **自动归档**已完成计划
 - **备份**至本地文件系统、Obsidian 库或 Notion
-- **导入** 支持从 Markdown、Notion、Jira、Confluence、飞书、GitHub Issues、GitLab Issues 或 MCP 服务器导入计划
 - **SQLite** — 零运维，单文件数据库
 
 ### 国际化

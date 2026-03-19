@@ -22,12 +22,6 @@ Then provide the skill content as markdown. The content should be instructions, 
 
 Output ONLY the file content. No explanation, no code fences wrapping the whole thing.`;
 
-function getDefaultProvider(): string {
-  const db = getDb();
-  const s = db.select().from(appSettings).where(eq(appSettings.key, "default_provider")).get();
-  return s?.value || "anthropic";
-}
-
 function saveSkillFile(rawText: string): { name: string; fileName: string; filePath: string; text: string } {
   // Strip markdown code fences if AI wrapped the output
   let text = rawText.trim();
@@ -59,9 +53,29 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "prompt is required" }, { status: 400 });
   }
 
-  const provider = getDefaultProvider();
+  const db = getDb();
+  const providerSetting = db.select().from(appSettings).where(eq(appSettings.key, "default_provider")).get();
+  const provider = providerSetting?.value || "anthropic";
+
   const encoder = new TextEncoder();
   let fullText = "";
+
+  // ACP-friendly prompt: frame as a clear user task, not a system override
+  const acpPrompt = `Please generate a skill file for me. The file should be a markdown document with YAML frontmatter.
+
+Start the file with:
+---
+name: <short-kebab-case-name>
+description: <one-line description>
+---
+
+Then write the skill content as markdown — instructions, rules, patterns, or knowledge that a coding assistant can reference when working on tasks.
+
+Here is what I need the skill to cover:
+
+${prompt}
+
+Please output only the file content, starting with the --- frontmatter block. No extra explanation.`;
 
   const responseStream = new ReadableStream({
     async start(controller) {
@@ -70,7 +84,7 @@ export async function POST(req: NextRequest) {
           const acpClient = new AcpClient(process.cwd());
           await acpClient.start();
           const session = await acpClient.createSession();
-          await acpClient.prompt(session.sessionId, `${SYSTEM_PROMPT}\n\n${prompt}`, (type, text) => {
+          await acpClient.prompt(session.sessionId, acpPrompt, (type, text) => {
             if (type === "text") {
               fullText += text;
               controller.enqueue(encoder.encode(text));

@@ -1,4 +1,4 @@
-import { spawn, type ChildProcess } from "child_process";
+import { spawn, execSync, type ChildProcess } from "child_process";
 import fs from "fs";
 
 interface PendingRequest {
@@ -44,6 +44,7 @@ export class AcpClient {
   private onUpdate: UpdateCallback | null = null;
   private onWrite: WriteCallback | null = null;
   private repoPath: string;
+  private terminals = new Map<string, { output: string; exitCode: number | null }>();
 
   constructor(repoPath: string) {
     this.repoPath = repoPath;
@@ -246,12 +247,50 @@ export class AcpClient {
       const filePath = uri.replace("file://", "");
       const text = (params?.text as string) || "";
       try {
+        const dir = require("path").dirname(filePath);
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
         fs.writeFileSync(filePath, text, "utf-8");
         if (this.onWrite) this.onWrite(filePath, text);
         result = {};
       } catch (e) {
         result = { error: String(e) };
       }
+    } else if (method === "terminal/create") {
+      const command = (params?.command as string) || "";
+      const args = (params?.args as string[]) || [];
+      const cwd = (params?.cwd as string) || this.repoPath;
+      const termId = `term-${Date.now()}`;
+      try {
+        const fullCmd = args.length > 0 ? `${command} ${args.join(" ")}` : command;
+        const output = execSync(fullCmd, {
+          cwd,
+          encoding: "utf-8",
+          timeout: 60000,
+          maxBuffer: 1024 * 1024,
+        });
+        this.terminals.set(termId, { output: output || "", exitCode: 0 });
+      } catch (e: unknown) {
+        const err = e as { stdout?: string; stderr?: string; status?: number };
+        this.terminals.set(termId, {
+          output: (err.stdout || "") + (err.stderr || ""),
+          exitCode: err.status ?? 1,
+        });
+      }
+      result = { terminalId: termId };
+    } else if (method === "terminal/output") {
+      const termId = (params?.terminalId as string) || "";
+      const term = this.terminals.get(termId);
+      result = {
+        output: term?.output || "",
+        truncated: false,
+        exitStatus: term ? { exitCode: term.exitCode ?? 0 } : { exitCode: 0 },
+      };
+    } else if (method === "terminal/wait_for_exit") {
+      const termId = (params?.terminalId as string) || "";
+      const term = this.terminals.get(termId);
+      result = { exitCode: term?.exitCode ?? 0 };
+    } else if (method === "terminal/kill" || method === "terminal/release") {
+      result = {};
     }
 
     this.send({ jsonrpc: "2.0", id, result });

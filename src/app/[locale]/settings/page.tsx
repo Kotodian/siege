@@ -17,7 +17,8 @@ interface AiConfig {
   anthropic: ProviderStatus;
   openai: ProviderStatus;
   glm: ProviderStatus;
-  claude?: { installed: boolean; loggedIn: boolean; email?: string };
+  claude?: { installed: boolean; loggedIn: boolean; email?: string; subscriptionType?: string };
+  codex?: { installed: boolean; loggedIn: boolean; method?: string };
 }
 
 interface SkillSummary {
@@ -146,9 +147,9 @@ export default function SettingsPage({
                   <span className="text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
                     ✓ {aiConfig.claude.email || (isZh ? "已登录" : "Logged in")}
                   </span>
-                  {(aiConfig.claude as Record<string, unknown>)?.subscriptionType && (
+                  {aiConfig.claude.subscriptionType && (
                     <span className="text-xs text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
-                      {String((aiConfig.claude as Record<string, unknown>).subscriptionType)}
+                      {aiConfig.claude.subscriptionType}
                     </span>
                   )}
                 </>
@@ -163,11 +164,67 @@ export default function SettingsPage({
               )}
             </div>
           </div>
-          <p className="text-xs text-gray-400 mt-2">
-            {isZh
-              ? "使用 Claude 订阅认证。任务排期中选择「Claude Code (ACP)」引擎即可使用。未登录请运行: claude login"
-              : "Uses your Claude subscription. Select 'Claude Code (ACP)' engine in task scheduler. To login: claude login"}
-          </p>
+          {aiConfig?.claude?.loggedIn ? (
+            <p className="text-xs text-gray-400 mt-2">
+              {isZh
+                ? "任务排期中选择「Claude Code (ACP)」引擎即可使用"
+                : "Select 'Claude Code (ACP)' engine in task scheduler"}
+            </p>
+          ) : aiConfig?.claude?.installed ? (
+            <div className="mt-2 flex items-center gap-2">
+              <code className="text-xs bg-gray-100 px-2 py-1 rounded font-mono select-all">claude login</code>
+              <Button variant="ghost" size="sm" onClick={() => fetch("/api/ai-config").then(r => r.json()).then(setAiConfig)}>
+                {isZh ? "刷新状态" : "Refresh"}
+              </Button>
+            </div>
+          ) : (
+            <p className="text-xs text-gray-400 mt-2">
+              {isZh ? "请先安装 Claude Code CLI" : "Install Claude Code CLI first"}
+            </p>
+          )}
+        </div>
+
+        {/* Codex Login — for Codex ACP engine */}
+        <div className="rounded-lg border bg-white p-4 mb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-sm">Codex</span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-600 font-medium">ACP</span>
+            </div>
+            <div className="flex items-center gap-2">
+              {aiConfig?.codex?.loggedIn ? (
+                <span className="text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
+                  ✓ {aiConfig.codex.method || (isZh ? "已登录" : "Logged in")}
+                </span>
+              ) : aiConfig?.codex?.installed ? (
+                <span className="text-xs text-yellow-600 bg-yellow-50 px-2 py-0.5 rounded-full">
+                  {isZh ? "未登录" : "Not logged in"}
+                </span>
+              ) : (
+                <span className="text-xs text-gray-400">
+                  {isZh ? "未安装" : "Not installed"}
+                </span>
+              )}
+            </div>
+          </div>
+          {aiConfig?.codex?.loggedIn ? (
+            <p className="text-xs text-gray-400 mt-2">
+              {isZh
+                ? "任务排期中选择「Codex (ACP)」引擎即可使用"
+                : "Select 'Codex (ACP)' engine in task scheduler"}
+            </p>
+          ) : aiConfig?.codex?.installed ? (
+            <div className="mt-2 flex items-center gap-2">
+              <code className="text-xs bg-gray-100 px-2 py-1 rounded font-mono select-all">codex login</code>
+              <Button variant="ghost" size="sm" onClick={() => fetch("/api/ai-config").then(r => r.json()).then(setAiConfig)}>
+                {isZh ? "刷新状态" : "Refresh"}
+              </Button>
+            </div>
+          ) : (
+            <p className="text-xs text-gray-400 mt-2">
+              {isZh ? "请先安装 Codex CLI" : "Install Codex CLI first"}
+            </p>
+          )}
         </div>
 
         <div className="space-y-3">
@@ -322,6 +379,7 @@ export default function SettingsPage({
               className="w-full border rounded-md px-3 py-2 text-sm"
             >
               <option value="acp">Claude Code (ACP)</option>
+              <option value="codex-acp">Codex (ACP)</option>
               <option value="anthropic">Anthropic (Claude)</option>
               <option value="openai">OpenAI (GPT)</option>
               <option value="glm">GLM (智谱)</option>

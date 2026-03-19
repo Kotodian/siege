@@ -110,14 +110,32 @@ function checkClaudeLogin(): { loggedIn: boolean; installed: boolean; email?: st
   }
 }
 
+function checkCodexLogin(): { installed: boolean; loggedIn: boolean; method?: string } {
+  try {
+    execSync("which codex", { encoding: "utf-8", timeout: 3000 });
+  } catch {
+    return { loggedIn: false, installed: false };
+  }
+  try {
+    const output = execSync("codex login status 2>&1", { encoding: "utf-8", timeout: 5000 });
+    const loggedIn = output.includes("Logged in");
+    const method = output.trim().replace("Logged in using ", "");
+    return { loggedIn, installed: true, method: loggedIn ? method : undefined };
+  } catch {
+    return { loggedIn: false, installed: true };
+  }
+}
+
 // GET: check AI config status
 export async function GET() {
   const claude = checkClaudeLogin();
+  const codex = checkCodexLogin();
   const status = {
     anthropic: getProviderStatus("anthropic"),
     openai: getProviderStatus("openai"),
     glm: getProviderStatus("glm"),
     claude: { installed: claude.installed, loggedIn: claude.loggedIn, email: claude.email, subscriptionType: claude.subscriptionType },
+    codex: { installed: codex.installed, loggedIn: codex.loggedIn, method: codex.method },
   };
   return NextResponse.json(status);
 }

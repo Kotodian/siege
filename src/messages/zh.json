@@ -67,7 +67,14 @@
     "sourceType": {
       "web_search": "网页搜索",
       "local_analysis": "本地分析",
-      "manual": "手动添加"
+      "manual": "手动添加",
+      "notion": "Notion 导入",
+      "jira": "Jira 导入",
+      "confluence": "Confluence 导入",
+      "mcp": "MCP 导入",
+      "feishu": "飞书导入",
+      "github": "GitHub 导入",
+      "gitlab": "GitLab 导入"
     },
     "confirmSchemes": "确认方案",
     "revokeConfirm": "撤回确认",
@@ -123,5 +130,32 @@
     "create": "新建文件夹",
     "name": "文件夹名称",
     "deleteConfirm": "确定要删除文件夹「{name}」吗？"
+  },
+  "import": {
+    "title": "导入计划",
+    "markdown": "Markdown",
+    "notion": "Notion",
+    "jira": "Jira",
+    "confluence": "Confluence",
+    "mcp": "MCP",
+    "feishu": "飞书",
+    "github": "GitHub",
+    "gitlab": "GitLab",
+    "search": "搜索",
+    "searching": "搜索中...",
+    "selected": "已选 {count} 项",
+    "importSelected": "导入所选 ({count})",
+    "noSourceConfigured": "尚未配置 {source} 导入源",
+    "goToSettings": "前往设置页面配置",
+    "filePath": "Markdown 文件路径",
+    "importSources": "导入来源",
+    "addImportSource": "添加导入来源",
+    "noImportSources": "暂无配置的导入来源",
+    "sourceType": "类型",
+    "validate": "验证",
+    "validating": "验证中...",
+    "connected": "连接成功",
+    "connectionFailed": "连接失败",
+    "link": "链接"
   }
 }

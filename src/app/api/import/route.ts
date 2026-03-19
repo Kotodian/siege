@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
-import { plans, projects, schemes } from "@/lib/db/schema";
+import { plans, projects, schemes, importConfigs } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import fs from "fs";
 import path from "path";
+import { getImportSource } from "@/lib/import";
 
 interface ParsedPlan {
   name: string;
@@ -55,11 +56,24 @@ function parseMarkdown(content: string, fileName: string): ParsedPlan {
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { projectId, filePath } = body;
+  const { projectId, filePath, source, sourceId, itemId } = body;
 
-  if (!projectId || !filePath) {
+  if (!projectId) {
     return NextResponse.json(
-      { error: "projectId and filePath are required" },
+      { error: "projectId is required" },
+      { status: 400 }
+    );
+  }
+
+  // Source-based import (Notion, Jira, Confluence, MCP)
+  if (source && sourceId && itemId) {
+    return handleSourceImport(projectId, source, sourceId, itemId);
+  }
+
+  // Markdown file import (original behavior)
+  if (!filePath) {
+    return NextResponse.json(
+      { error: "filePath is required for markdown import" },
       { status: 400 }
     );
   }
@@ -97,29 +111,80 @@ export async function POST(req: NextRequest) {
 
   const parsed = parseMarkdown(content, path.basename(resolvedPath));
 
+  return createPlanFromImport(projectId, parsed.name, parsed.description, "feature", parsed.schemes, "manual");
+}
+
+async function handleSourceImport(
+  projectId: string,
+  source: string,
+  sourceId: string,
+  itemId: string
+) {
+  const importSource = getImportSource(source);
+  if (!importSource) {
+    return NextResponse.json(
+      { error: `Unknown import source: ${source}` },
+      { status: 400 }
+    );
+  }
+
+  const db = getDb();
+  const config = db
+    .select()
+    .from(importConfigs)
+    .where(eq(importConfigs.id, sourceId))
+    .get();
+
+  if (!config) {
+    return NextResponse.json(
+      { error: "Import config not found" },
+      { status: 404 }
+    );
+  }
+
+  const configObj = JSON.parse(config.config) as Record<string, string>;
+  const result = await importSource.fetchItem(configObj, itemId);
+
+  return createPlanFromImport(
+    projectId,
+    result.planName,
+    result.planDescription,
+    result.planTag,
+    result.schemes,
+    source as "notion" | "jira" | "confluence" | "mcp"
+  );
+}
+
+function createPlanFromImport(
+  projectId: string,
+  name: string,
+  description: string,
+  tag: string,
+  importedSchemes: Array<{ title: string; content: string }>,
+  sourceType: "manual" | "notion" | "jira" | "confluence" | "mcp" | "feishu" | "github" | "gitlab"
+) {
   const db = getDb();
 
-  // Create plan
   const planId = crypto.randomUUID();
   db.insert(plans)
     .values({
       id: planId,
       projectId,
-      name: parsed.name,
-      description: parsed.description,
-      status: parsed.schemes.length > 0 ? "reviewing" : "draft",
+      name,
+      description,
+      tag,
+      status: importedSchemes.length > 0 ? "reviewing" : "draft",
     })
     .run();
 
-  // Create schemes
-  for (const scheme of parsed.schemes) {
+  for (const scheme of importedSchemes) {
     db.insert(schemes)
       .values({
         id: crypto.randomUUID(),
         planId,
         title: scheme.title,
         content: scheme.content,
-        sourceType: "manual",
+        sourceType,
       })
       .run();
   }

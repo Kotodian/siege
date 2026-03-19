@@ -72,7 +72,7 @@ export const schemes = sqliteTable("schemes", {
   title: text("title").notNull(),
   content: text("content").default(""),
   sourceType: text("source_type", {
-    enum: ["web_search", "local_analysis", "manual"],
+    enum: ["web_search", "local_analysis", "manual", "notion", "jira", "confluence", "mcp", "feishu", "github", "gitlab"],
   })
     .notNull()
     .default("manual"),
@@ -300,6 +300,18 @@ export const reviewComments = sqliteTable("review_comments", {
   })
     .notNull()
     .default("pending"),
+  createdAt: text("created_at")
+    .default(sql`(datetime('now'))`)
+    .notNull(),
+});
+
+export const importConfigs = sqliteTable("import_configs", {
+  id: text("id").primaryKey(),
+  source: text("source", {
+    enum: ["notion", "jira", "confluence", "mcp", "feishu", "github", "gitlab"],
+  }).notNull(),
+  config: text("config").notNull().default("{}"),
+  enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
   createdAt: text("created_at")
     .default(sql`(datetime('now'))`)
     .notNull(),

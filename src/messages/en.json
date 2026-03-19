@@ -67,7 +67,14 @@
     "sourceType": {
       "web_search": "Web Search",
       "local_analysis": "Local Analysis",
-      "manual": "Manual"
+      "manual": "Manual",
+      "notion": "Notion Import",
+      "jira": "Jira Import",
+      "confluence": "Confluence Import",
+      "mcp": "MCP Import",
+      "feishu": "Feishu Import",
+      "github": "GitHub Import",
+      "gitlab": "GitLab Import"
     },
     "confirmSchemes": "Confirm Schemes",
     "revokeConfirm": "Revoke Confirmation",
@@ -123,5 +130,32 @@
     "create": "New Folder",
     "name": "Folder Name",
     "deleteConfirm": "Delete folder \"{name}\"?"
+  },
+  "import": {
+    "title": "Import Plan",
+    "markdown": "Markdown",
+    "notion": "Notion",
+    "jira": "Jira",
+    "confluence": "Confluence",
+    "mcp": "MCP",
+    "feishu": "Feishu",
+    "github": "GitHub",
+    "gitlab": "GitLab",
+    "search": "Search",
+    "searching": "Searching...",
+    "selected": "{count} selected",
+    "importSelected": "Import Selected ({count})",
+    "noSourceConfigured": "No {source} import source configured",
+    "goToSettings": "Go to Settings to configure",
+    "filePath": "Markdown File Path",
+    "importSources": "Import Sources",
+    "addImportSource": "Add Import Source",
+    "noImportSources": "No import sources configured",
+    "sourceType": "Type",
+    "validate": "Validate",
+    "validating": "Validating...",
+    "connected": "Connected",
+    "connectionFailed": "Connection Failed",
+    "link": "Link"
   }
 }

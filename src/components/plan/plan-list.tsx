@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { PlanCard } from "./plan-card";
 import { CreatePlanDialog } from "./create-plan-dialog";
+import { ImportPlanDialog } from "./import-plan-dialog";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 
@@ -41,7 +42,6 @@ export function PlanList({ projectId, locale }: PlanListProps) {
   const [folderDialogOpen, setFolderDialogOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
   const [importDialogOpen, setImportDialogOpen] = useState(false);
-  const [importPath, setImportPath] = useState("");
 
   const fetchContents = async (folderId: string | null) => {
     const params = new URLSearchParams({ projectId });
@@ -116,14 +116,7 @@ export function PlanList({ projectId, locale }: PlanListProps) {
     fetchContents(currentFolderId);
   };
 
-  const handleImport = async () => {
-    if (!importPath) return;
-    await fetch("/api/import", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ projectId, filePath: importPath }),
-    });
-    setImportPath("");
+  const handleImported = () => {
     setImportDialogOpen(false);
     fetchContents(currentFolderId);
   };
@@ -269,33 +262,13 @@ export function PlanList({ projectId, locale }: PlanListProps) {
         </div>
       </Dialog>
 
-      {/* Import Dialog */}
-      <Dialog
+      <ImportPlanDialog
         open={importDialogOpen}
         onClose={() => setImportDialogOpen(false)}
-        title={locale === "zh" ? "从 Markdown 导入计划" : "Import Plan from Markdown"}
-      >
-        <div className="space-y-4">
-          <Input
-            label="Markdown File Path"
-            value={importPath}
-            onChange={(e) => setImportPath(e.target.value)}
-            placeholder="/path/to/plan.md"
-            required
-          />
-          <div className="flex justify-end gap-2">
-            <Button
-              variant="secondary"
-              onClick={() => setImportDialogOpen(false)}
-            >
-              {t("common.cancel")}
-            </Button>
-            <Button onClick={handleImport} disabled={!importPath}>
-              {locale === "zh" ? "导入" : "Import"}
-            </Button>
-          </div>
-        </div>
-      </Dialog>
+        projectId={projectId}
+        locale={locale}
+        onImported={handleImported}
+      />
     </div>
   );
 }

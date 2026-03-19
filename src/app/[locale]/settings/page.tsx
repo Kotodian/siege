@@ -4,6 +4,7 @@ import { useState, useEffect, use } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Dialog } from "@/components/ui/dialog";
 import { useGlobalLoading } from "@/components/ui/global-loading";
 
 interface ProviderStatus {
@@ -404,6 +405,9 @@ export default function SettingsPage({
         </div>
       </section>
 
+      {/* Import Sources */}
+      <ImportSourcesSection isZh={isZh} />
+
       {/* Skills */}
       <SkillsSection
         skills={skills}
@@ -562,6 +566,240 @@ function SkillsSection({
           {isZh ? "未找到技能（~/.claude/skills/）" : "No skills found in ~/.claude/skills/"}
         </p>
       )}
+    </section>
+  );
+}
+
+interface ImportConfigItem {
+  id: string;
+  source: string;
+  config: Record<string, string>;
+  enabled: boolean;
+}
+
+const IMPORT_SOURCE_FIELDS: Record<
+  string,
+  Array<{ key: string; label: string; labelZh: string; placeholder: string; type?: string }>
+> = {
+  notion: [
+    { key: "api_key", label: "API Key", labelZh: "API Key", placeholder: "secret_...", type: "password" },
+    { key: "database_id", label: "Database ID (optional)", labelZh: "Database ID（可选）", placeholder: "abc123..." },
+  ],
+  jira: [
+    { key: "base_url", label: "Base URL", labelZh: "Base URL", placeholder: "https://your-domain.atlassian.net" },
+    { key: "email", label: "Email", labelZh: "邮箱", placeholder: "user@example.com" },
+    { key: "api_token", label: "API Token", labelZh: "API Token", placeholder: "ATATT3x...", type: "password" },
+  ],
+  confluence: [
+    { key: "base_url", label: "Base URL", labelZh: "Base URL", placeholder: "https://your-domain.atlassian.net/wiki" },
+    { key: "email", label: "Email", labelZh: "邮箱", placeholder: "user@example.com" },
+    { key: "api_token", label: "API Token", labelZh: "API Token", placeholder: "ATATT3x...", type: "password" },
+  ],
+  feishu: [
+    { key: "app_id", label: "App ID", labelZh: "App ID", placeholder: "cli_a1b2c3..." },
+    { key: "app_secret", label: "App Secret", labelZh: "App Secret", placeholder: "xxxx", type: "password" },
+    { key: "space_id", label: "Space ID (optional)", labelZh: "知识空间 ID（可选）", placeholder: "7xxx..." },
+  ],
+  github: [
+    { key: "token", label: "Personal Access Token", labelZh: "Personal Access Token", placeholder: "ghp_...", type: "password" },
+    { key: "repo", label: "Repository (optional)", labelZh: "仓库（可选）", placeholder: "owner/repo" },
+  ],
+  gitlab: [
+    { key: "base_url", label: "Base URL", labelZh: "Base URL", placeholder: "https://gitlab.com" },
+    { key: "token", label: "Personal Access Token", labelZh: "Personal Access Token", placeholder: "glpat-...", type: "password" },
+    { key: "project_id", label: "Project ID (optional)", labelZh: "项目 ID（可选）", placeholder: "12345" },
+  ],
+  mcp: [
+    { key: "server_command", label: "Server Command", labelZh: "服务器命令", placeholder: "npx" },
+    { key: "server_args", label: "Args (JSON array)", labelZh: "参数（JSON 数组）", placeholder: '["@modelcontextprotocol/server-xxx"]' },
+    { key: "server_env", label: "Env (JSON object)", labelZh: "环境变量（JSON 对象）", placeholder: '{"API_KEY": "..."}' },
+  ],
+};
+
+function ImportSourcesSection({ isZh }: { isZh: boolean }) {
+  const [configs, setConfigs] = useState<ImportConfigItem[]>([]);
+  const [addOpen, setAddOpen] = useState(false);
+  const [addSource, setAddSource] = useState("notion");
+  const [addFields, setAddFields] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
+  const [validating, setValidating] = useState<string | null>(null);
+  const [validationResult, setValidationResult] = useState<Record<string, boolean | null>>({});
+
+  const fetchConfigs = () => {
+    fetch("/api/import-sources")
+      .then((r) => r.json())
+      .then(setConfigs);
+  };
+
+  useEffect(() => {
+    fetchConfigs();
+  }, []);
+
+  const handleAdd = async () => {
+    setSaving(true);
+    await fetch("/api/import-sources", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ source: addSource, config: addFields }),
+    });
+    setAddOpen(false);
+    setAddFields({});
+    setSaving(false);
+    fetchConfigs();
+  };
+
+  const handleDelete = async (id: string) => {
+    await fetch(`/api/import-sources?id=${id}`, { method: "DELETE" });
+    fetchConfigs();
+  };
+
+  const handleValidate = async (id: string) => {
+    setValidating(id);
+    setValidationResult((prev) => ({ ...prev, [id]: null }));
+    const res = await fetch(`/api/import-sources/${id}/validate`, {
+      method: "POST",
+    });
+    const data = await res.json();
+    setValidationResult((prev) => ({ ...prev, [id]: data.valid }));
+    setValidating(null);
+  };
+
+  const sourceLabel = (source: string) => {
+    const labels: Record<string, string> = {
+      notion: "Notion",
+      jira: "Jira",
+      confluence: "Confluence",
+      feishu: "Feishu",
+      github: "GitHub",
+      gitlab: "GitLab",
+      mcp: "MCP",
+    };
+    return labels[source] || source;
+  };
+
+  return (
+    <section className="mb-8">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl font-semibold">
+          {isZh ? "导入来源" : "Import Sources"}
+        </h2>
+        <Button size="sm" onClick={() => setAddOpen(true)}>
+          {isZh ? "添加导入来源" : "Add Import Source"}
+        </Button>
+      </div>
+
+      {configs.length === 0 ? (
+        <p className="text-gray-500 text-sm">
+          {isZh ? "暂无配置的导入来源" : "No import sources configured"}
+        </p>
+      ) : (
+        <div className="space-y-3">
+          {configs.map((cfg) => (
+            <div key={cfg.id} className="rounded-lg border bg-white p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium text-sm">
+                    {sourceLabel(cfg.source)}
+                  </span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 font-medium">
+                    {cfg.source}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {validationResult[cfg.id] === true && (
+                    <span className="text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
+                      {isZh ? "连接成功" : "Connected"}
+                    </span>
+                  )}
+                  {validationResult[cfg.id] === false && (
+                    <span className="text-xs text-red-600 bg-red-50 px-2 py-0.5 rounded-full">
+                      {isZh ? "连接失败" : "Failed"}
+                    </span>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleValidate(cfg.id)}
+                    disabled={validating === cfg.id}
+                  >
+                    {validating === cfg.id
+                      ? (isZh ? "验证中..." : "Validating...")
+                      : (isZh ? "验证" : "Validate")}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDelete(cfg.id)}
+                    className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                  >
+                    {isZh ? "删除" : "Delete"}
+                  </Button>
+                </div>
+              </div>
+              <div className="mt-2 text-xs text-gray-400 font-mono">
+                {Object.entries(cfg.config)
+                  .map(([k, v]) => `${k}: ${v}`)
+                  .join(" | ")}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <Dialog
+        open={addOpen}
+        onClose={() => setAddOpen(false)}
+        title={isZh ? "添加导入来源" : "Add Import Source"}
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              {isZh ? "类型" : "Type"}
+            </label>
+            <select
+              value={addSource}
+              onChange={(e) => {
+                setAddSource(e.target.value);
+                setAddFields({});
+              }}
+              className="w-full border rounded-md px-3 py-2 text-sm"
+            >
+              {Object.keys(IMPORT_SOURCE_FIELDS).map((s) => (
+                <option key={s} value={s}>
+                  {sourceLabel(s)}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {IMPORT_SOURCE_FIELDS[addSource]?.map((field) => (
+            <Input
+              key={field.key}
+              label={isZh ? field.labelZh : field.label}
+              value={addFields[field.key] || ""}
+              onChange={(e) =>
+                setAddFields((prev) => ({
+                  ...prev,
+                  [field.key]: e.target.value,
+                }))
+              }
+              placeholder={field.placeholder}
+              type={field.type || "text"}
+            />
+          ))}
+
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setAddOpen(false)}>
+              {isZh ? "取消" : "Cancel"}
+            </Button>
+            <Button onClick={handleAdd} disabled={saving}>
+              {saving
+                ? (isZh ? "保存中..." : "Saving...")
+                : (isZh ? "保存" : "Save")}
+            </Button>
+          </div>
+        </div>
+      </Dialog>
     </section>
   );
 }

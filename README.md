@@ -59,8 +59,8 @@ Describe   AI Gen    Gantt       Claude      Diff View   AI Gen
 
 <table>
   <tr>
-    <td><img src="docs/screenshots/03-project-list.png" alt="Projects" /><br /><em>Project List</em></td>
-    <td><img src="docs/screenshots/05-scheme-detail.png" alt="Schemes" /><br /><em>AI-Generated Technical Schemes</em></td>
+    <td><img src="docs/screenshots/en/03-project-list.png" alt="Projects" /><br /><em>Project List</em></td>
+    <td><img src="docs/screenshots/en/05-scheme-detail.png" alt="Schemes" /><br /><em>AI-Generated Technical Schemes</em></td>
   </tr>
   <tr>
     <td><img src="docs/screenshots/09-schedule-gantt.png" alt="Schedule" /><br /><em>Task Schedule with Gantt Chart</em></td>
@@ -68,7 +68,7 @@ Describe   AI Gen    Gantt       Claude      Diff View   AI Gen
   </tr>
   <tr>
     <td><img src="docs/screenshots/08-code-review-file.png" alt="Diff Viewer" /><br /><em>Syntax-Highlighted Diff with Inline Findings</em></td>
-    <td><img src="docs/screenshots/06-settings.png" alt="Settings" /><br /><em>AI Provider Configuration</em></td>
+    <td><img src="docs/screenshots/en/06-settings.png" alt="Settings" /><br /><em>AI Provider & Import Source Configuration</em></td>
   </tr>
 </table>
 
@@ -126,7 +126,7 @@ Describe   AI Gen    Gantt       Claude      Diff View   AI Gen
 ### Data Management
 - **Auto-archive** completed plans after configurable days
 - **Backup** to Local filesystem, Obsidian vault, or Notion
-- **Import** plans from Markdown files
+- **Import** plans from Markdown, Notion, Jira, Confluence, Feishu, GitHub Issues, GitLab Issues, or MCP servers
 - **SQLite** — zero-ops, single file database
 
 ### i18n

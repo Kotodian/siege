@@ -59,8 +59,8 @@ Siege 将 Claude Code / Codex 包装成一个**完整的开发生命周期管理
 
 <table>
   <tr>
-    <td><img src="docs/screenshots/03-project-list.png" alt="项目列表" /><br /><em>项目列表</em></td>
-    <td><img src="docs/screenshots/05-scheme-detail.png" alt="技术方案" /><br /><em>AI 生成的技术方案</em></td>
+    <td><img src="docs/screenshots/zh/03-project-list.png" alt="项目列表" /><br /><em>项目列表</em></td>
+    <td><img src="docs/screenshots/zh/05-scheme-detail.png" alt="技术方案" /><br /><em>AI 生成的技术方案</em></td>
   </tr>
   <tr>
     <td><img src="docs/screenshots/09-schedule-gantt.png" alt="任务排期" /><br /><em>甘特图任务排期</em></td>
@@ -68,7 +68,7 @@ Siege 将 Claude Code / Codex 包装成一个**完整的开发生命周期管理
   </tr>
   <tr>
     <td><img src="docs/screenshots/08-code-review-file.png" alt="Diff 查看器" /><br /><em>语法高亮 Diff 及行内发现标注</em></td>
-    <td><img src="docs/screenshots/06-settings.png" alt="设置" /><br /><em>AI 提供商配置</em></td>
+    <td><img src="docs/screenshots/zh/06-settings.png" alt="设置" /><br /><em>AI 提供商 & 导入来源配置</em></td>
   </tr>
 </table>
 
@@ -118,7 +118,7 @@ Siege 将 Claude Code / Codex 包装成一个**完整的开发生命周期管理
 ### 数据管理
 - **自动归档**已完成计划
 - **备份**至本地文件系统、Obsidian 库或 Notion
-- **导入** Markdown 格式计划
+- **导入** 支持从 Markdown、Notion、Jira、Confluence、飞书、GitHub Issues、GitLab Issues 或 MCP 服务器导入计划
 - **SQLite** — 零运维，单文件数据库
 
 ### 国际化

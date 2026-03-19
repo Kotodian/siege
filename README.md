@@ -70,6 +70,10 @@ Describe   AI Gen    Gantt       Claude      Diff View   AI Gen
     <td><img src="docs/screenshots/08-code-review-file.png" alt="Diff Viewer" /><br /><em>Syntax-Highlighted Diff with Inline Findings</em></td>
     <td><img src="docs/screenshots/en/06-settings.png" alt="Settings" /><br /><em>AI Provider & Import Source Configuration</em></td>
   </tr>
+  <tr>
+    <td><img src="docs/screenshots/en/11-import-dialog.png" alt="Import" /><br /><em>Multi-Source Import — GitHub, GitLab, Notion, Jira, Confluence, Feishu, MCP</em></td>
+    <td><img src="docs/screenshots/en/04-plan-list.png" alt="Plans" /><br /><em>Plan List with Folders</em></td>
+  </tr>
 </table>
 
 ## Core Workflow

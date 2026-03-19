@@ -70,6 +70,10 @@ Siege 将 Claude Code / Codex 包装成一个**完整的开发生命周期管理
     <td><img src="docs/screenshots/08-code-review-file.png" alt="Diff 查看器" /><br /><em>语法高亮 Diff 及行内发现标注</em></td>
     <td><img src="docs/screenshots/zh/06-settings.png" alt="设置" /><br /><em>AI 提供商 & 导入来源配置</em></td>
   </tr>
+  <tr>
+    <td><img src="docs/screenshots/zh/11-import-dialog.png" alt="导入" /><br /><em>多来源导入 — GitHub、GitLab、Notion、Jira、Confluence、飞书、MCP</em></td>
+    <td><img src="docs/screenshots/zh/04-plan-list.png" alt="计划列表" /><br /><em>计划列表与文件夹</em></td>
+  </tr>
 </table>
 
 ## 核心流程

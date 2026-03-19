@@ -85,6 +85,7 @@ Output the complete file content starting with the --- frontmatter block.`;
     async start(controller) {
       try {
         if (provider === "acp") {
+          let writtenSkill: { path: string; content: string } | null = null;
           const acpClient = new AcpClient(process.cwd());
           await acpClient.start();
           const session = await acpClient.createSession();
@@ -93,8 +94,17 @@ Output the complete file content starting with the --- frontmatter block.`;
               fullText += text;
               controller.enqueue(encoder.encode(text));
             }
+          }, (filePath, content) => {
+            // Claude Code wrote a file — capture it if it looks like a skill
+            if (content.includes("---") && (filePath.endsWith(".md") || filePath.includes("skills"))) {
+              writtenSkill = { path: filePath, content };
+            }
           });
           await acpClient.stop();
+          // If Claude Code wrote the skill file directly, use that content instead
+          if (writtenSkill !== null) {
+            fullText = (writtenSkill as { path: string; content: string }).content;
+          }
         } else {
           const model = getConfiguredModel();
           const result = streamText({ model, system: SYSTEM_PROMPT, prompt });

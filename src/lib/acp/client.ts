@@ -34,6 +34,7 @@ export interface AcpPromptResult {
 }
 
 export type UpdateCallback = (type: string, text: string) => void;
+export type WriteCallback = (filePath: string, content: string) => void;
 
 export class AcpClient {
   private proc: ChildProcess | null = null;
@@ -41,6 +42,7 @@ export class AcpClient {
   private pending = new Map<number, PendingRequest>();
   private buffer = "";
   private onUpdate: UpdateCallback | null = null;
+  private onWrite: WriteCallback | null = null;
   private repoPath: string;
 
   constructor(repoPath: string) {
@@ -119,13 +121,15 @@ export class AcpClient {
     }
   }
 
-  async prompt(sessionId: string, text: string, callback: UpdateCallback): Promise<AcpPromptResult> {
+  async prompt(sessionId: string, text: string, callback: UpdateCallback, onWrite?: WriteCallback): Promise<AcpPromptResult> {
     this.onUpdate = callback;
+    this.onWrite = onWrite || null;
     const result = await this.request("session/prompt", {
       sessionId,
       prompt: [{ type: "text", text }],
     }) as AcpPromptResult;
     this.onUpdate = null;
+    this.onWrite = null;
     return result;
   }
 
@@ -243,6 +247,7 @@ export class AcpClient {
       const text = (params?.text as string) || "";
       try {
         fs.writeFileSync(filePath, text, "utf-8");
+        if (this.onWrite) this.onWrite(filePath, text);
         result = {};
       } catch (e) {
         result = { error: String(e) };

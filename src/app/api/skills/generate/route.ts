@@ -22,7 +22,7 @@ Then provide the skill content as markdown. The content should be instructions, 
 
 Output ONLY the file content. No explanation, no code fences wrapping the whole thing.`;
 
-function saveSkillFile(rawText: string): { name: string; fileName: string; filePath: string; text: string } {
+function saveSkillFile(rawText: string): { name: string; fileName: string; filePath: string; text: string } | null {
   let text = rawText.trim();
 
   // Strip markdown code fences if AI wrapped the output
@@ -30,15 +30,13 @@ function saveSkillFile(rawText: string): { name: string; fileName: string; fileP
   if (fenceMatch) text = fenceMatch[1].trim();
 
   // Extract the actual skill content: find the frontmatter block and everything after it
-  // This handles cases where AI outputs chat text before the actual skill
   const frontmatterStart = text.indexOf("---\n");
-  if (frontmatterStart > 0) {
-    // There's text before the frontmatter — strip it
-    text = text.slice(frontmatterStart);
-  }
+  if (frontmatterStart < 0) return null; // No frontmatter = no valid skill
+  if (frontmatterStart > 0) text = text.slice(frontmatterStart);
 
   const nameMatch = text.match(/^---\n[\s\S]*?name:\s*(.+)\n[\s\S]*?---/);
-  const skillName = nameMatch?.[1]?.trim().replace(/['"]/g, "") || `skill-${Date.now()}`;
+  if (!nameMatch) return null; // frontmatter exists but no name field
+  const skillName = nameMatch[1].trim().replace(/['"]/g, "");
   const fileName = `${skillName.replace(/[^a-zA-Z0-9-_]/g, "-")}.md`;
 
   const homeDir = process.env.HOME || process.env.USERPROFILE || "";
@@ -116,8 +114,12 @@ Output the complete file content starting with the --- frontmatter block.`;
 
         // Save file and send result marker
         if (fullText.trim()) {
-          const { name } = saveSkillFile(fullText);
-          controller.enqueue(encoder.encode(`\n__SKILL_INSTALLED__:${name}`));
+          const saved = saveSkillFile(fullText);
+          if (saved) {
+            controller.enqueue(encoder.encode(`\n__SKILL_INSTALLED__:${saved.name}`));
+          } else {
+            controller.enqueue(encoder.encode("\n__SKILL_ERROR__:AI did not generate valid skill content (missing frontmatter)"));
+          }
         } else {
           controller.enqueue(encoder.encode("\n__SKILL_ERROR__:Empty response"));
         }

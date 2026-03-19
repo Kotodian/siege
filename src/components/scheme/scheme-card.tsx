@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { MarkdownRenderer } from "@/components/markdown/markdown-renderer";
+import { extractHeadings } from "./scheme-toc";
+import { SchemeSections } from "./scheme-sections";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { TimeAgo } from "@/components/ui/time-ago";
 import { Button } from "@/components/ui/button";
@@ -178,7 +180,11 @@ export function SchemeCard({
         </div>
       </div>
 
-      <MarkdownRenderer content={scheme.content || ""} />
+      {extractHeadings(scheme.content || "").length > 1 ? (
+        <SchemeSections content={scheme.content || ""} />
+      ) : (
+        <MarkdownRenderer content={scheme.content || ""} />
+      )}
 
       {/* Chat history */}
       {chatHistory.length > 0 && (

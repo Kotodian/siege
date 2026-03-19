@@ -13,6 +13,8 @@ import { z } from "zod";
 import { getConfiguredModel } from "@/lib/ai/config";
 import { scanAllSkills, getSkillContent } from "@/lib/skills/registry";
 import { parseJsonBody } from "@/lib/utils";
+import { LspClient } from "@/lib/lsp/client";
+import { getLanguageFromPath, getServerConfig, isServerAvailable } from "@/lib/lsp/servers";
 import fs from "fs";
 import path from "path";
 
@@ -118,6 +120,131 @@ function createProjectTools(repoPath: string) {
   };
 }
 
+// Lazily managed LSP clients per language
+const lspClients = new Map<string, LspClient>();
+
+async function getLspClient(repoPath: string, filePath: string): Promise<LspClient | null> {
+  const lang = getLanguageFromPath(filePath);
+  if (!lang) return null;
+
+  const key = `${repoPath}:${lang}`;
+  if (lspClients.has(key)) return lspClients.get(key)!;
+
+  if (!isServerAvailable(lang)) return null;
+  const config = getServerConfig(lang);
+  if (!config) return null;
+
+  const client = new LspClient(config.command, config.args, repoPath);
+  try {
+    await client.start();
+    lspClients.set(key, client);
+    return client;
+  } catch (err) {
+    console.error(`[lsp] Failed to start ${lang} server:`, err);
+    return null;
+  }
+}
+
+function createLspTools(repoPath: string) {
+  return {
+    lspHover: tool({
+      description: "Get type information and documentation for a symbol at a specific position in a file using LSP. Use this to understand types, function signatures, and API docs precisely.",
+      inputSchema: z.object({
+        relativePath: z.string().describe("Relative path to the file"),
+        line: z.number().describe("Line number (1-based)"),
+        column: z.number().describe("Column number (0-based)"),
+      }),
+      execute: async ({ relativePath, line, column }) => {
+        const absPath = path.resolve(repoPath, relativePath);
+        const client = await getLspClient(repoPath, absPath);
+        if (!client) return "LSP not available for this file type";
+        try {
+          const lang = getLanguageFromPath(absPath) || "text";
+          const content = fs.readFileSync(absPath, "utf-8");
+          await client.openFile(absPath, content, lang);
+          const result = await client.hover(absPath, line, column);
+          return result || "No type information available";
+        } catch (e) {
+          return `LSP error: ${e instanceof Error ? e.message : e}`;
+        }
+      },
+    }),
+    lspDefinition: tool({
+      description: "Go to definition of a symbol. Returns the file path and line where the symbol is defined. Use this to navigate to function/type/variable definitions across files.",
+      inputSchema: z.object({
+        relativePath: z.string().describe("Relative path to the file"),
+        line: z.number().describe("Line number (1-based)"),
+        column: z.number().describe("Column number (0-based)"),
+      }),
+      execute: async ({ relativePath, line, column }) => {
+        const absPath = path.resolve(repoPath, relativePath);
+        const client = await getLspClient(repoPath, absPath);
+        if (!client) return "LSP not available for this file type";
+        try {
+          const lang = getLanguageFromPath(absPath) || "text";
+          const content = fs.readFileSync(absPath, "utf-8");
+          await client.openFile(absPath, content, lang);
+          const locations = await client.definition(absPath, line, column);
+          if (locations.length === 0) return "No definition found";
+          return locations.map((l) => {
+            const rel = path.relative(repoPath, l.file);
+            return `${rel}:${l.line}:${l.character}`;
+          }).join("\n");
+        } catch (e) {
+          return `LSP error: ${e instanceof Error ? e.message : e}`;
+        }
+      },
+    }),
+    lspReferences: tool({
+      description: "Find all references to a symbol across the project. Returns file paths and line numbers where the symbol is used. Useful before refactoring to understand impact.",
+      inputSchema: z.object({
+        relativePath: z.string().describe("Relative path to the file"),
+        line: z.number().describe("Line number (1-based)"),
+        column: z.number().describe("Column number (0-based)"),
+      }),
+      execute: async ({ relativePath, line, column }) => {
+        const absPath = path.resolve(repoPath, relativePath);
+        const client = await getLspClient(repoPath, absPath);
+        if (!client) return "LSP not available for this file type";
+        try {
+          const lang = getLanguageFromPath(absPath) || "text";
+          const content = fs.readFileSync(absPath, "utf-8");
+          await client.openFile(absPath, content, lang);
+          const locations = await client.references(absPath, line, column);
+          if (locations.length === 0) return "No references found";
+          return locations.slice(0, 50).map((l) => {
+            const rel = path.relative(repoPath, l.file);
+            return `${rel}:${l.line}`;
+          }).join("\n") + (locations.length > 50 ? `\n... and ${locations.length - 50} more` : "");
+        } catch (e) {
+          return `LSP error: ${e instanceof Error ? e.message : e}`;
+        }
+      },
+    }),
+    lspDiagnostics: tool({
+      description: "Get compiler diagnostics (errors, warnings) for a file using LSP. Use this to check for type errors, unused imports, and other issues after editing.",
+      inputSchema: z.object({
+        relativePath: z.string().describe("Relative path to the file"),
+      }),
+      execute: async ({ relativePath }) => {
+        const absPath = path.resolve(repoPath, relativePath);
+        const client = await getLspClient(repoPath, absPath);
+        if (!client) return "LSP not available for this file type";
+        try {
+          const lang = getLanguageFromPath(absPath) || "text";
+          const content = fs.readFileSync(absPath, "utf-8");
+          await client.openFile(absPath, content, lang);
+          const diags = await client.diagnostics(absPath);
+          if (diags.length === 0) return "No diagnostics (clean)";
+          return diags.map((d) => `Line ${d.line} [${d.severity}]: ${d.message}`).join("\n");
+        } catch (e) {
+          return `LSP error: ${e instanceof Error ? e.message : e}`;
+        }
+      },
+    }),
+  };
+}
+
 export async function POST(req: NextRequest) {
   const [body, errRes] = await parseJsonBody(req);
   if (errRes) return errRes;
@@ -187,11 +314,13 @@ ${item.description || ""}
 
 ${skillsContent ? `Skills context:\n${skillsContent}` : ""}
 
-Use the provided tools to read the codebase, write/edit files, and run commands. Implement the changes and verify they work.`;
+Use the provided tools to read the codebase, write/edit files, and run commands. Implement the changes and verify they work.
+
+You also have LSP tools (lspHover, lspDefinition, lspReferences, lspDiagnostics) for precise type information, go-to-definition, finding references, and compiler diagnostics. Use them when you need to understand types, navigate definitions, or check for errors.`;
 
   const cwd = fs.existsSync(project.targetRepoPath) ? project.targetRepoPath : process.cwd();
   const configuredModel = getConfiguredModel();
-  const tools = createProjectTools(cwd);
+  const tools = { ...createProjectTools(cwd), ...createLspTools(cwd) };
 
   const encoder = new TextEncoder();
   let fullLog = "";

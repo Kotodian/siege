@@ -150,8 +150,10 @@ export class AcpClient {
       this.pending.set(id, { resolve, reject });
       this.send({ jsonrpc: "2.0", id, method, params });
 
-      // Timeout: 120s for prompts, 30s for others
-      const timeout = method === "session/prompt" ? 120000 : 30000;
+      // Timeout: 10min for prompts (large tasks), 60s for session ops, 30s for others
+      const timeout = method === "session/prompt" ? 600000
+        : method.startsWith("session/") ? 60000
+        : 30000;
       setTimeout(() => {
         if (this.pending.has(id)) {
           this.pending.delete(id);

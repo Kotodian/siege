@@ -194,14 +194,20 @@ export function ScheduleView({
           content += decoder.decode(value, { stream: true });
           updateContent(content);
         }
-      }
 
-      await new Promise((r) => setTimeout(r, 500));
-      await fetchSchedule();
-      onPlanStatusChange();
-      stopLoading(isZh ? "排期生成完成" : "Schedule generated");
-    } catch {
-      stopLoading(isZh ? "排期生成失败" : "Schedule generation failed");
+        if (content.includes("Error:") && content.trim().split("\n").length < 5) {
+          stopLoading(isZh ? `排期生成失败: ${content.trim()}` : `Failed: ${content.trim()}`);
+        } else {
+          await new Promise((r) => setTimeout(r, 500));
+          await fetchSchedule();
+          onPlanStatusChange();
+          stopLoading(isZh ? "排期生成完成" : "Schedule generated");
+        }
+      } else {
+        stopLoading(isZh ? `排期生成失败 (${res.status})` : `Failed (${res.status})`);
+      }
+    } catch (err) {
+      stopLoading(isZh ? `排期生成失败: ${err instanceof Error ? err.message : "未知错误"}` : `Failed: ${err instanceof Error ? err.message : "Unknown error"}`);
     } finally {
       setGenerating(false);
     }

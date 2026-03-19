@@ -130,15 +130,27 @@ export function SchemeList({
           setStreamingContent(content);
           updateContent(content);
         }
-      }
 
-      // Wait for backend to finish saving (happens after stream close)
-      await new Promise((r) => setTimeout(r, 1000));
-      await fetchSchemes();
-      onPlanStatusChange();
-      stopLoading(isZh ? "方案生成完成" : "Scheme generated");
-    } catch {
-      stopLoading(isZh ? "生成失败" : "Generation failed");
+        // Check if content contains error
+        if (content.includes("Error:") && content.trim().split("\n").length < 5) {
+          stopLoading(isZh ? `生成失败: ${content.trim()}` : `Failed: ${content.trim()}`);
+        } else {
+          await new Promise((r) => setTimeout(r, 1000));
+          await fetchSchemes();
+          onPlanStatusChange();
+          // Check if new schemes were actually created
+          const newSchemes = await fetch(`/api/schemes?planId=${planId}`).then(r => r.json());
+          if (newSchemes.length > currentCount) {
+            stopLoading(isZh ? "方案生成完成" : "Scheme generated");
+          } else {
+            stopLoading(isZh ? "方案生成失败，请检查 AI 配置" : "Scheme generation failed, check AI config");
+          }
+        }
+      } else {
+        stopLoading(isZh ? `生成失败 (${res.status})` : `Failed (${res.status})`);
+      }
+    } catch (err) {
+      stopLoading(isZh ? `生成失败: ${err instanceof Error ? err.message : "未知错误"}` : `Failed: ${err instanceof Error ? err.message : "Unknown error"}`);
     } finally {
       setGenerating(false);
       setStreamingContent("");

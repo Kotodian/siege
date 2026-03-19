@@ -8,6 +8,7 @@ import {
   reviews,
   reviewItems,
   projects,
+  appSettings,
 } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { getConfiguredModel } from "@/lib/ai/config";
@@ -86,10 +87,10 @@ Output ONLY the JSON object. No other text before or after.`,
 export async function POST(req: NextRequest) {
   const [body, errRes] = await parseJsonBody(req);
   if (errRes) return errRes;
-  const { planId, type, provider, model } = body as {
+  const { planId, type, provider: rawProvider, model } = body as {
     planId: string;
     type: "scheme" | "implementation";
-    provider: Provider;
+    provider?: string;
     model?: string;
   };
 
@@ -98,6 +99,7 @@ export async function POST(req: NextRequest) {
   }
 
   const db = getDb();
+  const provider = rawProvider || db.select().from(appSettings).where(eq(appSettings.key, "default_provider")).get()?.value || "anthropic";
   const plan = db.select().from(plans).where(eq(plans.id, planId)).get();
   if (!plan) {
     return NextResponse.json({ error: "Plan not found" }, { status: 404 });
@@ -162,7 +164,7 @@ export async function POST(req: NextRequest) {
     .run();
 
   const { system, prompt } = buildReviewPrompt(type, plan.name, itemsToReview);
-  const aiModel = getConfiguredModel(provider || undefined, model);
+  const aiModel = getConfiguredModel((provider !== "acp" && provider !== "codex-acp" ? provider : undefined) as Provider | undefined, model);
 
   const result = streamText({ model: aiModel, system, prompt });
 

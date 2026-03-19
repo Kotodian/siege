@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
-import { plans, schemes, schedules, scheduleItems, projects } from "@/lib/db/schema";
+import { plans, schemes, schedules, scheduleItems, projects, appSettings } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { getConfiguredModel } from "@/lib/ai/config";
 import { streamText } from "ai";
@@ -58,13 +58,14 @@ function saveScheduleFromJson(planId: string, jsonText: string) {
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { planId, provider, model } = body as { planId: string; provider?: string; model?: string };
+  const { planId, provider: rawProvider, model } = body as { planId: string; provider?: string; model?: string };
 
   if (!planId) {
     return NextResponse.json({ error: "planId required" }, { status: 400 });
   }
 
   const db = getDb();
+  const provider = rawProvider || db.select().from(appSettings).where(eq(appSettings.key, "default_provider")).get()?.value || "anthropic";
   const plan = db.select().from(plans).where(eq(plans.id, planId)).get();
   if (!plan) return NextResponse.json({ error: "Plan not found" }, { status: 404 });
   if (plan.status !== "confirmed" && plan.status !== "scheduled") {

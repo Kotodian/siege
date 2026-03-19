@@ -18,15 +18,17 @@ function cleanSchemeContent(raw: string): string {
   let foundSchemeStart = false;
 
   for (const line of lines) {
-    // Skip tool call markers
-    if (/^>\s*\*?\*?Tool:/.test(line)) continue;
-    if (/^>\s*Tool:/.test(line)) continue;
-    // Skip AI reasoning lines before the actual scheme starts
+    // Always skip tool call markers (anywhere in the output)
+    if (/^>\s*\*?\*?Tool[:\s]/.test(line)) continue;
+    if (/^>\s*\*\*Tool:/.test(line)) continue;
+    // Skip empty blockquote lines that follow tool markers
+    if (/^>\s*$/.test(line) && !foundSchemeStart) continue;
+
     if (!foundSchemeStart) {
-      // Scheme typically starts with a markdown heading
       if (/^#{1,3}\s/.test(line)) {
         foundSchemeStart = true;
       } else {
+        // Skip AI reasoning before scheme starts
         continue;
       }
     }
@@ -34,8 +36,6 @@ function cleanSchemeContent(raw: string): string {
   }
 
   if (cleaned.length === 0) {
-    // No markdown heading found — AI only output reasoning, no actual scheme.
-    // Return empty so caller knows generation failed.
     return "";
   }
 

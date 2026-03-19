@@ -311,6 +311,7 @@ export default function SettingsPage({
         skills={skills}
         skillsBySource={skillsBySource}
         isZh={isZh}
+        hasAi={!!(aiConfig?.anthropic?.configured || aiConfig?.openai?.configured || aiConfig?.glm?.configured)}
         onSkillsChange={() => fetch("/api/skills").then((r) => r.json()).then(setSkills)}
       />
     </div>
@@ -321,11 +322,13 @@ function SkillsSection({
   skills,
   skillsBySource,
   isZh,
+  hasAi,
   onSkillsChange,
 }: {
   skills: SkillSummary[];
   skillsBySource: Record<string, SkillSummary[]>;
   isZh: boolean;
+  hasAi: boolean;
   onSkillsChange: () => void;
 }) {
   const [prompt, setPrompt] = useState("");
@@ -380,14 +383,17 @@ function SkillsSection({
             rows={2}
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            placeholder={isZh
-              ? "描述你需要的技能，例如：Go 语言最佳实践和代码规范..."
-              : "Describe the skill you need, e.g.: Go best practices and coding standards..."}
+            disabled={!hasAi}
+            placeholder={!hasAi
+              ? (isZh ? "请先配置 AI 服务" : "Configure an AI provider first")
+              : isZh
+                ? "描述你需要的技能，例如：Go 语言最佳实践和代码规范..."
+                : "Describe the skill you need, e.g.: Go best practices and coding standards..."}
             onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && (e.preventDefault(), handleGenerate())}
           />
           <Button
             onClick={handleGenerate}
-            disabled={generating || !prompt.trim()}
+            disabled={generating || !prompt.trim() || !hasAi}
             className="self-end"
           >
             {generating ? (isZh ? "生成中..." : "Generating...") : (isZh ? "安装" : "Install")}

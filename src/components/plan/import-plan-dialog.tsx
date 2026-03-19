@@ -29,7 +29,7 @@ interface ImportPlanDialogProps {
   onImported: () => void;
 }
 
-const SOURCE_TYPES = ["notion", "jira", "confluence", "feishu", "github", "gitlab", "mcp"] as const;
+const SOURCE_TYPES = ["github", "gitlab", "notion", "jira", "confluence", "feishu", "mcp"] as const;
 
 const SOURCE_FIELDS: Record<
   string,
@@ -486,14 +486,14 @@ const SOURCE_LABELS: Record<string, { en: string; zh: string }> = {
 };
 
 const SOURCE_ICONS: Record<string, string> = {
-  markdown: "📄",
-  notion: "📝",
-  jira: "🎯",
-  confluence: "📖",
-  feishu: "🐦",
-  github: "🐙",
-  gitlab: "🦊",
-  mcp: "🔌",
+  markdown: "/icons/markdown.svg",
+  notion: "/icons/notion.svg",
+  jira: "/icons/jira.svg",
+  confluence: "/icons/confluence.svg",
+  feishu: "/icons/feishu.svg",
+  github: "/icons/github.svg",
+  gitlab: "/icons/gitlab.svg",
+  mcp: "/icons/mcp.svg",
 };
 
 export function ImportPlanDialog({
@@ -534,7 +534,8 @@ export function ImportPlanDialog({
                   : "text-gray-600 hover:bg-gray-100"
               }`}
             >
-              <span className="text-base">{SOURCE_ICONS[src.id] || "📦"}</span>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={SOURCE_ICONS[src.id]} alt="" className="w-4 h-4 shrink-0" />
               <span className="truncate">{src.label}</span>
             </button>
           ))}

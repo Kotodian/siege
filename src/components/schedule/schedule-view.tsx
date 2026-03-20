@@ -532,7 +532,7 @@ export function ScheduleView({
                         )}
                         {canExecute && item.status === "pending" && (
                           <Button size="sm" onClick={() => setRunDialogItem(item)} disabled={executing !== null}>
-                            {executing === item.id ? t("common.loading") : "Run"}
+                            {executing === item.id ? t("common.loading") : (isZh ? "运行" : "Run")}
                           </Button>
                         )}
                         <button onClick={() => setSelectedItem(null)} className="text-xs px-2 py-1 rounded" style={{ color: "var(--muted)" }}>✕</button>

@@ -5,8 +5,7 @@ import { eq } from "drizzle-orm";
 import { execSync } from "child_process";
 import { streamText, tool, stepCountIs } from "ai";
 import { z } from "zod";
-import { getConfiguredModel } from "@/lib/ai/config";
-import type { Provider } from "@/lib/ai/provider";
+import { resolveStepConfig, getStepModel } from "@/lib/ai/config";
 import { AcpClient } from "@/lib/acp/client";
 import { parseJsonBody } from "@/lib/utils";
 import fs from "fs";
@@ -193,8 +192,11 @@ export async function POST(req: NextRequest) {
   const encoder = new TextEncoder();
   let fullText = "";
 
+  // Resolve step-specific provider/model for "scheme" step
+  const resolved = resolveStepConfig("scheme", provider as string, model);
+
   // ACP engine: use Claude Code via Agent Client Protocol
-  if (provider === "acp") {
+  if (resolved.provider === "acp") {
     const responseStream = new ReadableStream({
       async start(controller) {
         const acpClient = new AcpClient(cwd);
@@ -249,7 +251,7 @@ export async function POST(req: NextRequest) {
   // Default: Vercel AI SDK
   let configuredModel;
   try {
-    configuredModel = getConfiguredModel((provider as Provider) || undefined, model);
+    configuredModel = getStepModel("scheme", provider as string, model);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ error: msg }, { status: 503 });

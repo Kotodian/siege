@@ -21,6 +21,18 @@ const ALLOWED_SETTINGS = new Set([
   "default_model_glm",
   "archive_after_days",
   "cleanup_after_days",
+  "step_provider_scheme",
+  "step_model_scheme",
+  "step_provider_review",
+  "step_model_review",
+  "step_provider_schedule",
+  "step_model_schedule",
+  "step_provider_execute",
+  "step_model_execute",
+  "step_provider_test",
+  "step_model_test",
+  "step_provider_skills",
+  "step_model_skills",
 ]);
 
 export async function PUT(req: NextRequest) {

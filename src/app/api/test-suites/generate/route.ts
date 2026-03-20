@@ -3,6 +3,7 @@ import { getDb } from "@/lib/db";
 import { plans, schemes, testSuites, testCases, projects } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { generateTests } from "@/lib/ai/test-generator";
+import { resolveStepConfig } from "@/lib/ai/config";
 import type { Provider } from "@/lib/ai/provider";
 
 export async function POST(req: NextRequest) {
@@ -66,6 +67,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    const resolved = resolveStepConfig("test", provider, model);
     const generatedCases = await generateTests({
       planName: plan.name,
       schemes: schemeList.map((s) => ({
@@ -73,8 +75,8 @@ export async function POST(req: NextRequest) {
         content: s.content || "",
       })),
       targetRepoPath: project.targetRepoPath,
-      provider,
-      model,
+      provider: resolved.provider as Provider,
+      model: resolved.model,
     });
 
     // Delete existing cases

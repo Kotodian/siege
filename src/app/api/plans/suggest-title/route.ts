@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getConfiguredModel } from "@/lib/ai/config";
+import { getStepModel } from "@/lib/ai/config";
 import { parseJsonBody } from "@/lib/utils";
 import { generateText } from "ai";
 
@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
 
   let model;
   try {
-    model = getConfiguredModel();
+    model = getStepModel("scheme");
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ error: msg }, { status: 503 });

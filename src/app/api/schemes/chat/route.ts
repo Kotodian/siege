@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { schemes } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { getConfiguredModel } from "@/lib/ai/config";
+import { getStepModel } from "@/lib/ai/config";
 import { streamText } from "ai";
 import { parseJsonBody } from "@/lib/utils";
 import { saveSchemeVersion } from "@/lib/scheme-version";
@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
 
   let model;
   try {
-    model = getConfiguredModel();
+    model = getStepModel("scheme");
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ error: msg }, { status: 503 });

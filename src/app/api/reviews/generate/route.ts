@@ -11,9 +11,8 @@ import {
   appSettings,
 } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { getConfiguredModel } from "@/lib/ai/config";
+import { getStepModel } from "@/lib/ai/config";
 import { streamText } from "ai";
-import type { Provider } from "@/lib/ai/provider";
 import { parseJsonBody } from "@/lib/utils";
 import { execSync } from "child_process";
 import fs from "fs";
@@ -172,7 +171,7 @@ export async function POST(req: NextRequest) {
   const { system, prompt } = buildReviewPrompt(type, plan.name, itemsToReview);
   let aiModel;
   try {
-    aiModel = getConfiguredModel((provider !== "acp" && provider !== "codex-acp" ? provider : undefined) as Provider | undefined, model);
+    aiModel = getStepModel("review", provider, model);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ error: msg }, { status: 503 });

@@ -42,6 +42,45 @@ export function isAcpDefault(): boolean {
   return getSetting("default_provider") === "acp";
 }
 
+export type AiStep = "scheme" | "review" | "schedule" | "execute" | "test" | "skills";
+
+/**
+ * Resolve provider + model for a specific AI step.
+ * Priority: override params > step-specific settings > global default.
+ */
+export function resolveStepConfig(
+  step: AiStep,
+  overrideProvider?: string,
+  overrideModel?: string
+): { provider: string; model?: string } {
+  const provider =
+    overrideProvider ||
+    getSetting(`step_provider_${step}`) ||
+    getSetting("default_provider") ||
+    "anthropic";
+  const model =
+    overrideModel ||
+    getSetting(`step_model_${step}`) ||
+    undefined;
+  return { provider, model };
+}
+
+/**
+ * Get a configured LanguageModel for a specific AI step.
+ * Throws if the resolved provider is "acp"/"codex-acp" (not SDK providers).
+ */
+export function getStepModel(
+  step: AiStep,
+  overrideProvider?: string,
+  overrideModel?: string
+) {
+  const { provider, model } = resolveStepConfig(step, overrideProvider, overrideModel);
+  if (provider === "acp" || provider === "codex-acp") {
+    throw new Error(`Step "${step}" resolved to ACP engine — use CLI path instead of SDK.`);
+  }
+  return getConfiguredModel(provider as Provider, model);
+}
+
 export function getConfiguredModel(provider?: Provider, model?: string) {
   let resolvedProvider =
     provider || (getSetting("default_provider") as Provider) || "anthropic";

@@ -398,6 +398,9 @@ export default function SettingsPage({
         </div>
       </section>
 
+      {/* Per-Step AI Configuration */}
+      <StepModelSection settings={settings} setSettings={setSettings} isZh={isZh} onSave={saveSettings} />
+
       {/* General Settings */}
       <section className="mb-8">
         <h2 className="text-xl font-semibold mb-4">
@@ -635,7 +638,7 @@ const IMPORT_SOURCE_FIELDS: Record<
     { key: "space_id", label: "Space ID (optional)", labelZh: "知识空间 ID（可选）", placeholder: "7xxx..." },
   ],
   github: [
-    { key: "token", label: "Personal Access Token", labelZh: "Personal Access Token", placeholder: "ghp_...", type: "password" },
+    { key: "token", label: "Personal Access Token (optional if gh CLI logged in)", labelZh: "Personal Access Token（已登录 gh CLI 可留空）", placeholder: "ghp_...", type: "password" },
     { key: "repo", label: "Repository (optional)", labelZh: "仓库（可选）", placeholder: "owner/repo" },
   ],
   gitlab: [
@@ -834,6 +837,99 @@ function ImportSourcesSection({ isZh }: { isZh: boolean }) {
           </div>
         </div>
       </Dialog>
+    </section>
+  );
+}
+
+const AI_STEPS = [
+  { id: "scheme", labelZh: "方案生成", labelEn: "Scheme Generation" },
+  { id: "review", labelZh: "代码审查", labelEn: "Code Review" },
+  { id: "schedule", labelZh: "排期生成", labelEn: "Schedule Generation" },
+  { id: "execute", labelZh: "任务执行", labelEn: "Task Execution" },
+  { id: "test", labelZh: "测试生成", labelEn: "Test Generation" },
+  { id: "skills", labelZh: "技能生成", labelEn: "Skill Generation" },
+] as const;
+
+const ALL_PROVIDER_OPTIONS = [
+  { value: "", labelZh: "使用全局默认", labelEn: "Use Global Default" },
+  { value: "acp", labelZh: "Claude Code (ACP)", labelEn: "Claude Code (ACP)" },
+  { value: "codex-acp", labelZh: "Codex (ACP)", labelEn: "Codex (ACP)" },
+  { value: "anthropic", labelZh: "Anthropic (Claude)", labelEn: "Anthropic (Claude)" },
+  { value: "openai", labelZh: "OpenAI (GPT)", labelEn: "OpenAI (GPT)" },
+  { value: "glm", labelZh: "GLM (智谱)", labelEn: "GLM (智谱)" },
+];
+
+function StepModelSection({
+  settings,
+  setSettings,
+  isZh,
+  onSave,
+}: {
+  settings: Record<string, string>;
+  setSettings: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+  isZh: boolean;
+  onSave: () => Promise<void>;
+}) {
+  const [saved, setSaved] = useState(false);
+
+  const handleSave = async () => {
+    await onSave();
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
+
+  return (
+    <section className="mb-8">
+      <h2 className="text-xl font-semibold mb-2">
+        {isZh ? "各步骤 AI 配置" : "Per-Step AI Configuration"}
+      </h2>
+      <p className="text-xs text-gray-400 mb-4">
+        {isZh
+          ? "为不同步骤设置不同的 AI 提供商和模型。留空则使用全局默认。"
+          : "Set different AI providers and models for each step. Empty uses global default."}
+      </p>
+      <div className="rounded-lg border bg-white divide-y">
+        {AI_STEPS.map((step) => {
+          const provKey = `step_provider_${step.id}`;
+          const modelKey = `step_model_${step.id}`;
+          const selectedProvider = settings[provKey] || "";
+
+          return (
+            <div key={step.id} className="px-4 py-3 flex items-center gap-4">
+              <span className="text-sm font-medium w-24 shrink-0">
+                {isZh ? step.labelZh : step.labelEn}
+              </span>
+              <select
+                value={selectedProvider}
+                onChange={(e) =>
+                  setSettings((s) => ({ ...s, [provKey]: e.target.value }))
+                }
+                className="flex-1 rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+              >
+                {ALL_PROVIDER_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {isZh ? opt.labelZh : opt.labelEn}
+                  </option>
+                ))}
+              </select>
+              <input
+                value={settings[modelKey] || ""}
+                onChange={(e) =>
+                  setSettings((s) => ({ ...s, [modelKey]: e.target.value }))
+                }
+                placeholder={isZh ? "模型（可选）" : "Model (optional)"}
+                className="flex-1 rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+              />
+            </div>
+          );
+        })}
+      </div>
+      <div className="flex items-center gap-3 mt-3">
+        <Button size="sm" onClick={handleSave}>
+          {isZh ? "保存" : "Save"}
+        </Button>
+        {saved && <span className="text-sm text-green-600">✓</span>}
+      </div>
     </section>
   );
 }

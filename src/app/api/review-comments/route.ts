@@ -3,8 +3,7 @@ import { getDb } from "@/lib/db";
 import { reviewComments, reviews, plans, projects } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { parseJsonBody } from "@/lib/utils";
-import { getConfiguredModel } from "@/lib/ai/config";
-import type { Provider } from "@/lib/ai/provider";
+import { getStepModel } from "@/lib/ai/config";
 import { generateText } from "ai";
 import fs from "fs";
 import path from "path";
@@ -89,10 +88,7 @@ export async function POST(req: NextRequest) {
 
     let aiModel;
     try {
-      aiModel = getConfiguredModel(
-        (provider as Provider) || undefined,
-        model || undefined
-      );
+      aiModel = getStepModel("review", provider, model);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       return NextResponse.json({ error: msg }, { status: 503 });

@@ -55,7 +55,7 @@ const SOURCE_FIELDS: Record<
     { key: "space_id", label: "Space ID (optional)", labelZh: "知识空间 ID（可选）", placeholder: "7xxx..." },
   ],
   github: [
-    { key: "token", label: "Personal Access Token", labelZh: "Personal Access Token", placeholder: "ghp_...", type: "password" },
+    { key: "token", label: "Personal Access Token (optional if gh CLI logged in)", labelZh: "Personal Access Token（已登录 gh CLI 可留空）", placeholder: "ghp_...", type: "password" },
     { key: "repo", label: "Repository (optional)", labelZh: "仓库（可选）", placeholder: "owner/repo" },
   ],
   gitlab: [
@@ -88,8 +88,8 @@ const SOURCE_HINTS: Record<string, { en: string; zh: string }> = {
     zh: "在 open.feishu.cn/app 创建应用获取 App ID 和 App Secret",
   },
   github: {
-    en: "Generate a token at github.com/settings/tokens with 'repo' scope",
-    zh: "在 github.com/settings/tokens 生成 token，需要 repo 权限",
+    en: "Auto-detects gh CLI login. Or enter a Personal Access Token for explicit auth.",
+    zh: "自动检测 gh CLI 登录状态。也可手动输入 Personal Access Token。",
   },
   gitlab: {
     en: "Generate a token in GitLab Preferences > Access Tokens with 'read_api' scope",

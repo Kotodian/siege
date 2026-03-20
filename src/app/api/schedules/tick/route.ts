@@ -5,7 +5,7 @@ import { eq, and } from "drizzle-orm";
 import { execSync } from "child_process";
 import { streamText, tool, stepCountIs } from "ai";
 import { z } from "zod";
-import { getConfiguredModel } from "@/lib/ai/config";
+import { getStepModel } from "@/lib/ai/config";
 import { scanAllSkills, getSkillContent } from "@/lib/skills/registry";
 import fs from "fs";
 import path from "path";
@@ -118,7 +118,7 @@ Use the provided tools to read the codebase, write/edit files, and run commands.
 async function executeTask(itemId: string, cwd: string, prompt: string) {
   let configuredModel;
   try {
-    configuredModel = getConfiguredModel();
+    configuredModel = getStepModel("execute");
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     const db = getDb();

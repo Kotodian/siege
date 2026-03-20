@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getConfiguredModel } from "@/lib/ai/config";
+import { resolveStepConfig, getStepModel } from "@/lib/ai/config";
 import { streamText } from "ai";
 import { AcpClient } from "@/lib/acp/client";
 import { parseJsonBody } from "@/lib/utils";
-import { getDb } from "@/lib/db";
-import { appSettings } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
 import fs from "fs";
 import path from "path";
 
@@ -60,10 +57,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "prompt is required" }, { status: 400 });
   }
 
-  const db = getDb();
-  const providerSetting = db.select().from(appSettings).where(eq(appSettings.key, "default_provider")).get();
-  const provider = providerSetting?.value || "anthropic";
-
   const encoder = new TextEncoder();
   let fullText = "";
 
@@ -82,7 +75,8 @@ Output the complete file content starting with the --- frontmatter block.`;
   const responseStream = new ReadableStream({
     async start(controller) {
       try {
-        if (provider === "acp") {
+        const resolved = resolveStepConfig("skills");
+        if (resolved.provider === "acp") {
           // Snapshot existing skill files before ACP runs
           const skillsDir = path.join(process.env.HOME || "", ".claude", "skills");
           const beforeFiles = new Set<string>();
@@ -129,7 +123,7 @@ Output the complete file content starting with the --- frontmatter block.`;
         } else {
           let model;
           try {
-            model = getConfiguredModel();
+            model = getStepModel("skills");
           } catch (err) {
             const msg = err instanceof Error ? err.message : String(err);
             controller.enqueue(encoder.encode(`\n__SKILL_ERROR__:${msg}`));

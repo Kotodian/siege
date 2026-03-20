@@ -10,7 +10,7 @@ import { eq } from "drizzle-orm";
 import { execSync } from "child_process";
 import { streamText, tool, stepCountIs } from "ai";
 import { z } from "zod";
-import { getConfiguredModel } from "@/lib/ai/config";
+import { getStepModel } from "@/lib/ai/config";
 import { scanAllSkills, getSkillContent } from "@/lib/skills/registry";
 import { parseJsonBody } from "@/lib/utils";
 import { LspClient } from "@/lib/lsp/client";
@@ -401,7 +401,7 @@ You also have LSP tools (lspHover, lspDefinition, lspReferences, lspDiagnostics)
   // Default engine: Vercel AI SDK with tools
   let configuredModel;
   try {
-    configuredModel = getConfiguredModel();
+    configuredModel = getStepModel("execute");
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     db.update(scheduleItems)

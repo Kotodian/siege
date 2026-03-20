@@ -1,6 +1,19 @@
+import { execSync } from "child_process";
 import type { ImportSource, ImportableItem } from "./types";
 
 const GITHUB_API = "https://api.github.com";
+
+function getGhCliToken(): string | null {
+  try {
+    return execSync("gh auth token", { encoding: "utf-8", timeout: 5000 }).trim() || null;
+  } catch {
+    return null;
+  }
+}
+
+function resolveToken(config: Record<string, string>): string | null {
+  return config.token || getGhCliToken();
+}
 
 function githubHeaders(token: string): Record<string, string> {
   return {
@@ -27,7 +40,7 @@ export const githubSource: ImportSource = {
   name: "github",
 
   async validate(config) {
-    const { token } = config;
+    const token = resolveToken(config);
     if (!token) return false;
     try {
       const res = await fetch(`${GITHUB_API}/user`, {
@@ -40,7 +53,9 @@ export const githubSource: ImportSource = {
   },
 
   async listItems(config, query) {
-    const { token, repo } = config;
+    const token = resolveToken(config);
+    if (!token) return [];
+    const { repo } = config;
     const headers = githubHeaders(token);
     const items: ImportableItem[] = [];
 
@@ -131,7 +146,8 @@ export const githubSource: ImportSource = {
   },
 
   async fetchItem(config, itemId) {
-    const { token } = config;
+    const token = resolveToken(config);
+    if (!token) throw new Error("No GitHub token available");
     const headers = githubHeaders(token);
 
     // itemId format: "owner/repo#number"

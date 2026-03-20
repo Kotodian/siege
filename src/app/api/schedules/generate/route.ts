@@ -2,9 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { plans, schemes, schedules, scheduleItems, projects, appSettings } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { getConfiguredModel } from "@/lib/ai/config";
+import { resolveStepConfig, getStepModel } from "@/lib/ai/config";
 import { streamText } from "ai";
-import type { Provider } from "@/lib/ai/provider";
 import { AcpClient } from "@/lib/acp/client";
 import fs from "fs";
 
@@ -102,8 +101,11 @@ ${schemeSummary}
 
 Output the JSON array now:`;
 
+  // Resolve step-specific provider/model for "schedule" step
+  const resolved = resolveStepConfig("schedule", provider as string, model);
+
   // ACP engine
-  if (provider === "acp") {
+  if (resolved.provider === "acp") {
     const project = db.select().from(projects).where(eq(projects.id, plan.projectId)).get();
     const cwd = project?.targetRepoPath && fs.existsSync(project.targetRepoPath) ? project.targetRepoPath : process.cwd();
 
@@ -143,7 +145,7 @@ Output the JSON array now:`;
 
   let aiModel;
   try {
-    aiModel = getConfiguredModel((provider as Provider) || undefined, model);
+    aiModel = getStepModel("schedule", provider as string, model);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ error: msg }, { status: 503 });

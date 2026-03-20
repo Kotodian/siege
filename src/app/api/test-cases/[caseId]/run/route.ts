@@ -11,7 +11,7 @@ import { eq } from "drizzle-orm";
 import { execSync } from "child_process";
 import { generateText, tool, stepCountIs } from "ai";
 import { z } from "zod";
-import { getConfiguredModel } from "@/lib/ai/config";
+import { getStepModel } from "@/lib/ai/config";
 import fs from "fs";
 import path from "path";
 
@@ -112,7 +112,7 @@ If the test file doesn't exist, create it first, then run it. Report pass/fail s
 
   let configuredModel;
   try {
-    configuredModel = getConfiguredModel();
+    configuredModel = getStepModel("test");
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     db.update(testCases).set({ status: "failed" }).where(eq(testCases.id, caseId)).run();

@@ -98,7 +98,8 @@ export function GanttChart({ tasks, onDateChange, onClick }: GanttChartProps) {
   return (
     <div
       ref={containerRef}
-      className="rounded-xl border border-gray-200 bg-white p-5 overflow-x-auto select-none shadow-sm"
+      className="rounded-xl border p-5 overflow-x-auto select-none"
+      style={{ background: "var(--card)", borderColor: "var(--card-border)" }}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onPointerLeave={handlePointerUp}
@@ -117,10 +118,8 @@ export function GanttChart({ tasks, onDateChange, onClick }: GanttChartProps) {
           return (
             <div
               key={task.id}
-              className={`flex items-center gap-4 py-2 rounded-lg px-3 transition-colors ${
-                isDragging ? "bg-gray-50" : "cursor-pointer hover:bg-gray-50/60"
-              }`}
-              style={{ background: index % 2 === 0 ? "transparent" : colors.light }}
+              className="flex items-center gap-4 py-2 rounded-lg px-3 transition-colors cursor-pointer"
+              style={{ background: index % 2 === 0 ? "transparent" : "rgba(255,255,255,0.03)" }}
               onClick={() => !isDragging && onClick?.(task.id)}
             >
               {/* Task name */}
@@ -129,7 +128,7 @@ export function GanttChart({ tasks, onDateChange, onClick }: GanttChartProps) {
                 style={{
                   fontSize: "13px",
                   fontWeight: 500,
-                  color: "#374151",
+                  color: "var(--foreground)",
                   letterSpacing: "-0.01em",
                   fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif',
                 }}
@@ -139,7 +138,7 @@ export function GanttChart({ tasks, onDateChange, onClick }: GanttChartProps) {
               </div>
 
               {/* Timeline bar area */}
-              <div className="flex-1 relative h-8 rounded-lg bg-gray-100/60" data-timeline>
+              <div className="flex-1 relative h-8 rounded-lg" data-timeline style={{ background: "var(--background)" }}>
                 <div
                   className="absolute h-full rounded-lg flex items-center shadow-sm"
                   style={{
@@ -195,7 +194,7 @@ export function GanttChart({ tasks, onDateChange, onClick }: GanttChartProps) {
                 style={{
                   fontSize: "12px",
                   fontWeight: 600,
-                  color: task.progress === 100 ? colors.bar : "#9ca3af",
+                  color: task.progress === 100 ? colors.bar : "var(--muted)",
                   fontFamily: '"SF Mono", "Cascadia Code", Menlo, monospace',
                   fontVariantNumeric: "tabular-nums",
                 }}

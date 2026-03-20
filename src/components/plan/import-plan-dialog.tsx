@@ -312,6 +312,7 @@ function SourceTab({
     try {
       const params = new URLSearchParams();
       if (query) params.set("q", query);
+      params.set("projectId", projectId);
       const res = await fetch(`/api/import-sources/${id}/items?${params}`);
       const data = await res.json();
       setItems(data);

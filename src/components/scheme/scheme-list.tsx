@@ -34,6 +34,10 @@ export function SchemeList({
   const t = useTranslations();
   const { startLoading, updateContent, stopLoading } = useGlobalLoading();
   const [schemes, setSchemes] = useState<Scheme[]>([]);
+  const [reviewFindings, setReviewFindings] = useState<Array<{
+    id: string; targetId: string; title: string; content: string | null;
+    severity: string; resolved: boolean;
+  }>>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [generateDialogOpen, setGenerateDialogOpen] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -53,8 +57,19 @@ export function SchemeList({
     setSchemes(data);
   };
 
+  const fetchReviewFindings = async () => {
+    const res = await fetch(`/api/reviews?planId=${planId}&type=scheme`);
+    if (!res.ok) return;
+    const reviews = await res.json();
+    const latest = reviews[reviews.length - 1];
+    if (latest?.items) {
+      setReviewFindings(latest.items);
+    }
+  };
+
   useEffect(() => {
     fetchSchemes();
+    fetchReviewFindings();
   }, [planId]);
 
   const handleCreate = async (data: { title: string; content: string }) => {
@@ -231,6 +246,7 @@ export function SchemeList({
               readonly={readonly}
               onUpdate={handleUpdate}
               onDelete={handleDelete}
+              findings={reviewFindings.filter(f => f.targetId === scheme.id)}
             />
           ))}
         </div>
@@ -243,7 +259,7 @@ export function SchemeList({
             planId={planId}
             type="scheme"
             planStatus={planStatus}
-            onPlanStatusChange={onPlanStatusChange}
+            onPlanStatusChange={() => { onPlanStatusChange(); fetchReviewFindings(); }}
           />
         </div>
       )}

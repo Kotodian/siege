@@ -22,11 +22,21 @@ interface Scheme {
   createdAt: string;
 }
 
+export interface ReviewFinding {
+  id: string;
+  targetId: string;
+  title: string;
+  content: string | null;
+  severity: string;
+  resolved: boolean;
+}
+
 interface SchemeCardProps {
   scheme: Scheme;
   readonly: boolean;
   onUpdate: (id: string, data: { title: string; content: string }) => void;
   onDelete: (id: string) => void;
+  findings?: ReviewFinding[];
 }
 
 export function SchemeCard({
@@ -34,6 +44,7 @@ export function SchemeCard({
   readonly,
   onUpdate,
   onDelete,
+  findings = [],
 }: SchemeCardProps) {
   const t = useTranslations();
   const isZh = t("common.back") === "返回";
@@ -185,6 +196,7 @@ export function SchemeCard({
           content={scheme.content || ""}
           schemeId={scheme.id}
           readonly={readonly}
+          findings={findings}
           onContentUpdated={(newContent) => {
             onUpdate(scheme.id, { title: scheme.title, content: newContent });
           }}

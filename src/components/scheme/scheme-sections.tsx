@@ -54,17 +54,33 @@ function splitIntoSections(content: string): { preamble: string; sections: Secti
   return { preamble: preamble.trim(), sections };
 }
 
+interface Finding {
+  id: string;
+  title: string;
+  content: string | null;
+  severity: string;
+  resolved: boolean;
+}
+
 interface SchemeSectionsProps {
   content: string;
   schemeId?: string;
   readonly?: boolean;
+  findings?: Finding[];
   onContentUpdated?: (newContent: string) => void;
 }
+
+const severityStyles: Record<string, { bg: string; border: string; text: string }> = {
+  critical: { bg: "#3a1a1a", border: "#7f1d1d", text: "#fca5a5" },
+  warning: { bg: "#3a2a1a", border: "#78350f", text: "#fcd34d" },
+  info: { bg: "#1a2a3a", border: "#1e3a5f", text: "#93c5fd" },
+};
 
 export function SchemeSections({
   content,
   schemeId,
   readonly,
+  findings = [],
   onContentUpdated,
 }: SchemeSectionsProps) {
   const t = useTranslations();
@@ -143,6 +159,13 @@ export function SchemeSections({
         {sections.map((section, i) => {
           const isOpen = expandedIndex === i;
           const isEditing = editingIndex === i;
+          // Match findings to section by keyword overlap
+          const sectionFindings = findings.filter((f) => {
+            const text = `${f.title} ${f.content || ""}`.toLowerCase();
+            const words = section.title.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+            return words.some(w => text.includes(w));
+          });
+          const unresolvedCount = sectionFindings.filter(f => !f.resolved).length;
           return (
             <div key={i}>
               <button
@@ -150,11 +173,19 @@ export function SchemeSections({
                 className="w-full text-left px-4 py-3 flex items-center justify-between transition-colors"
                 style={{ background: isOpen ? "var(--background)" : undefined }}
               >
-                <span
-                  className="font-medium text-sm"
-                  style={{ paddingLeft: `${(section.level - 1) * 12}px` }}
-                >
-                  {section.title}
+                <span className="flex items-center gap-2">
+                  <span
+                    className="font-medium text-sm"
+                    style={{ paddingLeft: `${(section.level - 1) * 12}px` }}
+                  >
+                    {section.title}
+                  </span>
+                  {unresolvedCount > 0 && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
+                      style={{ background: "#7f1d1d", color: "#fca5a5" }}>
+                      {unresolvedCount}
+                    </span>
+                  )}
                 </span>
                 <svg
                   className={`w-4 h-4 shrink-0 transition-transform ${
@@ -171,6 +202,36 @@ export function SchemeSections({
               {isOpen && (
                 <div className="px-4 pb-4">
                   <MarkdownRenderer content={section.content} />
+
+                  {/* Review findings for this section */}
+                  {sectionFindings.length > 0 && (
+                    <div className="mt-3 space-y-2">
+                      {sectionFindings.map((f) => {
+                        const s = severityStyles[f.severity] || severityStyles.info;
+                        return (
+                          <div
+                            key={f.id}
+                            className={`rounded-md border px-3 py-2 text-xs ${f.resolved ? "opacity-40" : ""}`}
+                            style={{ background: s.bg, borderColor: s.border, color: s.text }}
+                          >
+                            <div className="flex items-center gap-2 font-medium">
+                              <span className="uppercase text-[10px] px-1.5 py-0.5 rounded"
+                                style={{ background: s.border }}>
+                                {f.severity}
+                              </span>
+                              {f.title}
+                              {f.resolved && <span style={{ color: "var(--muted)" }}>(resolved)</span>}
+                            </div>
+                            {f.content && (
+                              <div className="mt-1 opacity-90">
+                                <MarkdownRenderer content={f.content} />
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
 
                   {/* Section-level AI suggestion */}
                   {!readonly && schemeId && (

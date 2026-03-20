@@ -116,7 +116,7 @@ Output the JSON array now:`;
   const resolved = resolveStepConfig("schedule", provider as string, model);
 
   // ACP engine
-  if (resolved.provider === "acp") {
+  if (resolved.provider === "acp" || resolved.provider === "codex-acp") {
     const project = db.select().from(projects).where(eq(projects.id, plan.projectId)).get();
     const cwd = project?.targetRepoPath && fs.existsSync(project.targetRepoPath) ? project.targetRepoPath : process.cwd();
 
@@ -124,14 +124,14 @@ Output the JSON array now:`;
     let fullText = "";
     const responseStream = new ReadableStream({
       async start(controller) {
-        const acpClient = new AcpClient(cwd);
+        const acpClient = new AcpClient(cwd, resolved.provider === "codex-acp" ? "codex" : "claude");
         try {
           await acpClient.start();
           let session;
           if (project?.sessionId) {
             session = await acpClient.resumeSession(project.sessionId);
           } else {
-            session = await acpClient.createSession();
+            session = await acpClient.createSession(resolved.model);
           }
           if (project && session.sessionId !== project.sessionId) {
             db.update(projects).set({ sessionId: session.sessionId }).where(eq(projects.id, project.id)).run();

@@ -32,19 +32,19 @@ interface SkillSummary {
 const PROVIDERS = [
   {
     id: "anthropic",
-    label: "Anthropic (Claude)",
+    label: "\u{1F9E0} Anthropic (Claude)",
     keyPlaceholder: "sk-ant-api03-...",
     models: ["claude-sonnet-4-20250514", "claude-opus-4-20250514", "claude-haiku-4-20250414", "claude-3-5-sonnet-20241022"],
   },
   {
     id: "openai",
-    label: "OpenAI (GPT)",
+    label: "\u{1F4A0} OpenAI (GPT)",
     keyPlaceholder: "sk-...",
     models: ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-3.5-turbo", "o1", "o1-mini", "o3-mini"],
   },
   {
     id: "glm",
-    label: "GLM (智谱)",
+    label: "\u{1F30F} GLM (\u667A\u8C31)",
     keyPlaceholder: "glm-api-key...",
     models: ["glm-4-plus", "glm-4", "glm-4-air", "glm-4-flash"],
   },
@@ -134,14 +134,14 @@ export default function SettingsPage({
       {/* AI Providers */}
       <section className="mb-8">
         <h2 className="text-xl font-semibold mb-4">
-          {isZh ? "AI 服务配置" : "AI Provider Configuration"}
+          {isZh ? "\u{1F916} AI 服务配置" : "\u{1F916} AI Provider Configuration"}
         </h2>
 
         {/* Claude Code Login — for ACP engine */}
         <div className="rounded-lg border p-4 mb-3" style={{ background: "var(--card)", borderColor: "var(--card-border)" }}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="font-medium text-sm">Claude Code</span>
+              <span className="font-medium text-sm">{"\u{1F4AC}"} Claude Code</span>
               <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-50 text-purple-600 font-medium">ACP</span>
             </div>
             <div className="flex items-center gap-2">
@@ -191,7 +191,7 @@ export default function SettingsPage({
         <div className="rounded-lg border p-4 mb-3" style={{ background: "var(--card)", borderColor: "var(--card-border)" }}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="font-medium text-sm">Codex</span>
+              <span className="font-medium text-sm">{"\u{1F4E6}"} Codex</span>
               <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-600 font-medium">ACP</span>
             </div>
             <div className="flex items-center gap-2">
@@ -406,7 +406,7 @@ export default function SettingsPage({
       {/* General Settings */}
       <section className="mb-8">
         <h2 className="text-xl font-semibold mb-4">
-          {isZh ? "通用设置" : "General Settings"}
+          {isZh ? "\u2699\uFE0F 通用设置" : "\u2699\uFE0F General Settings"}
         </h2>
         <div className="rounded-lg border p-6 space-y-4" style={{ background: "var(--card)", borderColor: "var(--card-border)" }}>
           <div>
@@ -533,7 +533,7 @@ function SkillsSection({
   return (
     <section className="mb-8">
       <h2 className="text-xl font-semibold mb-4">
-        {isZh ? "技能" : "Skills"} ({skills.length})
+        {isZh ? "\u{1F3AF} 技能" : "\u{1F3AF} Skills"} ({skills.length})
       </h2>
 
       {/* Generate skill from prompt */}
@@ -722,7 +722,7 @@ function ImportSourcesSection({ isZh }: { isZh: boolean }) {
     <section className="mb-8">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-semibold">
-          {isZh ? "导入来源" : "Import Sources"}
+          {isZh ? "\u{1F4E5} 导入来源" : "\u{1F4E5} Import Sources"}
         </h2>
         <Button size="sm" onClick={() => setAddOpen(true)}>
           {isZh ? "添加导入来源" : "Add Import Source"}
@@ -847,12 +847,12 @@ function ImportSourcesSection({ isZh }: { isZh: boolean }) {
 }
 
 const AI_STEPS = [
-  { id: "scheme", labelZh: "方案生成", labelEn: "Scheme Generation" },
-  { id: "review", labelZh: "代码审查", labelEn: "Code Review" },
-  { id: "schedule", labelZh: "排期生成", labelEn: "Schedule Generation" },
-  { id: "execute", labelZh: "任务执行", labelEn: "Task Execution" },
-  { id: "test", labelZh: "测试生成", labelEn: "Test Generation" },
-  { id: "skills", labelZh: "技能生成", labelEn: "Skill Generation" },
+  { id: "scheme", labelZh: "\u{1F4D0} 方案生成", labelEn: "\u{1F4D0} Scheme Generation" },
+  { id: "review", labelZh: "\u{1F50D} 代码审查", labelEn: "\u{1F50D} Code Review" },
+  { id: "schedule", labelZh: "\u{1F4C5} 排期生成", labelEn: "\u{1F4C5} Schedule Generation" },
+  { id: "execute", labelZh: "\u26A1 任务执行", labelEn: "\u26A1 Task Execution" },
+  { id: "test", labelZh: "\u{1F9EA} 测试生成", labelEn: "\u{1F9EA} Test Generation" },
+  { id: "skills", labelZh: "\u{1F3AF} 技能生成", labelEn: "\u{1F3AF} Skill Generation" },
 ] as const;
 
 const ALL_PROVIDER_OPTIONS = [
@@ -886,7 +886,7 @@ function StepModelSection({
   return (
     <section className="mb-8">
       <h2 className="text-xl font-semibold mb-2">
-        {isZh ? "各步骤 AI 配置" : "Per-Step AI Configuration"}
+        {isZh ? "\u{1F3DB}\uFE0F 各步骤 AI 配置" : "\u{1F3DB}\uFE0F Per-Step AI Configuration"}
       </h2>
       <p className="text-xs mb-4" style={{ color: "var(--muted)" }}>
         {isZh
@@ -898,35 +898,49 @@ function StepModelSection({
           const provKey = `step_provider_${step.id}`;
           const modelKey = `step_model_${step.id}`;
           const selectedProvider = settings[provKey] || "";
+          const isAcpProvider = selectedProvider === "acp" || selectedProvider === "codex-acp";
 
           return (
-            <div key={step.id} className="px-4 py-3 flex items-center gap-4">
-              <span className="text-sm font-medium w-24 shrink-0">
-                {isZh ? step.labelZh : step.labelEn}
-              </span>
-              <select
-                value={selectedProvider}
-                onChange={(e) =>
-                  setSettings((s) => ({ ...s, [provKey]: e.target.value }))
-                }
-                className="flex-1 rounded-md border px-2 py-1.5 text-sm"
-                style={{ background: "var(--card)", color: "var(--foreground)", borderColor: "var(--card-border)" }}
-              >
-                {ALL_PROVIDER_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {isZh ? opt.labelZh : opt.labelEn}
-                  </option>
-                ))}
-              </select>
-              <input
-                value={settings[modelKey] || ""}
-                onChange={(e) =>
-                  setSettings((s) => ({ ...s, [modelKey]: e.target.value }))
-                }
-                placeholder={isZh ? "模型（可选）" : "Model (optional)"}
-                className="flex-1 rounded-md border px-2 py-1.5 text-sm"
-                style={{ background: "var(--card)", color: "var(--foreground)", borderColor: "var(--card-border)" }}
-              />
+            <div key={step.id} className="px-4 py-3">
+              <div className="flex items-center gap-4">
+                <span className="text-sm font-medium w-24 shrink-0">
+                  {isZh ? step.labelZh : step.labelEn}
+                </span>
+                <select
+                  value={selectedProvider}
+                  onChange={(e) =>
+                    setSettings((s) => ({ ...s, [provKey]: e.target.value }))
+                  }
+                  className="flex-1 rounded-md border px-2 py-1.5 text-sm"
+                  style={{ background: "var(--card)", color: "var(--foreground)", borderColor: "var(--card-border)" }}
+                >
+                  {ALL_PROVIDER_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {isZh ? opt.labelZh : opt.labelEn}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  value={settings[modelKey] || ""}
+                  onChange={(e) =>
+                    setSettings((s) => ({ ...s, [modelKey]: e.target.value }))
+                  }
+                  placeholder={
+                    isAcpProvider
+                      ? (isZh ? "ACP 模型名，如 claude-sonnet-4-20250514" : "ACP model, e.g. claude-sonnet-4-20250514")
+                      : (isZh ? "模型（可选）" : "Model (optional)")
+                  }
+                  className="flex-1 rounded-md border px-2 py-1.5 text-sm"
+                  style={{ background: "var(--card)", color: "var(--foreground)", borderColor: "var(--card-border)" }}
+                />
+              </div>
+              {isAcpProvider && (
+                <p className="text-xs mt-1 ml-28" style={{ color: "var(--muted)" }}>
+                  {isZh
+                    ? `${selectedProvider === "codex-acp" ? "Codex" : "Claude Code"} ACP 引擎模型，留空使用默认`
+                    : `Model for ${selectedProvider === "codex-acp" ? "Codex" : "Claude Code"} ACP engine. Leave empty for default.`}
+                </p>
+              )}
             </div>
           );
         })}

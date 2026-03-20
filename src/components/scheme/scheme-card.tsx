@@ -166,7 +166,7 @@ export function SchemeCard({
             size="sm"
             onClick={() => setVersionsOpen(true)}
           >
-            {isZh ? "版本" : "Versions"}
+            {isZh ? "\u{1F4C2} 版本" : "\u{1F4C2} Versions"}
           </Button>
           {!readonly && (
             <>
@@ -175,7 +175,7 @@ export function SchemeCard({
                 size="sm"
                 onClick={() => setEditing(true)}
               >
-                {t("common.edit")}
+                {"\u270F\uFE0F"} {t("common.edit")}
               </Button>
               <Button
                 variant="ghost"
@@ -186,7 +186,7 @@ export function SchemeCard({
                   }
                 }}
               >
-                {t("common.delete")}
+                {"\u{1F5D1}\uFE0F"} {t("common.delete")}
               </Button>
             </>
           )}
@@ -265,8 +265,8 @@ export function SchemeCard({
             disabled={chatting || !chatInput.trim()}
           >
             {chatting
-              ? isZh ? "修改中" : "..."
-              : isZh ? "AI 修改" : "AI Edit"}
+              ? isZh ? "\u23F3 修改中" : "\u23F3 ..."
+              : isZh ? "\u2728 AI 修改" : "\u2728 AI Edit"}
           </Button>
         </div>
       )}
@@ -316,7 +316,7 @@ function CopyButton({ text, isZh }: { text: string; isZh: boolean }) {
         });
       }}
     >
-      {copied ? (isZh ? "已复制" : "Copied") : (isZh ? "复制" : "Copy")}
+      {copied ? "\u2705 " + (isZh ? "已复制" : "Copied") : "\u{1F4CB} " + (isZh ? "复制" : "Copy")}
     </Button>
   );
 }

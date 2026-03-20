@@ -10,7 +10,7 @@ import { eq } from "drizzle-orm";
 import { execSync } from "child_process";
 import { streamText, tool, stepCountIs } from "ai";
 import { z } from "zod";
-import { getStepModel } from "@/lib/ai/config";
+import { getStepModel, resolveStepConfig } from "@/lib/ai/config";
 import { scanAllSkills, getSkillContent } from "@/lib/skills/registry";
 import { parseJsonBody } from "@/lib/utils";
 import { LspClient } from "@/lib/lsp/client";
@@ -327,6 +327,7 @@ You also have LSP tools (lspHover, lspDefinition, lspReferences, lspDiagnostics)
   // ACP engine: use Agent Client Protocol with session reuse per project
   if (engine === "acp" || engine === "codex-acp") {
     const existingSessionId = project.sessionId; // Reuse project-level session
+    const resolved = resolveStepConfig("execute");
 
     const responseStream = new ReadableStream({
       async start(controller) {
@@ -341,7 +342,7 @@ You also have LSP tools (lspHover, lspDefinition, lspReferences, lspDiagnostics)
             controller.enqueue(encoder.encode(`Resuming session ${existingSessionId.slice(0, 8)}...\n`));
             session = await acpClient.resumeSession(existingSessionId);
           } else {
-            session = await acpClient.createSession();
+            session = await acpClient.createSession(resolved.model);
           }
 
           // Save session ID to project for future reuse

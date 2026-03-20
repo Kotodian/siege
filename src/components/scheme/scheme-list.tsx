@@ -119,7 +119,7 @@ export function SchemeList({
 
   const isZh = t("common.back") === "返回";
 
-  const handleGenerate = async (provider: string, skills: string[]) => {
+  const handleGenerate = async (provider: string, skills: string[], model?: string) => {
     setGenerating(true);
     setGenerateDialogOpen(false);
     setStreamingContent("");
@@ -131,7 +131,7 @@ export function SchemeList({
       const res = await fetch("/api/schemes/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ planId, provider, skills }),
+        body: JSON.stringify({ planId, provider, skills, model }),
       });
 
       if (res.ok && res.body) {

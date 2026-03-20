@@ -35,14 +35,14 @@ export default async function LocaleLayout({
               className="text-sm hover:text-[var(--accent)]"
               style={{ color: "var(--muted)" }}
             >
-              {locale === "zh" ? "项目" : "Projects"}
+              {locale === "zh" ? "\u{1F4C1} 项目" : "\u{1F4C1} Projects"}
             </a>
             <a
               href={`/${locale}/settings`}
               className="text-sm hover:text-[var(--accent)]"
               style={{ color: "var(--muted)" }}
             >
-              {locale === "zh" ? "设置" : "Settings"}
+              {locale === "zh" ? "\u2699\uFE0F 设置" : "\u2699\uFE0F Settings"}
             </a>
           </div>
           <div className="flex items-center gap-2">

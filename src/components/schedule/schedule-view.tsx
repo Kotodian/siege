@@ -410,18 +410,18 @@ export function ScheduleView({
                 {gitInfo.currentBranch}
               </span>
               <Button variant="ghost" size="sm" onClick={() => { setBranchName(`feat/plan-${planId.slice(0, 8)}`); setBranchDialogOpen(true); }}>
-                {isZh ? "创建分支" : "New Branch"}
+                {isZh ? "\u{1F33F} 创建分支" : "\u{1F33F} New Branch"}
               </Button>
             </div>
           )}
           {schedule && canEdit && (
             <Button variant="ghost" size="sm" onClick={() => setAddDialogOpen(true)}>
-              {isZh ? "添加任务" : "Add Task"}
+              {isZh ? "\u2795 添加任务" : "\u2795 Add Task"}
             </Button>
           )}
           {schedule && pendingCount > 0 && canEdit && (
             <Button variant="secondary" size="sm" onClick={handleReschedule}>
-              {isZh ? "重新排期" : "Reschedule"}
+              {isZh ? "\u{1F504} 重新排期" : "\u{1F504} Reschedule"}
             </Button>
           )}
           {schedule && canExecute && (
@@ -436,17 +436,17 @@ export function ScheduleView({
             >
               <span className={`w-2 h-2 rounded-full ${autoExecute ? "bg-green-500 animate-pulse" : ""}`} style={!autoExecute ? { background: "var(--muted)" } : undefined} />
               {autoExecute
-                ? (isZh ? "自动执行中" : "Auto-Executing")
-                : (isZh ? "自动执行" : "Auto-Execute")}
+                ? (isZh ? "\u25B6\uFE0F 自动执行中" : "\u25B6\uFE0F Auto-Executing")
+                : (isZh ? "\u25B6\uFE0F 自动执行" : "\u25B6\uFE0F Auto-Execute")}
             </button>
           )}
           {(canGenerate || planStatus === "scheduled") && (
             <Button onClick={handleGenerate} disabled={generating}>
               {generating
-                ? (isZh ? "生成中..." : "Generating...")
+                ? (isZh ? "\u23F3 生成中..." : "\u23F3 Generating...")
                 : schedule
-                  ? (isZh ? "重新生成" : "Regenerate")
-                  : (isZh ? "生成排期" : "Generate")}
+                  ? (isZh ? "\u2728 重新生成" : "\u2728 Regenerate")
+                  : (isZh ? "\u2728 生成排期" : "\u2728 Generate")}
             </Button>
           )}
         </div>

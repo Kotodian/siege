@@ -195,11 +195,11 @@ export async function POST(req: NextRequest) {
   // Resolve step-specific provider/model for "scheme" step
   const resolved = resolveStepConfig("scheme", provider as string, model);
 
-  // ACP engine: use Claude Code via Agent Client Protocol
-  if (resolved.provider === "acp") {
+  // ACP engine: use Claude Code / Codex via Agent Client Protocol
+  if (resolved.provider === "acp" || resolved.provider === "codex-acp") {
     const responseStream = new ReadableStream({
       async start(controller) {
-        const acpClient = new AcpClient(cwd);
+        const acpClient = new AcpClient(cwd, resolved.provider === "codex-acp" ? "codex" : "claude");
         try {
           await acpClient.start();
 
@@ -208,7 +208,7 @@ export async function POST(req: NextRequest) {
           if (project.sessionId) {
             session = await acpClient.resumeSession(project.sessionId);
           } else {
-            session = await acpClient.createSession();
+            session = await acpClient.createSession(resolved.model);
           }
 
           // Save session for reuse

@@ -19,6 +19,17 @@ interface PlanCardProps {
   onDelete: (id: string) => void;
 }
 
+const statusEmoji: Record<string, string> = {
+  draft: "\u{1F4DD}",
+  reviewing: "\u{1F50D}",
+  confirmed: "\u2705",
+  scheduled: "\u{1F4C5}",
+  executing: "\u26A1",
+  code_review: "\u{1F9D0}",
+  testing: "\u{1F9EA}",
+  completed: "\u{1F389}",
+};
+
 export function PlanCard({ plan, locale, onDelete }: PlanCardProps) {
   const t = useTranslations();
   const router = useRouter();
@@ -33,7 +44,7 @@ export function PlanCard({ plan, locale, onDelete }: PlanCardProps) {
     >
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-2">
-          <h3 className="font-semibold">{plan.name}</h3>
+          <h3 className="font-semibold">{statusEmoji[plan.status] || "\u{1F4CB}"} {plan.name}</h3>
           {plan.tag && (
             <StatusBadge
               status={plan.tag}
@@ -57,7 +68,7 @@ export function PlanCard({ plan, locale, onDelete }: PlanCardProps) {
             className="hover:text-red-500 text-sm"
             style={{ color: "var(--muted)" }}
           >
-            {t("common.delete")}
+            {"\u{1F5D1}\uFE0F"} {t("common.delete")}
           </button>
         </div>
       </div>

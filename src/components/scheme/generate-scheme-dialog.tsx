@@ -14,7 +14,7 @@ interface SkillSummary {
 interface GenerateSchemeDialogProps {
   open: boolean;
   onClose: () => void;
-  onGenerate: (provider: string, skills: string[]) => void;
+  onGenerate: (provider: string, skills: string[], model?: string) => void;
   generating: boolean;
 }
 
@@ -28,6 +28,7 @@ export function GenerateSchemeDialog({
   const [skills, setSkills] = useState<SkillSummary[]>([]);
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [provider, setProvider] = useState("openai");
+  const [model, setModel] = useState("");
 
   useEffect(() => {
     // Auto-detect default provider
@@ -75,6 +76,7 @@ export function GenerateSchemeDialog({
           <div className="flex gap-2 flex-wrap">
             {[
               { id: "acp", label: "Claude Code", badge: "ACP" },
+              { id: "codex-acp", label: "Codex", badge: "ACP" },
               { id: "anthropic", label: "Claude" },
               { id: "openai", label: "GPT" },
               { id: "glm", label: "GLM" },
@@ -99,6 +101,28 @@ export function GenerateSchemeDialog({
             ))}
           </div>
         </div>
+
+        {/* Model input for ACP engines */}
+        {(provider === "acp" || provider === "codex-acp") && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              {t("generate.provider")} Model
+            </label>
+            <input
+              type="text"
+              value={model}
+              onChange={(e) => setModel(e.target.value)}
+              placeholder="e.g. claude-sonnet-4-20250514"
+              className="w-full rounded-md border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              style={{ background: "var(--card)", color: "var(--foreground)", borderColor: "var(--card-border)" }}
+            />
+            <p className="text-xs mt-1" style={{ color: "var(--muted)" }}>
+              {provider === "codex-acp"
+                ? "Codex ACP model name (leave empty for default)"
+                : "Claude Code ACP model name (leave empty for default)"}
+            </p>
+          </div>
+        )}
 
         {/* Skills */}
         {skills.length > 0 && (
@@ -146,7 +170,7 @@ export function GenerateSchemeDialog({
             {t("common.cancel")}
           </Button>
           <Button
-            onClick={() => onGenerate(provider, selectedSkills)}
+            onClick={() => onGenerate(provider, selectedSkills, model || undefined)}
             disabled={generating}
           >
             {generating ? t("common.loading") : t("scheme.generate")}

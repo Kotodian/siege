@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
-import { plans, schemes } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { plans, schemes, reviews, reviewItems } from "@/lib/db/schema";
+import { eq, and } from "drizzle-orm";
 
 export async function POST(
   req: NextRequest,
@@ -41,6 +41,23 @@ export async function POST(
       .set({ status: "confirmed", updatedAt: new Date().toISOString() })
       .where(eq(plans.id, planId))
       .run();
+
+    // Mark all unresolved scheme review findings as resolved
+    const schemeReviews = db.select().from(reviews)
+      .where(and(eq(reviews.planId, planId), eq(reviews.type, "scheme")))
+      .all();
+    for (const review of schemeReviews) {
+      db.update(reviewItems)
+        .set({ resolved: true })
+        .where(and(eq(reviewItems.reviewId, review.id), eq(reviewItems.resolved, false)))
+        .run();
+      if (review.status !== "approved") {
+        db.update(reviews)
+          .set({ status: "approved", updatedAt: new Date().toISOString() })
+          .where(eq(reviews.id, review.id))
+          .run();
+      }
+    }
   } else if (action === "revoke") {
     if (plan.status !== "confirmed") {
       return NextResponse.json(

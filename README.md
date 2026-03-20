@@ -64,11 +64,11 @@ Describe   AI Gen    Gantt       Claude      Diff View   AI Gen
   </tr>
   <tr>
     <td><img src="docs/screenshots/en/12-scheme-findings.png" alt="Review Findings" /><br /><em>Scheme Review — Inline Findings with AI Fix</em></td>
-    <td><img src="docs/screenshots/en/06-settings.png" alt="Settings" /><br /><em>AI Provider & Per-Step Model Configuration</em></td>
+    <td><img src="docs/screenshots/en/09-schedule-gantt.png" alt="Gantt Chart" /><br /><em>Task Schedule with Gantt Chart</em></td>
   </tr>
   <tr>
+    <td><img src="docs/screenshots/en/06-settings.png" alt="Settings" /><br /><em>AI Provider & Per-Step Model Configuration</em></td>
     <td><img src="docs/screenshots/en/11-import-dialog.png" alt="Import" /><br /><em>Multi-Source Import — GitHub, GitLab, Notion, Jira, Confluence, Feishu, MCP</em></td>
-    <td><img src="docs/screenshots/en/04-plan-list.png" alt="Plans" /><br /><em>Plan List with Folders</em></td>
   </tr>
 </table>
 

@@ -64,11 +64,11 @@ Siege 将 Claude Code / Codex 包装成一个**完整的开发生命周期管理
   </tr>
   <tr>
     <td><img src="docs/screenshots/zh/12-scheme-findings.png" alt="方案审查" /><br /><em>方案审查 — 内联审查结果 + AI 修复</em></td>
-    <td><img src="docs/screenshots/zh/06-settings.png" alt="设置" /><br /><em>AI 提供商 & 各步骤模型配置</em></td>
+    <td><img src="docs/screenshots/zh/09-schedule-gantt.png" alt="甘特图" /><br /><em>甘特图任务排期</em></td>
   </tr>
   <tr>
+    <td><img src="docs/screenshots/zh/06-settings.png" alt="设置" /><br /><em>AI 提供商 & 各步骤模型配置</em></td>
     <td><img src="docs/screenshots/zh/11-import-dialog.png" alt="导入" /><br /><em>多来源导入 — GitHub、GitLab、Notion、Jira、Confluence、飞书、MCP</em></td>
-    <td><img src="docs/screenshots/zh/04-plan-list.png" alt="计划列表" /><br /><em>计划列表与文件夹</em></td>
   </tr>
 </table>
 

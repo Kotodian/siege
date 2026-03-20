@@ -103,6 +103,8 @@ export function SchemeSections({
   const [suggestion, setSuggestion] = useState("");
   const [fixingFinding, setFixingFinding] = useState<{ finding: Finding; section: Section; sectionIndex: number } | null>(null);
   const [fixNote, setFixNote] = useState("");
+  const [explaining, setExplaining] = useState<number | null>(null);
+  const [explanation, setExplanation] = useState<Record<number, string>>({});
 
   const toggle = (i: number) => {
     setExpandedIndex(expandedIndex === i ? null : i);
@@ -180,6 +182,38 @@ export function SchemeSections({
       if (onFindingsChanged) onFindingsChanged();
     }
     stopLoading(ok ? (isZh ? "修复完成" : "Fixed") : (isZh ? "修复失败" : "Fix failed"));
+  };
+
+  const handleExplain = async (sectionIndex: number) => {
+    const section = sections[sectionIndex];
+    setExplaining(sectionIndex);
+    setExplanation((prev) => ({ ...prev, [sectionIndex]: isZh ? "AI 正在解释..." : "AI explaining..." }));
+    try {
+      const res = await fetch("/api/schemes/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          schemeId: schemeId || "explain",
+          message: `请用通俗易懂的语言解释以下技术方案段落的含义、目的和关键点。不要修改方案，只做解释。\n\n${section.heading}\n${section.content}`,
+          sectionOnly: true,
+        }),
+      });
+      if (res.ok && res.body) {
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let text = "";
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          text += decoder.decode(value, { stream: true });
+          setExplanation((prev) => ({ ...prev, [sectionIndex]: text }));
+        }
+      }
+    } catch {
+      setExplanation((prev) => ({ ...prev, [sectionIndex]: isZh ? "解释失败" : "Explain failed" }));
+    } finally {
+      setExplaining(null);
+    }
   };
 
   const handleSectionSuggest = async (sectionIndex: number) => {
@@ -323,50 +357,58 @@ export function SchemeSections({
                     </div>
                   )}
 
-                  {/* Section-level AI suggestion */}
-                  {!readonly && schemeId && (
-                    <div className="mt-3 pt-3 border-t" style={{ borderColor: "var(--card-border)" }}>
-                      {isEditing ? (
-                        <div className="flex gap-2">
-                          <input
-                            value={suggestion}
-                            onChange={(e) => setSuggestion(e.target.value)}
-                            onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSectionSuggest(i)}
-                            placeholder={
-                              isZh
-                                ? `修改「${section.title}」的建议...`
-                                : `Suggestion for "${section.title}"...`
-                            }
-                            autoFocus
-                            className="flex-1 rounded-md border px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                            style={{ background: "var(--card)", color: "var(--foreground)", borderColor: "var(--card-border)" }}
-                          />
-                          <Button
-                            size="sm"
-                            onClick={() => handleSectionSuggest(i)}
-                            disabled={!suggestion.trim()}
-                          >
-                            {isZh ? "修改" : "Apply"}
-                          </Button>
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            onClick={() => { setEditingIndex(null); setSuggestion(""); }}
-                          >
-                            {t("common.cancel")}
-                          </Button>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => setEditingIndex(i)}
-                          className="text-xs hover:underline"
-                          style={{ color: "var(--muted)" }}
-                        >
-                          {isZh ? "AI 修改此段落" : "AI Edit This Section"}
-                        </button>
-                      )}
+                  {/* Explanation */}
+                  {explanation[i] && (
+                    <div className="mt-3 p-3 rounded-md text-xs" style={{ background: "var(--background)", color: "var(--foreground)" }}>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[10px] font-medium" style={{ color: "var(--muted)" }}>
+                          {isZh ? "💡 AI 解释" : "💡 AI Explanation"}
+                        </span>
+                        <button onClick={() => setExplanation((prev) => { const n = { ...prev }; delete n[i]; return n; })}
+                          className="text-[10px]" style={{ color: "var(--muted)" }}>✕</button>
+                      </div>
+                      <MarkdownRenderer content={explanation[i]} />
                     </div>
                   )}
+
+                  {/* Section actions */}
+                  <div className="mt-3 pt-3 border-t flex items-center gap-3" style={{ borderColor: "var(--card-border)" }}>
+                    <button
+                      onClick={() => explanation[i] ? setExplanation((prev) => { const n = { ...prev }; delete n[i]; return n; }) : handleExplain(i)}
+                      disabled={explaining === i}
+                      className="text-xs hover:underline"
+                      style={{ color: "var(--muted)" }}
+                    >
+                      {explaining === i ? (isZh ? "⏳ 解释中..." : "⏳ Explaining...") : (isZh ? "❓ 解释" : "❓ Explain")}
+                    </button>
+                    {!readonly && schemeId && (
+                      <>
+                        {isEditing ? (
+                          <div className="flex gap-2 flex-1">
+                            <input
+                              value={suggestion}
+                              onChange={(e) => setSuggestion(e.target.value)}
+                              onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSectionSuggest(i)}
+                              placeholder={isZh ? `修改「${section.title}」的建议...` : `Suggestion for "${section.title}"...`}
+                              autoFocus
+                              className="flex-1 rounded-md border px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                              style={{ background: "var(--card)", color: "var(--foreground)", borderColor: "var(--card-border)" }}
+                            />
+                            <Button size="sm" onClick={() => handleSectionSuggest(i)} disabled={!suggestion.trim()}>
+                              {isZh ? "修改" : "Apply"}
+                            </Button>
+                            <Button variant="secondary" size="sm" onClick={() => { setEditingIndex(null); setSuggestion(""); }}>
+                              {t("common.cancel")}
+                            </Button>
+                          </div>
+                        ) : (
+                          <button onClick={() => setEditingIndex(i)} className="text-xs hover:underline" style={{ color: "var(--muted)" }}>
+                            {isZh ? "✏️ AI 修改" : "✏️ AI Edit"}
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </div>
                 </div>
               )}
             </div>

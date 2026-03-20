@@ -101,6 +101,8 @@ export function SchemeSections({
   const [expandedIndex, setExpandedIndex] = useState<number | null>(0);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [suggestion, setSuggestion] = useState("");
+  const [fixingFinding, setFixingFinding] = useState<{ finding: Finding; section: Section; sectionIndex: number } | null>(null);
+  const [fixNote, setFixNote] = useState("");
 
   const toggle = (i: number) => {
     setExpandedIndex(expandedIndex === i ? null : i);
@@ -154,12 +156,22 @@ export function SchemeSections({
     return false;
   };
 
-  const handleFindingFix = async (finding: Finding, section: Section, sectionIndex: number) => {
+  const submitFindingFix = async () => {
+    if (!fixingFinding) return;
+    const { finding, section, sectionIndex } = fixingFinding;
+    const note = fixNote.trim();
+    setFixingFinding(null);
+    setFixNote("");
+
     startLoading(isZh ? "AI 正在修复..." : "AI fixing...");
-    const prompt = `请根据以下审查意见修复方案中「${section.title}」段落：\n\n**${finding.title}**\n${finding.content || ""}\n\n当前该段落内容：\n${section.heading}\n${section.content}`;
+    let prompt = `请根据以下审查意见修复方案中「${section.title}」段落：\n\n**${finding.title}**\n${finding.content || ""}`;
+    if (note) {
+      prompt += `\n\n用户补充说明：${note}`;
+    }
+    prompt += `\n\n当前该段落内容：\n${section.heading}\n${section.content}`;
+
     const ok = await streamSectionEdit(prompt, sectionIndex);
     if (ok) {
-      // Mark finding as resolved
       await fetch(`/api/review-items/${finding.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -263,7 +275,8 @@ export function SchemeSections({
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    handleFindingFix(f, section, i);
+                                    setFixingFinding({ finding: f, section, sectionIndex: i });
+                                    setFixNote("");
                                   }}
                                   className="shrink-0 px-2 py-0.5 rounded text-[10px] font-medium hover:opacity-80"
                                   style={{ background: s.border, color: s.text }}
@@ -275,6 +288,33 @@ export function SchemeSections({
                             {f.content && (
                               <div className="mt-1 opacity-90">
                                 <MarkdownRenderer content={f.content} />
+                              </div>
+                            )}
+                            {fixingFinding?.finding.id === f.id && (
+                              <div className="mt-2 flex gap-2" onClick={(e) => e.stopPropagation()}>
+                                <input
+                                  value={fixNote}
+                                  onChange={(e) => setFixNote(e.target.value)}
+                                  onKeyDown={(e) => e.key === "Enter" && submitFindingFix()}
+                                  placeholder={isZh ? "补充说明（可选，直接回车修复）" : "Additional notes (optional, Enter to fix)"}
+                                  autoFocus
+                                  className="flex-1 rounded border px-2 py-1 text-[11px]"
+                                  style={{ background: "var(--card)", color: "var(--foreground)", borderColor: "var(--card-border)" }}
+                                />
+                                <button
+                                  onClick={submitFindingFix}
+                                  className="shrink-0 px-2 py-1 rounded text-[10px] font-medium hover:opacity-80"
+                                  style={{ background: "var(--foreground)", color: "var(--background)" }}
+                                >
+                                  {isZh ? "修复" : "Fix"}
+                                </button>
+                                <button
+                                  onClick={() => setFixingFinding(null)}
+                                  className="shrink-0 px-2 py-1 rounded text-[10px] hover:opacity-80"
+                                  style={{ color: "var(--muted)" }}
+                                >
+                                  {isZh ? "取消" : "Cancel"}
+                                </button>
                               </div>
                             )}
                           </div>

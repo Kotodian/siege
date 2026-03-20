@@ -228,25 +228,32 @@ export function ReviewPanel({
   };
 
   const [fixingItem, setFixingItem] = useState<string | null>(null);
+  const [fixPromptItem, setFixPromptItem] = useState<ReviewItem | null>(null);
+  const [fixUserNote, setFixUserNote] = useState("");
   const [reviewProvider, setReviewProvider] = useState("");
 
-  const handleFix = async (item: ReviewItem) => {
+  const handleFix = async (item: ReviewItem, userNote?: string) => {
     if (!item.targetId || fixingItem) return;
     setFixingItem(item.id);
+    setFixPromptItem(null);
+    setFixUserNote("");
     startLoading(isZh ? "AI 正在修复..." : "AI fixing...");
     try {
-      // Get current scheme updatedAt for polling
       const schemeRes = await fetch(`/api/schemes/${item.targetId}`);
       const schemeData = schemeRes.ok ? await schemeRes.json() : null;
       const originalUpdatedAt = schemeData?.updatedAt;
 
-      // Fire async modification
+      let fixMessage = `Fix the following issue:\n\n**${item.title}**\n\n${item.content}`;
+      if (userNote) {
+        fixMessage += `\n\nAdditional instructions from user: ${userNote}`;
+      }
+
       await fetch("/api/schemes/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           schemeId: item.targetId,
-          message: `Fix the following issue:\n\n**${item.title}**\n\n${item.content}`,
+          message: fixMessage,
         }),
       });
 
@@ -517,12 +524,13 @@ export function ReviewPanel({
                     <div className="flex gap-1">
                       {!item.resolved && item.targetId && (
                         <button
-                          onClick={() => handleFix(item)}
+                          onClick={() => { setFixPromptItem(item); setFixUserNote(""); }}
                           disabled={fixingItem !== null}
-                          className="text-xs px-2 py-1 rounded bg-blue-100 text-blue-700 hover:bg-blue-200 disabled:opacity-50"
+                          className="text-xs px-2 py-1 rounded hover:opacity-80 disabled:opacity-50"
+                          style={{ background: "var(--card-border)", color: "var(--foreground)" }}
                         >
                           {fixingItem === item.id
-                            ? isZh ? "修复中（约1-2分钟）..." : "Fixing (~1-2min)..."
+                            ? isZh ? "修复中..." : "Fixing..."
                             : isZh ? "AI 修复" : "AI Fix"}
                         </button>
                       )}
@@ -540,6 +548,33 @@ export function ReviewPanel({
                   {item.content && (
                     <div className="mt-2 text-sm">
                       <MarkdownRenderer content={item.content} />
+                    </div>
+                  )}
+                  {fixPromptItem?.id === item.id && (
+                    <div className="mt-2 flex gap-2">
+                      <input
+                        value={fixUserNote}
+                        onChange={(e) => setFixUserNote(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && handleFix(item, fixUserNote)}
+                        placeholder={isZh ? "补充说明（可选，直接回车修复）" : "Additional notes (optional, Enter to fix)"}
+                        autoFocus
+                        className="flex-1 rounded border px-2 py-1 text-xs"
+                        style={{ background: "var(--card)", color: "var(--foreground)", borderColor: "var(--card-border)" }}
+                      />
+                      <button
+                        onClick={() => handleFix(item, fixUserNote)}
+                        className="shrink-0 px-2 py-1 rounded text-xs font-medium hover:opacity-80"
+                        style={{ background: "var(--foreground)", color: "var(--background)" }}
+                      >
+                        {isZh ? "修复" : "Fix"}
+                      </button>
+                      <button
+                        onClick={() => setFixPromptItem(null)}
+                        className="shrink-0 px-2 py-1 rounded text-xs hover:opacity-80"
+                        style={{ color: "var(--muted)" }}
+                      >
+                        {isZh ? "取消" : "Cancel"}
+                      </button>
                     </div>
                   )}
                 </div>

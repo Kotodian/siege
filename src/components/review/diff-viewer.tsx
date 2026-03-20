@@ -125,7 +125,7 @@ export function DiffViewer({
 }: DiffViewerProps) {
   const t = useTranslations();
   const isZh = t("common.back") === "返回";
-  const [commentLine, setCommentLine] = useState<number | null>(null);
+  const [commentLineIdx, setCommentLineIdx] = useState<number | null>(null);
   const [fixingId, setFixingId] = useState<string | null>(null);
   const [fixResults, setFixResults] = useState<Record<string, { aiResponse: string; commentId: string; applied?: boolean }>>({});
   const diffLines = computeDiff(contentBefore, contentAfter);
@@ -213,7 +213,7 @@ export function DiffViewer({
           const lineNum = line.type === "remove" ? line.oldLineNumber : line.newLineNumber;
           const lineFindings = lineNum ? findingsMap.get(lineNum) : undefined;
           const lineComments = lineNum ? commentsMap.get(lineNum) : undefined;
-          const isCommentTarget = lineNum !== null && commentLine === lineNum;
+          const isCommentTarget = commentLineIdx === i;
 
           // Pick the highlighted HTML for this line
           let highlightedHtml: string | undefined;
@@ -246,7 +246,7 @@ export function DiffViewer({
                 <button
                   className="w-12 text-right pr-2 select-none hover:opacity-80 shrink-0"
                   style={{ color: "var(--muted)", borderRight: "1px solid var(--card-border)" }}
-                  onClick={() => lineNum && setCommentLine(commentLine === lineNum ? null : lineNum)}
+                  onClick={() => setCommentLineIdx(commentLineIdx === i ? null : i)}
                   title={t("review.addComment")}
                 >
                   {line.oldLineNumber || ""}
@@ -255,7 +255,7 @@ export function DiffViewer({
                 <button
                   className="w-12 text-right pr-2 select-none hover:opacity-80 shrink-0"
                   style={{ color: "var(--muted)", borderRight: "1px solid var(--card-border)" }}
-                  onClick={() => lineNum && setCommentLine(commentLine === lineNum ? null : lineNum)}
+                  onClick={() => setCommentLineIdx(commentLineIdx === i ? null : i)}
                   title={t("review.addComment")}
                 >
                   {line.newLineNumber || ""}
@@ -360,7 +360,7 @@ export function DiffViewer({
                   reviewId={reviewId}
                   filePath={filePath}
                   lineNumber={lineNum}
-                  onClose={() => setCommentLine(null)}
+                  onClose={() => setCommentLineIdx(null)}
                   onSubmitted={onCommentAdded}
                 />
               )}

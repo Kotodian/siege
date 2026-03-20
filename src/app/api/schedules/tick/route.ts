@@ -12,107 +12,114 @@ import path from "path";
 
 export async function POST() {
   const db = getDb();
-  const now = new Date();
 
-  // Find all schedules with auto-execute enabled
   const autoSchedules = db.select().from(schedules)
     .where(eq(schedules.autoExecute, true))
     .all();
 
   if (autoSchedules.length === 0) {
-    return NextResponse.json({ executed: false, reason: "no auto-execute schedules" });
+    return NextResponse.json({ executed: 0, reason: "no auto-execute schedules" });
   }
 
+  const launched: Array<{ taskId: string; title: string; schemeId: string | null }> = [];
+
   for (const schedule of autoSchedules) {
-    // Check if any task is currently in_progress
-    const running = db.select().from(scheduleItems)
-      .where(and(
-        eq(scheduleItems.scheduleId, schedule.id),
-        eq(scheduleItems.status, "in_progress")
-      ))
-      .get();
-
-    if (running) continue; // Already executing a task
-
-    // Find next pending task whose startDate has arrived, ordered by `order`
-    const items = db.select().from(scheduleItems)
-      .where(and(
-        eq(scheduleItems.scheduleId, schedule.id),
-        eq(scheduleItems.status, "pending")
-      ))
-      .all()
-      .sort((a, b) => a.order - b.order);
-
-    const dueItem = items.find(item => new Date(item.startDate) <= now);
-    if (!dueItem) continue;
-
-    // Get plan and project
-    const plan = db.select().from(plans).where(eq(plans.id, schedule.planId)).get();
-    if (!plan) continue;
-
-    const project = db.select().from(projects).where(eq(projects.id, plan.projectId)).get();
-    if (!project) continue;
-
-    // Mark as in_progress
-    db.update(scheduleItems)
-      .set({ status: "in_progress", progress: 0 })
-      .where(eq(scheduleItems.id, dueItem.id))
-      .run();
-
-    if (plan.status === "scheduled") {
-      db.update(plans)
-        .set({ status: "executing", updatedAt: new Date().toISOString() })
-        .where(eq(plans.id, plan.id))
-        .run();
-    }
-
-    // Build context from previous completed tasks
     const allItems = db.select().from(scheduleItems)
       .where(eq(scheduleItems.scheduleId, schedule.id))
       .all()
       .sort((a, b) => a.order - b.order);
 
-    let previousContext = "";
-    for (const prev of allItems) {
-      if (prev.id === dueItem.id) break;
-      if (prev.status === "completed" && prev.executionLog) {
-        previousContext += `\nCompleted Task #${prev.order} "${prev.title}":\n${prev.executionLog.slice(0, 3000)}\n`;
+    // Group items by schemeId (null schemeId = its own group)
+    const groups = new Map<string, typeof allItems>();
+    for (const item of allItems) {
+      const key = item.schemeId || `_no_scheme_${item.id}`;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(item);
+    }
+
+    // For each group (pipeline), find if we can launch a task
+    for (const [groupKey, groupItems] of groups) {
+      // Check if any task in this group is already running
+      const groupRunning = groupItems.some(i => i.status === "in_progress");
+      if (groupRunning) continue;
+
+      // Find first pending task in this group
+      const nextPending = groupItems.find(i => i.status === "pending");
+      if (!nextPending) continue;
+
+      // Get plan and project
+      const plan = db.select().from(plans).where(eq(plans.id, schedule.planId)).get();
+      if (!plan) continue;
+      const project = db.select().from(projects).where(eq(projects.id, plan.projectId)).get();
+      if (!project) continue;
+
+      // Mark as in_progress
+      db.update(scheduleItems)
+        .set({ status: "in_progress", progress: 0 })
+        .where(eq(scheduleItems.id, nextPending.id))
+        .run();
+
+      if (plan.status === "scheduled") {
+        db.update(plans)
+          .set({ status: "executing", updatedAt: new Date().toISOString() })
+          .where(eq(plans.id, plan.id))
+          .run();
       }
-    }
 
-    // Skills
-    const itemSkills: string[] = JSON.parse(dueItem.skills || "[]");
-    let skillsContent = "";
-    if (itemSkills.length > 0) {
+      // Build context from completed tasks in this group only (same pipeline)
+      let previousContext = "";
+      for (const prev of groupItems) {
+        if (prev.id === nextPending.id) break;
+        if (prev.status === "completed" && prev.executionLog) {
+          previousContext += `\nCompleted Task #${prev.order} "${prev.title}":\n${prev.executionLog.slice(0, 3000)}\n`;
+        }
+      }
+
+      // Skills — use configured skills, or auto-detect from all available
+      let itemSkills: string[] = JSON.parse(nextPending.skills || "[]");
       const allSkills = scanAllSkills();
-      skillsContent = getSkillContent(allSkills, itemSkills);
-    }
+      if (itemSkills.length === 0 && allSkills.length > 0) {
+        // Auto-select all available skills — let the AI use what it needs
+        itemSkills = allSkills.map(s => s.name);
+      }
+      let skillsContent = "";
+      if (itemSkills.length > 0) {
+        skillsContent = getSkillContent(allSkills, itemSkills);
+      }
 
-    const prompt = `${previousContext ? `Previously completed tasks:\n${previousContext}\n---\n` : ""}
+      const prompt = `${previousContext ? `Previously completed tasks in this pipeline:\n${previousContext}\n---\n` : ""}
 
-Implement task #${dueItem.order}: ${dueItem.title}
+Implement task #${nextPending.order}: ${nextPending.title}
 
-${dueItem.description || ""}
+${nextPending.description || ""}
 
 ${skillsContent ? `Skills context:\n${skillsContent}` : ""}
 
 Use the provided tools to read the codebase, write/edit files, and run commands. Implement the changes and verify they work.`;
 
-    const cwd = fs.existsSync(project.targetRepoPath) ? project.targetRepoPath : process.cwd();
+      const cwd = fs.existsSync(project.targetRepoPath) ? project.targetRepoPath : process.cwd();
 
-    // Execute asynchronously (fire and forget — the tick will be called again later)
-    executeTask(dueItem.id, cwd, prompt).catch(err => {
-      console.error(`[auto-execute] Task ${dueItem.id} failed:`, err);
-    });
+      // Launch asynchronously — multiple tasks from different groups run in parallel
+      executeTask(nextPending.id, cwd, prompt).catch(err => {
+        console.error(`[auto-execute] Task ${nextPending.id} failed:`, err);
+      });
 
-    return NextResponse.json({
-      executed: true,
-      taskId: dueItem.id,
-      taskTitle: dueItem.title
-    });
+      launched.push({
+        taskId: nextPending.id,
+        title: nextPending.title,
+        schemeId: nextPending.schemeId,
+      });
+    }
   }
 
-  return NextResponse.json({ executed: false, reason: "no due tasks" });
+  if (launched.length === 0) {
+    return NextResponse.json({ executed: 0, reason: "no due tasks" });
+  }
+
+  return NextResponse.json({
+    executed: launched.length,
+    tasks: launched,
+  });
 }
 
 async function executeTask(itemId: string, cwd: string, prompt: string) {

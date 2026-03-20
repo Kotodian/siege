@@ -432,7 +432,7 @@ export function ScheduleView({
               <span className={`w-2 h-2 rounded-full ${autoExecute ? "bg-green-500 animate-pulse" : ""}`} style={!autoExecute ? { background: "var(--muted)" } : undefined} />
               {autoExecute
                 ? (isZh ? "自动执行中" : "Auto-Executing")
-                : (isZh ? "定时执行" : "Auto-Execute")}
+                : (isZh ? "自动执行" : "Auto-Execute")}
             </button>
           )}
           {(canGenerate || planStatus === "scheduled") && (

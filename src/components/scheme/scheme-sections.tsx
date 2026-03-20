@@ -208,7 +208,8 @@ export function SchemeSections({
                       ) : (
                         <button
                           onClick={() => setEditingIndex(i)}
-                          className="text-xs text-blue-600 hover:text-blue-800 hover:underline"
+                          className="text-xs hover:underline"
+                          style={{ color: "var(--muted)" }}
                         >
                           {isZh ? "AI 修改此段落" : "AI Edit This Section"}
                         </button>

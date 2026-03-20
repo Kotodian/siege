@@ -128,7 +128,7 @@ export function PlanList({ projectId, locale }: PlanListProps) {
           <h2 className="text-2xl font-bold">{t("plan.title")}</h2>
           {/* Breadcrumb */}
           {folderPath.length > 0 && (
-            <div className="flex items-center gap-1 text-sm text-gray-500 ml-2">
+            <div className="flex items-center gap-1 text-sm ml-2" style={{ color: "var(--muted)" }}>
               <button
                 onClick={navigateToRoot}
                 className="hover:text-blue-600"
@@ -191,7 +191,8 @@ export function PlanList({ projectId, locale }: PlanListProps) {
           {folders.map((folder) => (
             <div
               key={folder.id}
-              className="rounded-lg border bg-white p-3 flex items-center justify-between hover:shadow-sm cursor-pointer"
+              className="rounded-lg border p-3 flex items-center justify-between hover:shadow-sm cursor-pointer"
+              style={{ background: "var(--card)", borderColor: "var(--card-border)" }}
               onClick={() => navigateToFolder(folder)}
             >
               <div className="flex items-center gap-2">
@@ -205,7 +206,8 @@ export function PlanList({ projectId, locale }: PlanListProps) {
                     handleDeleteFolder(folder.id);
                   }
                 }}
-                className="text-gray-400 hover:text-red-500 text-xs"
+                className="hover:text-red-500 text-xs"
+                style={{ color: "var(--muted)" }}
               >
                 {t("common.delete")}
               </button>
@@ -216,7 +218,7 @@ export function PlanList({ projectId, locale }: PlanListProps) {
 
       {/* Plans */}
       {plans.length === 0 && folders.length === 0 ? (
-        <p className="text-gray-500 text-center py-12">
+        <p className="text-center py-12" style={{ color: "var(--muted)" }}>
           {t("common.noData")}
         </p>
       ) : (

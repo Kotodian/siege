@@ -83,7 +83,7 @@ export function CreatePlanDialog({
     <Dialog open={open} onClose={handleClose} title={t("plan.create")}>
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium mb-1" style={{ color: "var(--foreground)" }}>
             {t("plan.description")}
           </label>
           <MarkdownEditor
@@ -114,7 +114,7 @@ export function CreatePlanDialog({
           </div>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium mb-1" style={{ color: "var(--foreground)" }}>
             {t("plan.tag")}
           </label>
           <div className="flex flex-wrap gap-2">
@@ -126,8 +126,9 @@ export function CreatePlanDialog({
                 className={`px-3 py-1 text-xs rounded-full border transition-colors ${
                   tag === t_
                     ? "bg-blue-600 text-white border-blue-600"
-                    : "bg-white text-gray-600 border-gray-300 hover:border-gray-400"
+                    : ""
                 }`}
+                style={tag !== t_ ? { background: "var(--card)", color: "var(--muted)", borderColor: "var(--card-border)" } : undefined}
               >
                 {t(`plan.tags.${t_}`)}
               </button>

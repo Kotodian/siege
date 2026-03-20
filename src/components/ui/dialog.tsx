@@ -28,7 +28,8 @@ export function Dialog({ open, onClose, title, children, maxWidth }: DialogProps
     <dialog
       ref={dialogRef}
       onClose={onClose}
-      className={`fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 m-0 rounded-lg p-0 backdrop:bg-black/50 w-full max-h-[calc(100vh-2rem)] overflow-auto ${maxWidth || "max-w-lg"}`}
+      className={`fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 m-0 rounded-lg p-0 backdrop:bg-black/60 w-full max-h-[calc(100vh-2rem)] overflow-auto ${maxWidth || "max-w-lg"}`}
+      style={{ background: "var(--card)", color: "var(--foreground)", borderColor: "var(--card-border)" }}
     >
       <div className="p-6">
         <div className="flex items-center justify-between mb-4">

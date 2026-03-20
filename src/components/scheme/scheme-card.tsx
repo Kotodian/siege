@@ -136,7 +136,7 @@ export function SchemeCard({
   }
 
   return (
-    <div className="rounded-lg border bg-white p-5">
+    <div className="rounded-lg border p-5" style={{ background: "var(--card)", borderColor: "var(--card-border)" }}>
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2">
           <h3 className="font-semibold">{scheme.title}</h3>
@@ -195,15 +195,16 @@ export function SchemeCard({
 
       {/* Chat history */}
       {chatHistory.length > 0 && (
-        <div className="mt-3 border-t pt-3 space-y-2">
+        <div className="mt-3 border-t pt-3 space-y-2" style={{ borderColor: "var(--card-border)" }}>
           {chatHistory.map((msg, i) => (
             <div
               key={i}
               className={`text-sm px-3 py-1.5 rounded-lg max-w-[80%] ${
                 msg.role === "user"
                   ? "bg-blue-50 text-blue-800 ml-auto"
-                  : "bg-gray-50 text-gray-700"
+                  : ""
               }`}
+              style={msg.role !== "user" ? { background: "var(--background)", color: "var(--foreground)" } : undefined}
             >
               {msg.text}
             </div>
@@ -238,9 +239,10 @@ export function SchemeCard({
                 : "e.g., Change the tech stack to Go"
             }
             disabled={chatting}
-            className="flex-1 rounded-md border border-gray-300 px-3 py-1.5 text-sm
+            className="flex-1 rounded-md border px-3 py-1.5 text-sm
               focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500
               disabled:opacity-50"
+            style={{ background: "var(--card)", color: "var(--foreground)", borderColor: "var(--card-border)" }}
           />
           <Button
             size="sm"

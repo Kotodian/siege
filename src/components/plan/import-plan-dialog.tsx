@@ -374,7 +374,7 @@ function SourceTab({
 
   if (!activeConfig) {
     return (
-      <p className="text-gray-400 text-sm text-center py-6">
+      <p className="text-sm text-center py-6" style={{ color: "var(--muted)" }}>
         {t("common.loading")}
       </p>
     );
@@ -404,9 +404,9 @@ function SourceTab({
         </Button>
       </div>
 
-      <div className="max-h-64 overflow-y-auto border rounded-lg divide-y">
+      <div className="max-h-64 overflow-y-auto border rounded-lg divide-y" style={{ borderColor: "var(--card-border)", "--tw-divide-color": "var(--card-border)" } as React.CSSProperties}>
         {items.length === 0 ? (
-          <p className="text-gray-400 text-sm text-center py-6">
+          <p className="text-sm text-center py-6" style={{ color: "var(--muted)" }}>
             {searching
               ? t("common.loading")
               : t("common.noData")}
@@ -415,7 +415,7 @@ function SourceTab({
           items.map((item) => (
             <label
               key={item.id}
-              className="flex items-start gap-3 px-3 py-2.5 hover:bg-gray-50 cursor-pointer"
+              className="flex items-start gap-3 px-3 py-2.5 cursor-pointer"
             >
               <input
                 type="checkbox"
@@ -428,7 +428,7 @@ function SourceTab({
                   {item.title}
                 </div>
                 {item.description && (
-                  <div className="text-xs text-gray-500 truncate">
+                  <div className="text-xs truncate" style={{ color: "var(--muted)" }}>
                     {item.description}
                   </div>
                 )}
@@ -450,7 +450,7 @@ function SourceTab({
       </div>
 
       <div className="flex items-center justify-between">
-        <span className="text-xs text-gray-400">
+        <span className="text-xs" style={{ color: "var(--muted)" }}>
           {isZh
             ? `已选 ${selected.size} 项`
             : `${selected.size} selected`}
@@ -523,7 +523,7 @@ export function ImportPlanDialog({
     >
       <div className="flex min-h-[400px] -mx-6 -mb-6">
         {/* Left sidebar */}
-        <div className="w-40 shrink-0 border-r bg-gray-50 rounded-bl-lg overflow-y-auto">
+        <div className="w-40 shrink-0 border-r rounded-bl-lg overflow-y-auto" style={{ background: "var(--background)", borderColor: "var(--card-border)" }}>
           {allSources.map((src) => (
             <button
               key={src.id}
@@ -531,8 +531,9 @@ export function ImportPlanDialog({
               className={`w-full text-left px-3 py-2.5 text-sm flex items-center gap-2 transition-colors ${
                 activeSource === src.id
                   ? "bg-blue-50 text-blue-700 font-medium border-r-2 border-blue-600"
-                  : "text-gray-600 hover:bg-gray-100"
+                  : "hover:opacity-80"
               }`}
+              style={activeSource !== src.id ? { color: "var(--muted)" } : undefined}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={SOURCE_ICONS[src.id]} alt="" className="w-4 h-4 shrink-0" />

@@ -1,10 +1,14 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
-@import "highlight.js/styles/github.css";
+@import "highlight.js/styles/github-dark.css";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #1a1a1a;
+  --foreground: #d4d4d4;
+  --card: #252525;
+  --card-border: #3a3a3a;
+  --muted: #888888;
+  --accent: #60a5fa;
 }
 
 @theme inline {
@@ -14,10 +18,44 @@
   --font-mono: var(--font-geist-mono);
 }
 
-/* Force light mode — dark mode breaks gantt chart and other components */
-
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Override prose for dark mode */
+.prose {
+  --tw-prose-body: #d4d4d4;
+  --tw-prose-headings: #e5e5e5;
+  --tw-prose-links: #60a5fa;
+  --tw-prose-bold: #e5e5e5;
+  --tw-prose-counters: #888888;
+  --tw-prose-bullets: #888888;
+  --tw-prose-hr: #3a3a3a;
+  --tw-prose-quotes: #888888;
+  --tw-prose-quote-borders: #3a3a3a;
+  --tw-prose-code: #e5e5e5;
+  --tw-prose-pre-code: #d4d4d4;
+  --tw-prose-pre-bg: #1a1a1a;
+  --tw-prose-th-borders: #3a3a3a;
+  --tw-prose-td-borders: #303030;
+}
+
+/* Gantt chart dark overrides */
+.gantt .grid-header,
+.gantt .grid-row {
+  fill: #252525 !important;
+}
+.gantt .grid-row:nth-child(even) {
+  fill: #1a1a1a !important;
+}
+.gantt .row-line,
+.gantt .tick {
+  stroke: #3a3a3a !important;
+}
+.gantt .bar-label,
+.gantt .lower-text,
+.gantt .upper-text {
+  fill: #d4d4d4 !important;
 }

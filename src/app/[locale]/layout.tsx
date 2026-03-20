@@ -22,8 +22,8 @@ export default async function LocaleLayout({
   return (
     <NextIntlClientProvider messages={messages}>
       <GlobalLoadingProvider>
-      <div className="min-h-screen bg-gray-50">
-        <nav className="border-b bg-white px-6 py-3 flex items-center justify-between">
+      <div className="min-h-screen" style={{ background: "var(--background)", color: "var(--foreground)" }}>
+        <nav className="border-b px-6 py-3 flex items-center justify-between" style={{ background: "var(--card)", borderColor: "var(--card-border)" }}>
           <div className="flex items-center gap-6">
             <a href={`/${locale}`} className="flex items-center gap-2">
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -32,13 +32,15 @@ export default async function LocaleLayout({
             </a>
             <a
               href={`/${locale}`}
-              className="text-sm text-gray-600 hover:text-gray-900"
+              className="text-sm hover:text-[var(--accent)]"
+              style={{ color: "var(--muted)" }}
             >
               {locale === "zh" ? "项目" : "Projects"}
             </a>
             <a
               href={`/${locale}/settings`}
-              className="text-sm text-gray-600 hover:text-gray-900"
+              className="text-sm hover:text-[var(--accent)]"
+              style={{ color: "var(--muted)" }}
             >
               {locale === "zh" ? "设置" : "Settings"}
             </a>
@@ -46,14 +48,16 @@ export default async function LocaleLayout({
           <div className="flex items-center gap-2">
             <a
               href="/en"
-              className={`text-xs ${locale === "en" ? "text-gray-900 font-medium" : "text-gray-500"} hover:text-gray-900`}
+              className={`text-xs ${locale === "en" ? "font-medium" : ""} hover:text-[var(--accent)]`}
+              style={{ color: locale === "en" ? "var(--foreground)" : "var(--muted)" }}
             >
               EN
             </a>
-            <span className="text-gray-300">|</span>
+            <span style={{ color: "var(--card-border)" }}>|</span>
             <a
               href="/zh"
-              className={`text-xs ${locale === "zh" ? "text-gray-900 font-medium" : "text-gray-500"} hover:text-gray-900`}
+              className={`text-xs ${locale === "zh" ? "font-medium" : ""} hover:text-[var(--accent)]`}
+              style={{ color: locale === "zh" ? "var(--foreground)" : "var(--muted)" }}
             >
               中文
             </a>

@@ -24,7 +24,8 @@ export function ProjectCard({ project, locale, onDelete }: ProjectCardProps) {
 
   return (
     <div
-      className="rounded-lg border bg-white p-5 hover:shadow-md transition-shadow cursor-pointer"
+      className="rounded-lg border p-5 hover:shadow-md transition-shadow cursor-pointer"
+      style={{ background: "var(--card)", borderColor: "var(--card-border)" }}
       onClick={() => {
         addRecentProject(project.id);
         router.push(`/${locale}/projects/${project.id}`);
@@ -42,18 +43,19 @@ export function ProjectCard({ project, locale, onDelete }: ProjectCardProps) {
               onDelete(project.id);
             }
           }}
-          className="text-gray-400 hover:text-red-500 text-sm"
+          className="hover:text-red-500 text-sm"
+          style={{ color: "var(--muted)" }}
         >
           {t("common.delete")}
         </button>
       </div>
       {project.description && (
-        <p className="text-sm text-gray-500 mt-1 line-clamp-2">
+        <p className="text-sm mt-1 line-clamp-2" style={{ color: "var(--muted)" }}>
           {project.description}
         </p>
       )}
       <div className="flex items-center justify-between mt-3">
-        <p className="text-xs text-gray-400 font-mono truncate">
+        <p className="text-xs font-mono truncate" style={{ color: "var(--muted)" }}>
           {project.targetRepoPath}
         </p>
         <TimeAgo date={project.updatedAt} locale={locale} />

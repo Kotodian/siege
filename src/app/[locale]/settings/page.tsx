@@ -138,7 +138,7 @@ export default function SettingsPage({
         </h2>
 
         {/* Claude Code Login — for ACP engine */}
-        <div className="rounded-lg border bg-white p-4 mb-3">
+        <div className="rounded-lg border p-4 mb-3" style={{ background: "var(--card)", borderColor: "var(--card-border)" }}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="font-medium text-sm">Claude Code</span>
@@ -161,34 +161,34 @@ export default function SettingsPage({
                   {isZh ? "未登录" : "Not logged in"}
                 </span>
               ) : (
-                <span className="text-xs text-gray-400">
+                <span className="text-xs" style={{ color: "var(--muted)" }}>
                   {isZh ? "未安装" : "Not installed"}
                 </span>
               )}
             </div>
           </div>
           {aiConfig?.claude?.loggedIn ? (
-            <p className="text-xs text-gray-400 mt-2">
+            <p className="text-xs mt-2" style={{ color: "var(--muted)" }}>
               {isZh
                 ? "任务排期中选择「Claude Code (ACP)」引擎即可使用"
                 : "Select 'Claude Code (ACP)' engine in task scheduler"}
             </p>
           ) : aiConfig?.claude?.installed ? (
             <div className="mt-2 flex items-center gap-2">
-              <code className="text-xs bg-gray-100 px-2 py-1 rounded font-mono select-all">claude login</code>
+              <code className="text-xs px-2 py-1 rounded font-mono select-all" style={{ background: "var(--background)", color: "var(--foreground)" }}>claude login</code>
               <Button variant="ghost" size="sm" onClick={() => fetch("/api/ai-config").then(r => r.json()).then(setAiConfig)}>
                 {isZh ? "刷新状态" : "Refresh"}
               </Button>
             </div>
           ) : (
-            <p className="text-xs text-gray-400 mt-2">
+            <p className="text-xs mt-2" style={{ color: "var(--muted)" }}>
               {isZh ? "请先安装 Claude Code CLI" : "Install Claude Code CLI first"}
             </p>
           )}
         </div>
 
         {/* Codex Login — for Codex ACP engine */}
-        <div className="rounded-lg border bg-white p-4 mb-3">
+        <div className="rounded-lg border p-4 mb-3" style={{ background: "var(--card)", borderColor: "var(--card-border)" }}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="font-medium text-sm">Codex</span>
@@ -204,27 +204,27 @@ export default function SettingsPage({
                   {isZh ? "未登录" : "Not logged in"}
                 </span>
               ) : (
-                <span className="text-xs text-gray-400">
+                <span className="text-xs" style={{ color: "var(--muted)" }}>
                   {isZh ? "未安装" : "Not installed"}
                 </span>
               )}
             </div>
           </div>
           {aiConfig?.codex?.loggedIn ? (
-            <p className="text-xs text-gray-400 mt-2">
+            <p className="text-xs mt-2" style={{ color: "var(--muted)" }}>
               {isZh
                 ? "任务排期中选择「Codex (ACP)」引擎即可使用"
                 : "Select 'Codex (ACP)' engine in task scheduler"}
             </p>
           ) : aiConfig?.codex?.installed ? (
             <div className="mt-2 flex items-center gap-2">
-              <code className="text-xs bg-gray-100 px-2 py-1 rounded font-mono select-all">codex login</code>
+              <code className="text-xs px-2 py-1 rounded font-mono select-all" style={{ background: "var(--background)", color: "var(--foreground)" }}>codex login</code>
               <Button variant="ghost" size="sm" onClick={() => fetch("/api/ai-config").then(r => r.json()).then(setAiConfig)}>
                 {isZh ? "刷新状态" : "Refresh"}
               </Button>
             </div>
           ) : (
-            <p className="text-xs text-gray-400 mt-2">
+            <p className="text-xs mt-2" style={{ color: "var(--muted)" }}>
               {isZh ? "请先安装 Codex CLI" : "Install Codex CLI first"}
             </p>
           )}
@@ -236,7 +236,7 @@ export default function SettingsPage({
             const isEditing = editingProvider === prov.id;
 
             return (
-              <div key={prov.id} className="rounded-lg border bg-white p-4">
+              <div key={prov.id} className="rounded-lg border p-4" style={{ background: "var(--card)", borderColor: "var(--card-border)" }}>
                 <div className="flex items-center justify-between">
                   <span className="font-medium text-sm">{prov.label}</span>
                   <div className="flex items-center gap-2">
@@ -251,13 +251,13 @@ export default function SettingsPage({
                           </span>
                         )}
                         {status.baseURL && (
-                          <span className="text-xs text-gray-400 font-mono">
+                          <span className="text-xs font-mono" style={{ color: "var(--muted)" }}>
                             {status.baseURL.slice(0, 30)}
                           </span>
                         )}
                       </>
                     ) : (
-                      <span className="text-xs text-gray-400">
+                      <span className="text-xs" style={{ color: "var(--muted)" }}>
                         {isZh ? "未配置" : "Not configured"}
                       </span>
                     )}
@@ -340,7 +340,7 @@ export default function SettingsPage({
                 </div>
 
                 {isEditing && (
-                  <div className="mt-3 space-y-3 border-t pt-3">
+                  <div className="mt-3 space-y-3 border-t pt-3" style={{ borderColor: "var(--card-border)" }}>
                     <Input
                       label="API Key"
                       value={editKey}
@@ -361,12 +361,13 @@ export default function SettingsPage({
                       }
                     />
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-medium mb-1" style={{ color: "var(--foreground)" }}>
                         {isZh ? "模型" : "Model"}
                       </label>
                       <div className="flex gap-2">
                         <select
-                          className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          className="flex-1 rounded-md border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          style={{ background: "var(--card)", color: "var(--foreground)", borderColor: "var(--card-border)" }}
                           value={editModel}
                           onChange={(e) => setEditModel(e.target.value)}
                         >
@@ -376,7 +377,8 @@ export default function SettingsPage({
                           ))}
                         </select>
                         <input
-                          className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          className="flex-1 rounded-md border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          style={{ background: "var(--card)", color: "var(--foreground)", borderColor: "var(--card-border)" }}
                           value={editModel}
                           onChange={(e) => setEditModel(e.target.value)}
                           placeholder={isZh ? "或输入自定义模型名" : "Or enter custom model name"}
@@ -406,15 +408,16 @@ export default function SettingsPage({
         <h2 className="text-xl font-semibold mb-4">
           {isZh ? "通用设置" : "General Settings"}
         </h2>
-        <div className="rounded-lg border bg-white p-6 space-y-4">
+        <div className="rounded-lg border p-6 space-y-4" style={{ background: "var(--card)", borderColor: "var(--card-border)" }}>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium mb-1" style={{ color: "var(--foreground)" }}>
               {isZh ? "默认 AI 提供商" : "Default AI Provider"}
             </label>
             <select
               value={settings.default_provider || "anthropic"}
               onChange={(e) => setSettings((s) => ({ ...s, default_provider: e.target.value }))}
               className="w-full border rounded-md px-3 py-2 text-sm"
+              style={{ background: "var(--card)", color: "var(--foreground)", borderColor: "var(--card-border)" }}
             >
               <option value="acp">Claude Code (ACP)</option>
               <option value="codex-acp">Codex (ACP)</option>
@@ -534,13 +537,14 @@ function SkillsSection({
       </h2>
 
       {/* Generate skill from prompt */}
-      <div className="rounded-lg border bg-white p-4 mb-4">
-        <h3 className="text-sm font-medium text-gray-700 mb-2">
+      <div className="rounded-lg border p-4 mb-4" style={{ background: "var(--card)", borderColor: "var(--card-border)" }}>
+        <h3 className="text-sm font-medium mb-2" style={{ color: "var(--foreground)" }}>
           {isZh ? "通过描述安装技能" : "Install Skill from Prompt"}
         </h3>
         <div className="flex gap-2">
           <textarea
-            className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none"
+            className="flex-1 rounded-md border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none"
+            style={{ background: "var(--card)", color: "var(--foreground)", borderColor: "var(--card-border)" }}
             rows={2}
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
@@ -570,17 +574,17 @@ function SkillsSection({
       {/* Installed skills */}
       {Object.entries(skillsBySource).map(([source, items]) => (
         <div key={source} className="mb-4">
-          <h3 className="text-sm font-medium text-gray-500 mb-2">
+          <h3 className="text-sm font-medium mb-2" style={{ color: "var(--muted)" }}>
             {source} ({items.length})
           </h3>
-          <div className="rounded-lg border bg-white divide-y">
+          <div className="rounded-lg border divide-y" style={{ background: "var(--card)", borderColor: "var(--card-border)", "--tw-divide-color": "var(--card-border)" } as React.CSSProperties}>
             {items.map((skill) => (
               <div key={skill.name} className="px-4 py-3">
                 <div className="flex items-start justify-between">
                   <div className="flex-1 min-w-0">
                     <span className="font-mono text-sm font-medium">{skill.name}</span>
                     {skill.description && (
-                      <p className="text-xs text-gray-600 mt-0.5">{skill.description}</p>
+                      <p className="text-xs mt-0.5" style={{ color: "var(--muted)" }}>{skill.description}</p>
                     )}
                   </div>
                   <button
@@ -591,7 +595,7 @@ function SkillsSection({
                   </button>
                 </div>
                 {skill.preview && (
-                  <pre className="text-[11px] text-gray-400 mt-1.5 whitespace-pre-wrap line-clamp-3 font-mono leading-relaxed">{skill.preview}</pre>
+                  <pre className="text-[11px] mt-1.5 whitespace-pre-wrap line-clamp-3 font-mono leading-relaxed" style={{ color: "var(--muted)" }}>{skill.preview}</pre>
                 )}
               </div>
             ))}
@@ -599,7 +603,7 @@ function SkillsSection({
         </div>
       ))}
       {skills.length === 0 && (
-        <p className="text-gray-500 text-sm">
+        <p className="text-sm" style={{ color: "var(--muted)" }}>
           {isZh ? "未找到技能（~/.claude/skills/）" : "No skills found in ~/.claude/skills/"}
         </p>
       )}
@@ -726,13 +730,13 @@ function ImportSourcesSection({ isZh }: { isZh: boolean }) {
       </div>
 
       {configs.length === 0 ? (
-        <p className="text-gray-500 text-sm">
+        <p className="text-sm" style={{ color: "var(--muted)" }}>
           {isZh ? "暂无配置的导入来源" : "No import sources configured"}
         </p>
       ) : (
         <div className="space-y-3">
           {configs.map((cfg) => (
-            <div key={cfg.id} className="rounded-lg border bg-white p-4">
+            <div key={cfg.id} className="rounded-lg border p-4" style={{ background: "var(--card)", borderColor: "var(--card-border)" }}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="font-medium text-sm">
@@ -773,7 +777,7 @@ function ImportSourcesSection({ isZh }: { isZh: boolean }) {
                   </Button>
                 </div>
               </div>
-              <div className="mt-2 text-xs text-gray-400 font-mono">
+              <div className="mt-2 text-xs font-mono" style={{ color: "var(--muted)" }}>
                 {Object.entries(cfg.config)
                   .map(([k, v]) => `${k}: ${v}`)
                   .join(" | ")}
@@ -790,7 +794,7 @@ function ImportSourcesSection({ isZh }: { isZh: boolean }) {
       >
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium mb-1" style={{ color: "var(--foreground)" }}>
               {isZh ? "类型" : "Type"}
             </label>
             <select
@@ -800,6 +804,7 @@ function ImportSourcesSection({ isZh }: { isZh: boolean }) {
                 setAddFields({});
               }}
               className="w-full border rounded-md px-3 py-2 text-sm"
+              style={{ background: "var(--card)", color: "var(--foreground)", borderColor: "var(--card-border)" }}
             >
               {Object.keys(IMPORT_SOURCE_FIELDS).map((s) => (
                 <option key={s} value={s}>
@@ -883,12 +888,12 @@ function StepModelSection({
       <h2 className="text-xl font-semibold mb-2">
         {isZh ? "各步骤 AI 配置" : "Per-Step AI Configuration"}
       </h2>
-      <p className="text-xs text-gray-400 mb-4">
+      <p className="text-xs mb-4" style={{ color: "var(--muted)" }}>
         {isZh
           ? "为不同步骤设置不同的 AI 提供商和模型。留空则使用全局默认。"
           : "Set different AI providers and models for each step. Empty uses global default."}
       </p>
-      <div className="rounded-lg border bg-white divide-y">
+      <div className="rounded-lg border divide-y" style={{ background: "var(--card)", borderColor: "var(--card-border)", "--tw-divide-color": "var(--card-border)" } as React.CSSProperties}>
         {AI_STEPS.map((step) => {
           const provKey = `step_provider_${step.id}`;
           const modelKey = `step_model_${step.id}`;
@@ -904,7 +909,8 @@ function StepModelSection({
                 onChange={(e) =>
                   setSettings((s) => ({ ...s, [provKey]: e.target.value }))
                 }
-                className="flex-1 rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+                className="flex-1 rounded-md border px-2 py-1.5 text-sm"
+                style={{ background: "var(--card)", color: "var(--foreground)", borderColor: "var(--card-border)" }}
               >
                 {ALL_PROVIDER_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>
@@ -918,7 +924,8 @@ function StepModelSection({
                   setSettings((s) => ({ ...s, [modelKey]: e.target.value }))
                 }
                 placeholder={isZh ? "模型（可选）" : "Model (optional)"}
-                className="flex-1 rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+                className="flex-1 rounded-md border px-2 py-1.5 text-sm"
+                style={{ background: "var(--card)", color: "var(--foreground)", borderColor: "var(--card-border)" }}
               />
             </div>
           );

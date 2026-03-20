@@ -25,7 +25,8 @@ export function PlanCard({ plan, locale, onDelete }: PlanCardProps) {
 
   return (
     <div
-      className="rounded-lg border bg-white p-5 hover:shadow-md transition-shadow cursor-pointer"
+      className="rounded-lg border p-5 hover:shadow-md transition-shadow cursor-pointer"
+      style={{ background: "var(--card)", borderColor: "var(--card-border)" }}
       onClick={() =>
         router.push(`/${locale}/projects/${plan.projectId}/plans/${plan.id}`)
       }
@@ -53,14 +54,15 @@ export function PlanCard({ plan, locale, onDelete }: PlanCardProps) {
                 onDelete(plan.id);
               }
             }}
-            className="text-gray-400 hover:text-red-500 text-sm"
+            className="hover:text-red-500 text-sm"
+            style={{ color: "var(--muted)" }}
           >
             {t("common.delete")}
           </button>
         </div>
       </div>
       {plan.description && (
-        <p className="text-sm text-gray-500 mt-1 line-clamp-2">
+        <p className="text-sm mt-1 line-clamp-2" style={{ color: "var(--muted)" }}>
           {plan.description}
         </p>
       )}

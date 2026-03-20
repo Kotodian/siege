@@ -351,7 +351,7 @@ export function ScheduleView({
 
   if (!schedule && !canGenerate && planStatus !== "confirmed") {
     return (
-      <p className="text-gray-500 text-center py-8">{t("common.noData")}</p>
+      <p className="text-center py-8" style={{ color: "var(--muted)" }}>{t("common.noData")}</p>
     );
   }
 
@@ -381,7 +381,7 @@ export function ScheduleView({
         <div className="flex items-center gap-2">
           {gitInfo?.isGit && (
             <div className="flex items-center gap-1 text-xs">
-              <span className="text-gray-400 font-mono">
+              <span className="font-mono" style={{ color: "var(--muted)" }}>
                 {gitInfo.currentBranch}
               </span>
               <Button variant="ghost" size="sm" onClick={() => { setBranchName(`feat/plan-${planId.slice(0, 8)}`); setBranchDialogOpen(true); }}>
@@ -405,10 +405,11 @@ export function ScheduleView({
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
                 autoExecute
                   ? "bg-green-100 text-green-700 hover:bg-green-200"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  : "hover:opacity-80"
               }`}
+              style={!autoExecute ? { background: "var(--card-border)", color: "var(--muted)" } : undefined}
             >
-              <span className={`w-2 h-2 rounded-full ${autoExecute ? "bg-green-500 animate-pulse" : "bg-gray-400"}`} />
+              <span className={`w-2 h-2 rounded-full ${autoExecute ? "bg-green-500 animate-pulse" : ""}`} style={!autoExecute ? { background: "var(--muted)" } : undefined} />
               {autoExecute
                 ? (isZh ? "自动执行中" : "Auto-Executing")
                 : (isZh ? "定时执行" : "Auto-Execute")}
@@ -447,9 +448,10 @@ export function ScheduleView({
                 return (
                   <div
                     key={item.id}
-                    className={`rounded-lg border bg-white p-4 ${
+                    className={`rounded-lg border p-4 ${
                       isSelected ? "ring-2 ring-blue-500" : ""
                     }`}
+                    style={{ background: "var(--card)", borderColor: "var(--card-border)" }}
                     onClick={() => setSelectedItem(item)}
                   >
                     {isEditing ? (
@@ -457,39 +459,44 @@ export function ScheduleView({
                       <div className="space-y-3" onClick={(e) => e.stopPropagation()}>
                         <input
                           className="w-full border rounded px-2 py-1 text-sm font-medium"
+                          style={{ background: "var(--card)", color: "var(--foreground)", borderColor: "var(--card-border)" }}
                           value={editForm.title}
                           onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
                         />
                         <textarea
                           className="w-full border rounded px-2 py-1 text-sm resize-y min-h-[60px]"
+                          style={{ background: "var(--card)", color: "var(--foreground)", borderColor: "var(--card-border)" }}
                           value={editForm.description}
                           onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
                           placeholder={isZh ? "任务描述..." : "Task description..."}
                         />
                         <div className="flex gap-3">
                           <label className="flex-1">
-                            <span className="text-xs text-gray-500">{isZh ? "开始时间" : "Start"}</span>
+                            <span className="text-xs" style={{ color: "var(--muted)" }}>{isZh ? "开始时间" : "Start"}</span>
                             <input
                               type="datetime-local"
                               className="w-full border rounded px-2 py-1 text-sm"
+                              style={{ background: "var(--card)", color: "var(--foreground)", borderColor: "var(--card-border)" }}
                               value={editForm.startDate}
                               onChange={(e) => setEditForm({ ...editForm, startDate: e.target.value })}
                             />
                           </label>
                           <label className="flex-1">
-                            <span className="text-xs text-gray-500">{isZh ? "结束时间" : "End"}</span>
+                            <span className="text-xs" style={{ color: "var(--muted)" }}>{isZh ? "结束时间" : "End"}</span>
                             <input
                               type="datetime-local"
                               className="w-full border rounded px-2 py-1 text-sm"
+                              style={{ background: "var(--card)", color: "var(--foreground)", borderColor: "var(--card-border)" }}
                               value={editForm.endDate}
                               onChange={(e) => setEditForm({ ...editForm, endDate: e.target.value })}
                             />
                           </label>
                         </div>
                         <div>
-                          <span className="text-xs text-gray-500">{isZh ? "执行引擎" : "Engine"}</span>
+                          <span className="text-xs" style={{ color: "var(--muted)" }}>{isZh ? "执行引擎" : "Engine"}</span>
                           <select
                             className="w-full border rounded px-2 py-1 text-sm"
+                            style={{ background: "var(--card)", color: "var(--foreground)", borderColor: "var(--card-border)" }}
                             value={editForm.engine}
                             onChange={(e) => setEditForm({ ...editForm, engine: e.target.value })}
                           >
@@ -512,10 +519,10 @@ export function ScheduleView({
                       <>
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-sm text-gray-400">#{item.order}</span>
+                            <span className="text-sm" style={{ color: "var(--muted)" }}>#{item.order}</span>
                             <h4 className="font-medium">{item.title}</h4>
                             <StatusBadge status={item.status} label={item.status} />
-                            <span className="text-xs text-gray-400 font-mono">
+                            <span className="text-xs font-mono" style={{ color: "var(--muted)" }}>
                               {formatDateTime(item.startDate)} → {formatDateTime(item.endDate)}
                             </span>
                             {item.engine === "acp" && (
@@ -526,12 +533,13 @@ export function ScheduleView({
                             )}
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="text-sm text-gray-500">{item.progress}%</span>
+                            <span className="text-sm" style={{ color: "var(--muted)" }}>{item.progress}%</span>
                             {canEdit && item.status === "pending" && (
                               <>
                                 <button
                                   onClick={(e) => { e.stopPropagation(); startEditing(item); }}
-                                  className="text-xs px-2 py-1 rounded text-gray-500 hover:bg-gray-100"
+                                  className="text-xs px-2 py-1 rounded"
+                                  style={{ color: "var(--muted)" }}
                                 >
                                   {t("common.edit")}
                                 </button>
@@ -555,14 +563,14 @@ export function ScheduleView({
                           </div>
                         </div>
                         {isSelected && item.description && (
-                          <div className="mt-3 border-t pt-3">
+                          <div className="mt-3 border-t pt-3" style={{ borderColor: "var(--card-border)" }}>
                             <MarkdownRenderer content={item.description} />
                           </div>
                         )}
                         {isSelected && item.executionLog && (
-                          <div className="mt-3 border-t pt-3">
+                          <div className="mt-3 border-t pt-3" style={{ borderColor: "var(--card-border)" }}>
                             <h5 className="text-sm font-medium mb-1">{t("plan.tabs.logs")}</h5>
-                            <pre className="text-xs bg-gray-50 p-3 rounded overflow-auto max-h-60">
+                            <pre className="text-xs p-3 rounded overflow-auto max-h-60" style={{ background: "var(--background)" }}>
                               {item.executionLog}
                             </pre>
                           </div>
@@ -599,11 +607,12 @@ export function ScheduleView({
             placeholder={isZh ? "例如：实现用户认证模块" : "e.g., Implement user auth module"}
           />
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium mb-1" style={{ color: "var(--foreground)" }}>
               {isZh ? "任务描述" : "Description"}
             </label>
             <textarea
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 min-h-[80px]"
+              className="w-full rounded-md border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 min-h-[80px]"
+              style={{ background: "var(--card)", color: "var(--foreground)", borderColor: "var(--card-border)" }}
               value={addForm.description}
               onChange={(e) => setAddForm({ ...addForm, description: e.target.value })}
               placeholder={isZh ? "描述任务的详细内容..." : "Describe what to implement..."}
@@ -611,19 +620,21 @@ export function ScheduleView({
           </div>
           <div className="flex gap-3">
             <label className="flex-1">
-              <span className="block text-sm font-medium text-gray-700 mb-1">{isZh ? "开始时间" : "Start Time"}</span>
+              <span className="block text-sm font-medium mb-1" style={{ color: "var(--foreground)" }}>{isZh ? "开始时间" : "Start Time"}</span>
               <input
                 type="datetime-local"
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="w-full rounded-md border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                style={{ background: "var(--card)", color: "var(--foreground)", borderColor: "var(--card-border)" }}
                 value={addForm.startDate}
                 onChange={(e) => setAddForm({ ...addForm, startDate: e.target.value })}
               />
             </label>
             <label className="flex-1">
-              <span className="block text-sm font-medium text-gray-700 mb-1">{isZh ? "结束时间" : "End Time"}</span>
+              <span className="block text-sm font-medium mb-1" style={{ color: "var(--foreground)" }}>{isZh ? "结束时间" : "End Time"}</span>
               <input
                 type="datetime-local"
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="w-full rounded-md border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                style={{ background: "var(--card)", color: "var(--foreground)", borderColor: "var(--card-border)" }}
                 value={addForm.endDate}
                 onChange={(e) => setAddForm({ ...addForm, endDate: e.target.value })}
               />
@@ -657,11 +668,12 @@ export function ScheduleView({
       >
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium mb-1" style={{ color: "var(--foreground)" }}>
               {isZh ? "基于分支" : "Base Branch"}
             </label>
             <select
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full rounded-md border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              style={{ background: "var(--card)", color: "var(--foreground)", borderColor: "var(--card-border)" }}
               value={baseBranch}
               onChange={(e) => setBaseBranch(e.target.value)}
             >

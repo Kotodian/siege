@@ -139,7 +139,7 @@ export function SchemeSections({
           <MarkdownRenderer content={preamble} />
         </div>
       )}
-      <div className="border rounded-lg divide-y">
+      <div className="border rounded-lg divide-y" style={{ borderColor: "var(--card-border)", "--tw-divide-color": "var(--card-border)" } as React.CSSProperties}>
         {sections.map((section, i) => {
           const isOpen = expandedIndex === i;
           const isEditing = editingIndex === i;
@@ -147,9 +147,8 @@ export function SchemeSections({
             <div key={i}>
               <button
                 onClick={() => toggle(i)}
-                className={`w-full text-left px-4 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors ${
-                  isOpen ? "bg-gray-50" : ""
-                }`}
+                className="w-full text-left px-4 py-3 flex items-center justify-between transition-colors"
+                style={{ background: isOpen ? "var(--background)" : undefined }}
               >
                 <span
                   className="font-medium text-sm"
@@ -158,9 +157,10 @@ export function SchemeSections({
                   {section.title}
                 </span>
                 <svg
-                  className={`w-4 h-4 text-gray-400 shrink-0 transition-transform ${
+                  className={`w-4 h-4 shrink-0 transition-transform ${
                     isOpen ? "rotate-180" : ""
                   }`}
+                  style={{ color: "var(--muted)" }}
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -174,7 +174,7 @@ export function SchemeSections({
 
                   {/* Section-level AI suggestion */}
                   {!readonly && schemeId && (
-                    <div className="mt-3 pt-3 border-t">
+                    <div className="mt-3 pt-3 border-t" style={{ borderColor: "var(--card-border)" }}>
                       {isEditing ? (
                         <div className="flex gap-2">
                           <input
@@ -187,7 +187,8 @@ export function SchemeSections({
                                 : `Suggestion for "${section.title}"...`
                             }
                             autoFocus
-                            className="flex-1 rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            className="flex-1 rounded-md border px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            style={{ background: "var(--card)", color: "var(--foreground)", borderColor: "var(--card-border)" }}
                           />
                           <Button
                             size="sm"

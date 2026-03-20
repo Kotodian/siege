@@ -53,10 +53,11 @@ function LoadingDialog({
   return (
     <dialog
       ref={dialogRef}
-      className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 m-0 rounded-xl p-0 backdrop:bg-black/20 backdrop:backdrop-blur-[1px] w-full max-w-2xl max-h-[80vh]"
+      className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 m-0 rounded-xl p-0 backdrop:bg-black/40 backdrop:backdrop-blur-[1px] w-full max-w-2xl max-h-[80vh]"
+      style={{ background: "var(--card)", color: "var(--foreground)" }}
     >
-      <div className="bg-white rounded-xl shadow-lg flex flex-col max-h-[80vh]">
-        <div className="px-6 py-4 border-b flex items-center gap-3">
+      <div className="rounded-xl shadow-lg flex flex-col max-h-[80vh]">
+        <div className="px-6 py-4 flex items-center gap-3" style={{ borderBottom: "1px solid var(--card-border)" }}>
           <svg className="animate-spin h-5 w-5 text-blue-600 flex-shrink-0" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />

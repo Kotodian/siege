@@ -279,7 +279,8 @@ export function ReviewPanel({
               value={reviewProvider}
               onChange={(e) => setReviewProvider(e.target.value)}
               disabled={generating}
-              className="rounded-md border border-gray-300 px-2 py-1.5 text-xs"
+              className="rounded-md border px-2 py-1.5 text-xs"
+              style={{ background: "var(--card)", color: "var(--foreground)", borderColor: "var(--card-border)" }}
             >
               <option value="">{isZh ? "默认 AI" : "Default AI"}</option>
               <option value="acp">Claude Code (ACP)</option>
@@ -337,12 +338,12 @@ export function ReviewPanel({
               status={latestReview.status}
               label={t(`review.status.${latestReview.status}`)}
             />
-            <span className="text-xs text-gray-400" suppressHydrationWarning>
+            <span className="text-xs" style={{ color: "var(--muted)" }} suppressHydrationWarning>
               {new Date(latestReview.createdAt).toLocaleString()}
             </span>
           </div>
           {latestReview.content && (
-            <div className="rounded-lg border bg-white p-4">
+            <div className="rounded-lg border p-4" style={{ background: "var(--card)", borderColor: "var(--card-border)" }}>
               <MarkdownRenderer content={latestReview.content} />
             </div>
           )}
@@ -373,7 +374,7 @@ export function ReviewPanel({
           )}
 
           {viewMode === "diff" || !latestReview ? (
-            <div className="flex border rounded-lg overflow-hidden" style={{ height: "600px" }}>
+            <div className="flex border rounded-lg overflow-hidden" style={{ height: "600px", borderColor: "var(--card-border)" }}>
               <FileSidebar
                 files={snapshots.map((snap) => {
                   const stats = computeDiffStats(snap.contentBefore, snap.contentAfter);
@@ -407,7 +408,7 @@ export function ReviewPanel({
                   );
                 })()
               ) : (
-                <div className="flex-1 flex items-center justify-center text-sm text-gray-400">
+                <div className="flex-1 flex items-center justify-center text-sm" style={{ color: "var(--muted)" }}>
                   {isZh ? "请选择一个文件查看差异" : "Select a file to view diff"}
                 </div>
               )}
@@ -425,9 +426,10 @@ export function ReviewPanel({
                       key={item.id}
                       className={`rounded-lg border p-3 ${
                         item.resolved
-                          ? "bg-gray-50 border-gray-200 opacity-60"
+                          ? "opacity-60"
                           : severityColors[item.severity] || severityColors.info
                       }`}
+                      style={item.resolved ? { background: "var(--background)", borderColor: "var(--card-border)" } : undefined}
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex items-center gap-2">
@@ -437,11 +439,10 @@ export function ReviewPanel({
                         <div className="flex gap-1">
                           <button
                             onClick={() => handleResolve(item.id, !item.resolved)}
-                            className={`text-xs px-2 py-1 rounded ${
-                              item.resolved
-                                ? "bg-gray-200 text-gray-600"
-                                : "bg-white/50 text-gray-700 hover:bg-white"
-                            }`}
+                            className="text-xs px-2 py-1 rounded"
+                            style={item.resolved
+                              ? { background: "var(--card-border)", color: "var(--muted)" }
+                              : { background: "rgba(255,255,255,0.5)", color: "var(--foreground)" }}
                           >
                             {item.resolved ? t("review.resolved") : t("review.resolve")}
                           </button>
@@ -456,7 +457,7 @@ export function ReviewPanel({
                   ))}
                 </>
               ) : (
-                <p className="text-gray-500 text-sm text-center py-4">
+                <p className="text-sm text-center py-4" style={{ color: "var(--muted)" }}>
                   {t("review.noReview")}
                 </p>
               )}
@@ -476,9 +477,10 @@ export function ReviewPanel({
                   key={item.id}
                   className={`rounded-lg border p-3 ${
                     item.resolved
-                      ? "bg-gray-50 border-gray-200 opacity-60"
+                      ? "opacity-60"
                       : severityColors[item.severity] || severityColors.info
                   }`}
+                  style={item.resolved ? { background: "var(--background)", borderColor: "var(--card-border)" } : undefined}
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-2">
@@ -499,11 +501,10 @@ export function ReviewPanel({
                       )}
                       <button
                         onClick={() => handleResolve(item.id, !item.resolved)}
-                        className={`text-xs px-2 py-1 rounded ${
-                          item.resolved
-                            ? "bg-gray-200 text-gray-600"
-                            : "bg-white/50 text-gray-700 hover:bg-white"
-                        }`}
+                        className="text-xs px-2 py-1 rounded"
+                        style={item.resolved
+                          ? { background: "var(--card-border)", color: "var(--muted)" }
+                          : { background: "rgba(255,255,255,0.5)", color: "var(--foreground)" }}
                       >
                         {item.resolved ? t("review.resolved") : t("review.resolve")}
                       </button>
@@ -520,7 +521,7 @@ export function ReviewPanel({
           )}
         </div>
       ) : !generating && !latestReview && snapshots.length === 0 ? (
-        <p className="text-gray-500 text-sm text-center py-4">
+        <p className="text-sm text-center py-4" style={{ color: "var(--muted)" }}>
           {t("review.noReview")}
         </p>
       ) : null}

@@ -108,14 +108,14 @@ export function SchemeEditor({
   if (!hasSections) {
     // Original single-editor mode
     return (
-      <div className="rounded-lg border bg-white p-5 space-y-4">
+      <div className="rounded-lg border p-5 space-y-4" style={{ background: "var(--card)", borderColor: "var(--card-border)" }}>
         <Input
           label={t("scheme.schemeTitle")}
           value={title}
           onChange={(e) => setTitle(e.target.value)}
         />
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium mb-1" style={{ color: "var(--foreground)" }}>
             {t("scheme.content")}
           </label>
           <MarkdownEditor value={singleContent} onChange={setSingleContent} height={300} />
@@ -133,7 +133,7 @@ export function SchemeEditor({
   }
 
   return (
-    <div className="rounded-lg border bg-white p-5 space-y-4">
+    <div className="rounded-lg border p-5 space-y-4" style={{ background: "var(--card)", borderColor: "var(--card-border)" }}>
       <Input
         label={t("scheme.schemeTitle")}
         value={title}
@@ -142,18 +142,18 @@ export function SchemeEditor({
 
       {/* Preamble */}
       {preamble.trim() && (
-        <div className="text-sm text-gray-600 bg-gray-50 rounded p-3">
+        <div className="text-sm rounded p-3" style={{ background: "var(--background)", color: "var(--muted)" }}>
           <MarkdownRenderer content={preamble} />
         </div>
       )}
 
       {/* Sections accordion */}
-      <div className="border rounded-lg divide-y">
+      <div className="border rounded-lg divide-y" style={{ borderColor: "var(--card-border)", "--tw-divide-color": "var(--card-border)" } as React.CSSProperties}>
         {sections.map((section, i) => {
           const isEditing = editingIndex === i;
           return (
             <div key={i}>
-              <div className="flex items-center justify-between px-4 py-3 hover:bg-gray-50">
+              <div className="flex items-center justify-between px-4 py-3">
                 <span
                   className="font-medium text-sm"
                   style={{ paddingLeft: `${(section.level - 1) * 12}px` }}

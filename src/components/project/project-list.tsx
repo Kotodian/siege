@@ -74,7 +74,10 @@ export function ProjectList({ locale }: ProjectListProps) {
     );
   }
 
-  const recentIds = getRecentProjectIds();
+  const [recentIds, setRecentIds] = useState<string[]>([]);
+  useEffect(() => {
+    setRecentIds(getRecentProjectIds());
+  }, [projects]);
   const recentProjects = recentIds
     .map((id) => projects.find((p) => p.id === id))
     .filter(Boolean) as Project[];

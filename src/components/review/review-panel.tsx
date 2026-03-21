@@ -344,7 +344,7 @@ export function ReviewPanel({
       : `Done: ${fixed} fixed${failed > 0 ? `, ${failed} failed` : ""}`);
   };
 
-  /** Accept a finding: create a sub-task in the schedule and mark resolved */
+  /** Accept a finding: create a fix sub-task after the parent task and mark resolved */
   const handleAcceptFinding = async (item: ReviewItem, chosenOption?: string) => {
     const desc = [
       item.content || "",
@@ -359,6 +359,7 @@ export function ReviewPanel({
         planId,
         title: `[fix] ${item.title}`,
         description: desc,
+        afterItemId: item.targetId || undefined,
       }),
     });
     // Mark finding as resolved

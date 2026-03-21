@@ -38,13 +38,14 @@ export async function POST(req: NextRequest) {
   const [body, errRes] = await parseJsonBody(req);
   if (errRes) return errRes;
 
-  const { planId, title, description, startDate, endDate, estimatedHours } = body as {
+  const { planId, title, description, startDate, endDate, estimatedHours, afterItemId } = body as {
     planId: string;
     title: string;
     description?: string;
     startDate?: string;
     endDate?: string;
     estimatedHours?: number;
+    afterItemId?: string;
   };
 
   if (!planId || !title) {
@@ -73,26 +74,46 @@ export async function POST(req: NextRequest) {
       .run();
   }
 
-  // Determine order (max + 1)
+  // Determine order: after parent task, or at end
   const existing = db.select().from(scheduleItems)
     .where(eq(scheduleItems.scheduleId, schedule.id))
-    .all();
-  const maxOrder = existing.reduce((max, i) => Math.max(max, i.order), 0);
+    .all()
+    .sort((a, b) => a.order - b.order);
+
+  let newOrder: number;
+  if (afterItemId) {
+    const parentItem = existing.find(i => i.id === afterItemId);
+    const parentOrder = parentItem?.order ?? existing.length;
+    newOrder = parentOrder + 1;
+    // Shift subsequent items down
+    for (const item of existing) {
+      if (item.order >= newOrder) {
+        db.update(scheduleItems)
+          .set({ order: item.order + 1 })
+          .where(eq(scheduleItems.id, item.id))
+          .run();
+      }
+    }
+  } else {
+    newOrder = existing.reduce((max, i) => Math.max(max, i.order), 0) + 1;
+  }
 
   const now = new Date();
   const hours = estimatedHours || 2;
-  const start = startDate || now.toISOString();
+  const parentItem = afterItemId ? existing.find(i => i.id === afterItemId) : null;
+  const start = startDate || (parentItem ? parentItem.endDate : now.toISOString());
   const end = endDate || new Date(new Date(start).getTime() + hours * 3600000).toISOString();
 
   const itemId = crypto.randomUUID();
   db.insert(scheduleItems).values({
     id: itemId,
     scheduleId: schedule.id,
+    schemeId: parentItem?.schemeId || null,
     title,
     description: description || "",
     startDate: start,
     endDate: end,
-    order: maxOrder + 1,
+    order: newOrder,
     status: "pending",
     progress: 0,
     engine: "claude-code",

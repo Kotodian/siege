@@ -96,20 +96,23 @@ Start directly with [ and end with ].
 Break these confirmed schemes into executable IMPLEMENTATION tasks.
 These tasks will be executed by an AI coding agent (Claude Code / Codex), NOT a human developer.
 
-Estimation guidelines:
-- Small changes (config, rename, add field): 0.1-0.3 hours
-- Medium changes (new function, refactor module): 0.3-1 hour
-- Large changes (new feature, multi-file refactor): 1-3 hours
-- Keep tasks small and focused — prefer many small tasks over few large ones
+CRITICAL task granularity rules:
+- Each task = ONE COMPLETE FEATURE or functional module
+- Do NOT create separate tasks for definitions, types, structs, constants, or data models alone
+- Group related work: defining types + implementing logic + wiring up = ONE task
+- Aim for 3-8 tasks total. Fewer bigger tasks are BETTER than many tiny ones
+- Each task should produce a working, testable piece of functionality
+
+Estimation: each task 1-3 hours (realistic for AI agent execution).
 
 IMPORTANT: Do NOT include testing tasks. Testing is handled in a separate phase.
 Focus only on implementation: code changes, new files, refactoring, configuration.
 
 JSON array format — each object has:
 - schemeId: scheme ID string or null
-- title: short task title
-- description: markdown description of what to do (be specific about file paths and changes)
-- estimatedHours: number (0.1-3, realistic for AI agent execution)
+- title: short task title describing the feature/module
+- description: markdown description — include ALL sub-steps (define types, implement logic, wire up, update imports) in one task description
+- estimatedHours: number (1-3)
 - order: execution order starting from 1
 
 Plan: ${plan.name}
@@ -183,20 +186,23 @@ Start directly with [ and end with ].
 Break these confirmed schemes into executable IMPLEMENTATION tasks.
 These tasks will be executed by an AI coding agent (Claude Code / Codex), NOT a human developer.
 
-Estimation guidelines:
-- Small changes (config, rename, add field): 0.1-0.3 hours
-- Medium changes (new function, refactor module): 0.3-1 hour
-- Large changes (new feature, multi-file refactor): 1-3 hours
-- Keep tasks small and focused — prefer many small tasks over few large ones
+CRITICAL task granularity rules:
+- Each task = ONE COMPLETE FEATURE or functional module
+- Do NOT create separate tasks for definitions, types, structs, constants, or data models alone
+- Group related work: defining types + implementing logic + wiring up = ONE task
+- Aim for 3-8 tasks total. Fewer bigger tasks are BETTER than many tiny ones
+- Each task should produce a working, testable piece of functionality
+
+Estimation: each task 1-3 hours (realistic for AI agent execution).
 
 IMPORTANT: Do NOT include testing tasks. Testing is handled in a separate phase.
 Focus only on implementation: code changes, new files, refactoring, configuration.
 
 JSON array format — each object has:
 - schemeId: scheme ID string or null
-- title: short task title
-- description: markdown description of what to do (be specific about file paths and changes)
-- estimatedHours: number (0.1-3, realistic for AI agent execution)
+- title: short task title describing the feature/module
+- description: markdown description — include ALL sub-steps (define types, implement logic, wire up, update imports) in one task description
+- estimatedHours: number (1-3)
 - order: execution order starting from 1
 
 Plan: ${plan.name}

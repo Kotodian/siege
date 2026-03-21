@@ -16,10 +16,12 @@ interface GlobalLoadingContextType {
   message: string;
   content: string;
   tasks: TaskProgress[];
+  onCancel: (() => void) | null;
   startLoading: (message: string) => void;
   updateContent: (content: string) => void;
   setTasks: (tasks: TaskProgress[]) => void;
   updateTaskStatus: (taskId: string, status: TaskProgress["status"]) => void;
+  setOnCancel: (fn: (() => void) | null) => void;
   stopLoading: (toast?: string) => void;
   toast: string;
 }
@@ -29,10 +31,12 @@ const GlobalLoadingContext = createContext<GlobalLoadingContextType>({
   message: "",
   content: "",
   tasks: [],
+  onCancel: null,
   startLoading: () => {},
   updateContent: () => {},
   setTasks: () => {},
   updateTaskStatus: () => {},
+  setOnCancel: () => {},
   stopLoading: () => {},
   toast: "",
 });
@@ -103,12 +107,14 @@ function LoadingDialog({
   content,
   contentRef,
   tasks,
+  onCancel,
 }: {
   loading: boolean;
   message: string;
   content: string;
   contentRef: React.RefObject<HTMLDivElement | null>;
   tasks: TaskProgress[];
+  onCancel: (() => void) | null;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
 
@@ -134,12 +140,21 @@ function LoadingDialog({
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
           </svg>
-          <div>
+          <div className="flex-1">
             <p className="text-sm font-medium" style={{ color: "var(--foreground)" }}>{message}</p>
             <p className="text-xs" style={{ color: "var(--muted)" }}>
               {content ? "" : "约 1-2 分钟"}
             </p>
           </div>
+          {onCancel && (
+            <button
+              onClick={onCancel}
+              className="shrink-0 px-3 py-1.5 rounded-md text-xs font-medium hover:opacity-80"
+              style={{ background: "rgba(239,68,68,0.15)", color: "#ef4444" }}
+            >
+              取消 / Cancel
+            </button>
+          )}
         </div>
         <TaskTimeline tasks={tasks} />
         <div
@@ -165,6 +180,7 @@ export function GlobalLoadingProvider({ children }: { children: ReactNode }) {
   const [content, setContent] = useState("");
   const [tasks, setTasksState] = useState<TaskProgress[]>([]);
   const [toast, setToast] = useState("");
+  const cancelRef = useRef<(() => void) | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
   const startLoading = useCallback((msg: string) => {
@@ -191,11 +207,16 @@ export function GlobalLoadingProvider({ children }: { children: ReactNode }) {
     setTasksState(prev => prev.map(t => t.id === taskId ? { ...t, status } : t));
   }, []);
 
+  const setOnCancel = useCallback((fn: (() => void) | null) => {
+    cancelRef.current = fn;
+  }, []);
+
   const stopLoading = useCallback((toastMsg?: string) => {
     setLoading(false);
     setMessage("");
     setContent("");
     setTasksState([]);
+    cancelRef.current = null;
     if (toastMsg) {
       setToast(toastMsg);
       setTimeout(() => setToast(""), 4000);
@@ -203,7 +224,7 @@ export function GlobalLoadingProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <GlobalLoadingContext.Provider value={{ loading, message, content, tasks, startLoading, updateContent, setTasks, updateTaskStatus, stopLoading, toast }}>
+    <GlobalLoadingContext.Provider value={{ loading, message, content, tasks, onCancel: cancelRef.current, startLoading, updateContent, setTasks, updateTaskStatus, setOnCancel, stopLoading, toast }}>
       {children}
 
       <LoadingDialog
@@ -212,6 +233,7 @@ export function GlobalLoadingProvider({ children }: { children: ReactNode }) {
         content={content}
         contentRef={contentRef}
         tasks={tasks}
+        onCancel={cancelRef.current}
       />
 
       {toast && (

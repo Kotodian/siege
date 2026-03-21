@@ -91,7 +91,7 @@ export function ScheduleView({
     }
   };
 
-  const { startLoading, updateContent, stopLoading, setTasks, updateTaskStatus } = useGlobalLoading();
+  const { startLoading, updateContent, stopLoading, setTasks, updateTaskStatus, setOnCancel } = useGlobalLoading();
 
   useEffect(() => {
     fetchSchedule();
@@ -123,6 +123,9 @@ export function ScheduleView({
 
     const controller = new AbortController();
     abortRef.current = controller;
+
+    // Register cancel handler so the loading dialog's cancel button works
+    setOnCancel(() => handleToggleAutoExecute());
 
     const runLoop = async () => {
       let firstRun = true;
@@ -157,6 +160,7 @@ export function ScheduleView({
     return () => {
       controller.abort();
       abortRef.current = null;
+      setOnCancel(null);
       if (tickRef.current) { clearInterval(tickRef.current); tickRef.current = null; }
     };
   }, [autoExecute, schedule?.id]);

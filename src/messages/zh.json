@@ -52,7 +52,7 @@
     "tabs": {
       "schemes": "方案",
       "schedule": "任务排期",
-      "codeReview": "代码审查",
+      "codeReview": "审查",
       "tests": "测试",
       "logs": "执行日志",
       "publish": "发布"

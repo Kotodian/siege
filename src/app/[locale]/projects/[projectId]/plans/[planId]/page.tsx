@@ -106,10 +106,29 @@ export default function PlanDetailPage({
               />
               <button
                 onClick={startEdit}
-                className="text-xs text-gray-400 hover:text-gray-600 px-2 py-1 rounded hover:bg-gray-100"
+                className="text-xs px-2 py-1 rounded hover:opacity-80"
+                style={{ color: "var(--muted)" }}
               >
                 {t("common.edit")}
               </button>
+              <div className="flex-1" />
+              {plan.status !== "completed" && plan.status !== "draft" && (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={async () => {
+                    if (!window.confirm(isZh ? "确定标记为完成？" : "Mark as completed?")) return;
+                    await fetch(`/api/plans/${planId}`, {
+                      method: "PUT",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ status: "completed" }),
+                    });
+                    await fetchPlan();
+                  }}
+                >
+                  {isZh ? "完成" : "Complete"}
+                </Button>
+              )}
             </div>
             {plan.description && (
               <div className="mt-2">

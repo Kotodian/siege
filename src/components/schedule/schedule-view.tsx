@@ -432,7 +432,7 @@ export function ScheduleView({
 
   const canGenerate = planStatus === "confirmed";
   const canExecute = planStatus === "scheduled" || planStatus === "executing";
-  const canEdit = planStatus === "scheduled" || planStatus === "confirmed" || planStatus === "executing";
+  const canEdit = planStatus === "scheduled" || planStatus === "confirmed" || planStatus === "executing" || planStatus === "code_review" || planStatus === "testing";
 
   if (!schedule && !canGenerate && planStatus !== "confirmed") {
     return (

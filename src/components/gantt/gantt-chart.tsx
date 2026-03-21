@@ -19,9 +19,12 @@ interface GanttChartProps {
 }
 
 const STATUS_COLORS: Record<string, { bar: string; light: string }> = {
-  completed: { bar: "#22c55e", light: "rgba(34,197,94,0.08)" },
-  failed:    { bar: "#ef4444", light: "rgba(239,68,68,0.08)" },
-  "":        { bar: "#6366f1", light: "rgba(99,102,241,0.06)" },
+  completed:         { bar: "#22c55e", light: "rgba(34,197,94,0.08)" },
+  failed:            { bar: "#ef4444", light: "rgba(239,68,68,0.08)" },
+  subtask:           { bar: "#7c3aed", light: "rgba(124,58,237,0.08)" },
+  "completed subtask": { bar: "#22c55e", light: "rgba(34,197,94,0.08)" },
+  "failed subtask":  { bar: "#ef4444", light: "rgba(239,68,68,0.08)" },
+  "":                { bar: "#6366f1", light: "rgba(99,102,241,0.06)" },
 };
 
 export function GanttChart({ tasks, onDateChange, onClick }: GanttChartProps) {
@@ -127,8 +130,9 @@ export function GanttChart({ tasks, onDateChange, onClick }: GanttChartProps) {
                 className="w-40 flex-shrink-0 truncate"
                 style={{
                   fontSize: "13px",
-                  fontWeight: 500,
-                  color: "var(--foreground)",
+                  fontWeight: (task.custom_class || "").includes("subtask") ? 400 : 500,
+                  color: (task.custom_class || "").includes("subtask") ? "#c4b5fd" : "var(--foreground)",
+                  paddingLeft: (task.custom_class || "").includes("subtask") ? "12px" : undefined,
                   letterSpacing: "-0.01em",
                   fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif',
                 }}

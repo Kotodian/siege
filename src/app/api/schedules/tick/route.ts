@@ -209,7 +209,14 @@ async function executeTask(itemId: string, cwd: string, prompt: string) {
     const result = streamText({ model: configuredModel, prompt, tools, stopWhen: stepCountIs(15) });
     for await (const part of result.fullStream) {
       if (part.type === "text-delta") fullLog += part.text;
-      else if (part.type === "tool-call") fullLog += `\n> **Tool: ${part.toolName}**\n`;
+      else if (part.type === "tool-call") {
+        const input = "input" in part ? JSON.stringify(part.input).slice(0, 200) : "";
+        fullLog += `\n> **Tool: ${part.toolName}**(${input})\n`;
+      } else if (part.type === "tool-result") {
+        const raw = "output" in part ? part.output : "result" in part ? (part as Record<string, unknown>).result : "";
+        const output = typeof raw === "string" ? raw : JSON.stringify(raw);
+        fullLog += `\`\`\`\n${output.length > 500 ? output.slice(0, 500) + "..." : output}\n\`\`\`\n`;
+      }
     }
 
     const db = getDb();

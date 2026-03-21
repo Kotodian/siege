@@ -428,7 +428,15 @@ You also have LSP tools (lspHover, lspDefinition, lspReferences, lspDiagnostics)
             fullLog += part.text;
             controller.enqueue(encoder.encode(part.text));
           } else if (part.type === "tool-call") {
-            const msg = `\n> **Tool: ${part.toolName}**\n`;
+            const input = "input" in part ? JSON.stringify(part.input).slice(0, 200) : "";
+            const msg = `\n> **Tool: ${part.toolName}**(${input})\n`;
+            fullLog += msg;
+            controller.enqueue(encoder.encode(msg));
+          } else if (part.type === "tool-result") {
+            const raw = "output" in part ? part.output : "result" in part ? (part as Record<string, unknown>).result : "";
+            const output = typeof raw === "string" ? raw : JSON.stringify(raw);
+            const truncated = output.length > 500 ? output.slice(0, 500) + "..." : output;
+            const msg = `\`\`\`\n${truncated}\n\`\`\`\n`;
             fullLog += msg;
             controller.enqueue(encoder.encode(msg));
           }

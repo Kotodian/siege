@@ -273,8 +273,12 @@ export async function POST(req: NextRequest) {
             fullText += part.text;
             controller.enqueue(encoder.encode(part.text));
           } else if (part.type === "tool-call") {
-            const msg = `\n> **Tool: ${part.toolName}**\n`;
-            controller.enqueue(encoder.encode(msg));
+            const input = "input" in part ? JSON.stringify(part.input).slice(0, 200) : "";
+            controller.enqueue(encoder.encode(`\n> **Tool: ${part.toolName}**(${input})\n`));
+          } else if (part.type === "tool-result") {
+            const raw = "output" in part ? part.output : "result" in part ? (part as Record<string, unknown>).result : "";
+            const output = typeof raw === "string" ? raw : JSON.stringify(raw);
+            controller.enqueue(encoder.encode(`\`\`\`\n${output.length > 500 ? output.slice(0, 500) + "..." : output}\n\`\`\`\n`));
           }
         }
 

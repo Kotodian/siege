@@ -431,7 +431,7 @@ export function ScheduleView({
   };
 
   const canGenerate = planStatus === "confirmed";
-  const canExecute = planStatus === "scheduled" || planStatus === "executing";
+  const canExecute = planStatus === "scheduled" || planStatus === "executing" || planStatus === "code_review" || planStatus === "testing";
   const canEdit = planStatus === "scheduled" || planStatus === "confirmed" || planStatus === "executing" || planStatus === "code_review" || planStatus === "testing";
 
   if (!schedule && !canGenerate && planStatus !== "confirmed") {
@@ -440,21 +440,46 @@ export function ScheduleView({
     );
   }
 
-  const ganttTasks =
-    schedule?.items.map((item) => {
-      const isFix = item.title.startsWith("[fix]");
-      return {
-        id: item.id,
-        name: isFix ? `  ↳ ${item.title.replace("[fix] ", "")}` : `#${item.order} ${item.title}`,
-        start: item.startDate,
-        end: item.endDate,
-        progress: item.progress,
-        custom_class: [
-          item.status === "completed" ? "completed" : item.status === "failed" ? "failed" : "",
-          isFix ? "subtask" : "",
-        ].filter(Boolean).join(" "),
-      };
-    }) || [];
+  // Sort items: regular tasks by order, fix tasks inserted after their parent
+  const sortedItems = (() => {
+    if (!schedule) return [];
+    const regular = schedule.items.filter(i => !i.title.startsWith("[fix]")).sort((a, b) => a.order - b.order);
+    const fixes = schedule.items.filter(i => i.title.startsWith("[fix]"));
+    const result: typeof schedule.items = [];
+    for (const item of regular) {
+      result.push(item);
+      // Find fix tasks that start right after this item (within 1 hour) or share same start time
+      const itemEnd = new Date(item.endDate).getTime();
+      const childFixes = fixes.filter(f => {
+        const fStart = new Date(f.startDate).getTime();
+        return Math.abs(fStart - itemEnd) < 3600000 || f.order === item.order + 1;
+      });
+      // Also check fixes not yet matched
+      for (const fix of childFixes) {
+        if (!result.includes(fix)) result.push(fix);
+      }
+    }
+    // Append any remaining fixes not matched
+    for (const fix of fixes) {
+      if (!result.includes(fix)) result.push(fix);
+    }
+    return result;
+  })();
+
+  const ganttTasks = sortedItems.map((item) => {
+    const isFix = item.title.startsWith("[fix]");
+    return {
+      id: item.id,
+      name: isFix ? `  ↳ ${item.title.replace("[fix] ", "")}` : `#${item.order} ${item.title}`,
+      start: item.startDate,
+      end: item.endDate,
+      progress: item.progress,
+      custom_class: [
+        item.status === "completed" ? "completed" : item.status === "failed" ? "failed" : "",
+        isFix ? "subtask" : "",
+      ].filter(Boolean).join(" "),
+    };
+  });
 
   const pendingCount = schedule?.items.filter(i => i.status === "pending" || i.status === "failed").length || 0;
 

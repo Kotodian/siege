@@ -443,7 +443,7 @@ export function ReviewPanel({
                 </Button>
               </>
             )}
-            {taskList.length > 1 && (viewMode === "diff" || !latestReview) && (
+            {taskList.length > 0 && (viewMode === "diff" || !latestReview) && (
               <>
                 <span className="w-px h-5 mx-1" style={{ background: "var(--card-border)" }} />
                 <button
@@ -688,6 +688,24 @@ export function ReviewPanel({
               ))}
             </>
           )}
+        </div>
+      ) : !generating && type === "implementation" && snapshots.length === 0 ? (
+        <div className="text-center py-6 space-y-3">
+          <p className="text-sm" style={{ color: "var(--muted)" }}>
+            {isZh ? "暂无文件变更记录。已完成的任务可从 Git 历史补录。" : "No file change records. Completed tasks can be backfilled from git history."}
+          </p>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={async () => {
+              const res = await fetch(`/api/snapshots/backfill?planId=${planId}`, { method: "POST" });
+              if (res.ok) {
+                await fetchSnapshots();
+              }
+            }}
+          >
+            {isZh ? "从 Git 历史补录 Diff" : "Backfill Diff from Git"}
+          </Button>
         </div>
       ) : !generating && !latestReview && snapshots.length === 0 ? (
         <p className="text-sm text-center py-4" style={{ color: "var(--muted)" }}>

@@ -470,12 +470,16 @@ export function ReviewPanel({
             <div className="flex items-center gap-2">
               <Button
                 size="sm"
-                onClick={async () => {
+                onClick={async (e) => {
+                  const btn = e.currentTarget;
+                  btn.disabled = true;
+                  btn.textContent = isZh ? "处理中..." : "Processing...";
                   await fetch(`/api/plans/${planId}/review-action`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ action: "accept" }),
                   });
+                  await fetchReviews();
                   onPlanStatusChange();
                 }}
               >
@@ -484,7 +488,10 @@ export function ReviewPanel({
               <Button
                 size="sm"
                 variant="secondary"
-                onClick={async () => {
+                onClick={async (e) => {
+                  const btn = e.currentTarget;
+                  btn.disabled = true;
+                  btn.textContent = isZh ? "处理中..." : "Processing...";
                   await fetch(`/api/plans/${planId}/review-action`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },

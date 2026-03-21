@@ -641,19 +641,13 @@ export function ReviewPanel({
               </>
             )}
             {taskList.length > 0 && (viewMode === "diff" || !latestReview) && (
-              <select
-                value={selectedTask || ""}
-                onChange={(e) => { setSelectedTask(e.target.value || null); setSelectedFile(null); }}
-                className="rounded-md border px-2 py-1.5 text-xs"
-                style={{ background: "var(--card)", color: "var(--foreground)", borderColor: "var(--card-border)" }}
-              >
-                <option value="">{isZh ? "全部任务" : "All Tasks"} ({filteredSnapshots.length})</option>
-                {taskList.map((task) => (
-                  <option key={task.id} value={task.id}>
-                    #{task.order} {task.title} ({task.fileCount})
-                  </option>
-                ))}
-              </select>
+              <TaskFilterDropdown
+                tasks={taskList}
+                selectedTask={selectedTask}
+                onSelect={(id) => { setSelectedTask(id); setSelectedFile(null); }}
+                totalFiles={filteredSnapshots.length}
+                isZh={isZh}
+              />
             )}
           </div>
 
@@ -1084,6 +1078,87 @@ function FindingsGroup({
           })()}
         </div>
       ))}
+    </div>
+  );
+}
+
+/** Custom dropdown for task filter with parent/child visual */
+function TaskFilterDropdown({
+  tasks,
+  selectedTask,
+  onSelect,
+  totalFiles,
+  isZh,
+}: {
+  tasks: Array<{ id: string; title: string; order: number; fileCount: number }>;
+  selectedTask: string | null;
+  onSelect: (id: string | null) => void;
+  totalFiles: number;
+  isZh: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const selected = tasks.find(t => t.id === selectedTask);
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen(!open)}
+        className="rounded-md border px-3 py-1.5 text-xs flex items-center gap-2 min-w-[180px]"
+        style={{ background: "var(--card)", color: "var(--foreground)", borderColor: "var(--card-border)" }}
+      >
+        <span className="flex-1 text-left truncate">
+          {selected
+            ? `#${selected.order} ${selected.title.startsWith("[fix]") ? selected.title.replace("[fix] ", "↳ ") : selected.title}`
+            : (isZh ? `全部任务 (${totalFiles})` : `All Tasks (${totalFiles})`)}
+        </span>
+        <svg className={`w-3 h-3 shrink-0 transition-transform ${open ? "rotate-180" : ""}`} viewBox="0 0 20 20" fill="currentColor">
+          <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+        </svg>
+      </button>
+      {open && (
+        <div
+          className="absolute top-full left-0 mt-1 w-72 rounded-lg border shadow-lg z-20 max-h-64 overflow-y-auto"
+          style={{ background: "var(--card)", borderColor: "var(--card-border)" }}
+        >
+          <button
+            onClick={() => { onSelect(null); setOpen(false); }}
+            className="w-full text-left px-3 py-2 text-xs hover:opacity-80"
+            style={{
+              background: !selectedTask ? "var(--background)" : undefined,
+              color: "var(--foreground)",
+              borderBottom: "1px solid var(--card-border)",
+            }}
+          >
+            {isZh ? "全部任务" : "All Tasks"} ({totalFiles})
+          </button>
+          {tasks.map((task) => {
+            const isFix = task.title.startsWith("[fix]");
+            const isActive = selectedTask === task.id;
+            return (
+              <button
+                key={task.id}
+                onClick={() => { onSelect(task.id); setOpen(false); }}
+                className="w-full text-left px-3 py-2 text-xs hover:opacity-80 flex items-center gap-1.5"
+                style={{
+                  background: isActive ? "var(--background)" : undefined,
+                  paddingLeft: isFix ? "1.75rem" : "0.75rem",
+                  color: isFix ? "#c4b5fd" : "var(--foreground)",
+                  borderBottom: "1px solid var(--card-border)",
+                }}
+              >
+                {isFix && <span>↳</span>}
+                <span className="flex-1 truncate">
+                  #{task.order} {isFix ? task.title.replace("[fix] ", "") : task.title}
+                </span>
+                {isFix && (
+                  <span className="text-[9px] px-1 py-0.5 rounded shrink-0" style={{ background: "rgba(124,58,237,0.2)" }}>fix</span>
+                )}
+                <span className="shrink-0" style={{ color: "var(--muted)" }}>({task.fileCount})</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

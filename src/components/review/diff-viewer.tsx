@@ -40,10 +40,10 @@ interface DiffViewerProps {
   taskOrder?: number;
 }
 
-const severityColors: Record<string, string> = {
-  critical: "bg-red-50 border-red-300 text-red-800",
-  warning: "bg-yellow-50 border-yellow-300 text-yellow-800",
-  info: "bg-blue-50 border-blue-300 text-blue-800",
+const severityStyles: Record<string, { bg: string; border: string; color: string }> = {
+  critical: { bg: "rgba(239,68,68,0.15)", border: "rgba(239,68,68,0.3)", color: "#fca5a5" },
+  warning: { bg: "rgba(234,179,8,0.15)", border: "rgba(234,179,8,0.3)", color: "#fde047" },
+  info: { bg: "rgba(59,130,246,0.15)", border: "rgba(59,130,246,0.3)", color: "#93c5fd" },
 };
 
 const extToLang: Record<string, string> = {
@@ -295,12 +295,11 @@ export function DiffViewer({
                 return (
                   <div
                     key={finding.id}
-                    className={`mx-12 my-1 p-2 rounded border text-xs ${
-                      finding.resolved
-                        ? "opacity-60"
-                        : severityColors[finding.severity] || severityColors.info
-                    }`}
-                    style={finding.resolved ? { background: "var(--background)", borderColor: "var(--card-border)" } : {}}
+                    className={`mx-12 my-1 p-2 rounded border text-xs ${finding.resolved ? "opacity-60" : ""}`}
+                    style={finding.resolved
+                      ? { background: "var(--background)", borderColor: "var(--card-border)", color: "var(--foreground)" }
+                      : (() => { const s = severityStyles[finding.severity] || severityStyles.info; return { background: s.bg, borderColor: s.border, color: s.color }; })()
+                    }
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -313,7 +312,8 @@ export function DiffViewer({
                             <button
                               onClick={() => handleAiFix(finding)}
                               disabled={fixingId !== null}
-                              className="px-2 py-0.5 rounded bg-blue-100 text-blue-700 hover:bg-blue-200 disabled:opacity-50 font-medium"
+                              className="px-2 py-0.5 rounded disabled:opacity-50 font-medium"
+                              style={{ background: "rgba(59,130,246,0.2)", color: "#93c5fd" }}
                             >
                               {fixingId === finding.id
                                 ? isZh ? "修复中..." : "Fixing..."
@@ -323,14 +323,15 @@ export function DiffViewer({
                             <button
                               onClick={() => handleApplyFix(finding.id)}
                               disabled={fixingId !== null}
-                              className="px-2 py-0.5 rounded bg-green-100 text-green-700 hover:bg-green-200 disabled:opacity-50 font-medium"
+                              className="px-2 py-0.5 rounded disabled:opacity-50 font-medium"
+                              style={{ background: "rgba(34,197,94,0.2)", color: "#86efac" }}
                             >
                               {fixingId === finding.id
                                 ? isZh ? "应用中..." : "Applying..."
                                 : t("review.applyFix")}
                             </button>
                           ) : (
-                            <span className="px-2 py-0.5 rounded bg-green-50 text-green-600 font-medium">
+                            <span className="px-2 py-0.5 rounded font-medium" style={{ background: "rgba(34,197,94,0.15)", color: "#86efac" }}>
                               {t("review.fixApplied")}
                             </span>
                           )}
@@ -342,7 +343,7 @@ export function DiffViewer({
                     )}
                     {fixResult && !fixResult.applied && (
                       <div className="mt-2 p-2 rounded border" style={{ background: "var(--card)", borderColor: "var(--card-border)" }}>
-                        <span className="font-semibold text-blue-700">{t("review.aiSuggestion")}:</span>
+                        <span className="font-semibold" style={{ color: "#93c5fd" }}>{t("review.aiSuggestion")}:</span>
                         <pre className="mt-1 whitespace-pre-wrap text-xs" style={{ color: "var(--foreground)" }}>{fixResult.aiResponse}</pre>
                       </div>
                     )}
@@ -356,7 +357,7 @@ export function DiffViewer({
                   <p style={{ color: "var(--foreground)" }}>{comment.content}</p>
                   {comment.aiResponse && (
                     <div className="mt-1 p-1.5 rounded border" style={{ background: "var(--card)", borderColor: "var(--card-border)" }}>
-                      <span className="font-semibold text-purple-700">{t("review.aiSuggestion")}:</span>
+                      <span className="font-semibold" style={{ color: "#c4b5fd" }}>{t("review.aiSuggestion")}:</span>
                       <p className="mt-0.5 whitespace-pre-wrap" style={{ color: "var(--foreground)" }}>{comment.aiResponse}</p>
                     </div>
                   )}

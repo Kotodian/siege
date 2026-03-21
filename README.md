@@ -162,8 +162,12 @@ cd siege
 # Install
 npm install
 
-# Start
+# Development
 npm run dev
+
+# Production
+npm run build
+npm start
 ```
 
 Open [http://localhost:3000](http://localhost:3000) — the onboarding guide will walk you through GitHub connection, AI configuration, and creating your first project.
@@ -171,8 +175,51 @@ Open [http://localhost:3000](http://localhost:3000) — the onboarding guide wil
 ### Prerequisites
 
 - **Node.js** 20+
-- **Claude Code** (`claude` CLI) — for AI features without API key
-- **GitHub CLI** (`gh`) — optional, for GitHub repo integration
+- **Claude Code** (`claude` CLI) — for ACP engine (recommended)
+- **GitHub CLI** (`gh`) — optional, for GitHub repo / PR integration
+
+## Deploy
+
+### Option 1: Direct
+
+```bash
+git clone https://github.com/Kotodian/siege.git
+cd siege
+npm install
+npm run build
+PORT=3000 npm start
+```
+
+### Option 2: Docker
+
+```dockerfile
+FROM node:20-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+EXPOSE 3000
+CMD ["npm", "start"]
+```
+
+```bash
+docker build -t siege .
+docker run -d -p 3000:3000 -v siege-data:/app/data siege
+```
+
+### Option 3: PM2
+
+```bash
+npm run build
+pm2 start npm --name siege -- start
+```
+
+### Data
+
+- Database: `./data/siege.db` (SQLite, auto-created on first run)
+- Backup this file to preserve all projects, plans, and execution history
+- Set `DATA_DIR` environment variable to change the data directory
 
 ### AI Configuration
 

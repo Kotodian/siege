@@ -65,10 +65,10 @@ interface ReviewPanelProps {
   onPlanStatusChange: () => void;
 }
 
-const severityColors: Record<string, string> = {
-  critical: "bg-red-50 border-red-200 text-red-800",
-  warning: "bg-yellow-50 border-yellow-200 text-yellow-800",
-  info: "bg-blue-50 border-blue-200 text-blue-800",
+const severityStyles: Record<string, { bg: string; border: string; color: string }> = {
+  critical: { bg: "rgba(239,68,68,0.12)", border: "rgba(239,68,68,0.3)", color: "#fca5a5" },
+  warning: { bg: "rgba(234,179,8,0.12)", border: "rgba(234,179,8,0.3)", color: "#fde047" },
+  info: { bg: "rgba(59,130,246,0.12)", border: "rgba(59,130,246,0.3)", color: "#93c5fd" },
 };
 
 const SeverityIcon = ({ severity }: { severity: string }) => {
@@ -394,7 +394,7 @@ export function ReviewPanel({
             </span>
           </div>
           {latestReview.content && (
-            <div className="rounded-lg border p-4" style={{ background: "var(--card)", borderColor: "var(--card-border)" }}>
+            <div className="rounded-lg border p-4" style={{ background: "var(--card)", borderColor: "var(--card-border)", color: "var(--foreground)" }}>
               <MarkdownRenderer content={latestReview.content} />
             </div>
           )}
@@ -544,7 +544,7 @@ export function ReviewPanel({
                         group={group}
                         hasMultipleTasks={hasMultipleTasks}
                         isZh={isZh}
-                        severityColors={severityColors}
+                        severityStyles={severityStyles}
                         onResolve={handleResolve}
                       />
                     ));
@@ -574,9 +574,12 @@ export function ReviewPanel({
                   className={`rounded-lg border p-3 ${
                     item.resolved
                       ? "opacity-60"
-                      : severityColors[item.severity] || severityColors.info
+                      : ""
                   }`}
-                  style={item.resolved ? { background: "var(--background)", borderColor: "var(--card-border)" } : undefined}
+                  style={item.resolved
+                    ? { background: "var(--background)", borderColor: "var(--card-border)", color: "var(--foreground)" }
+                    : (() => { const s = severityStyles[item.severity] || severityStyles.info; return { background: s.bg, borderColor: s.border, color: s.color }; })()
+                  }
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-2">
@@ -676,13 +679,13 @@ function FindingsGroup({
   group,
   hasMultipleTasks,
   isZh,
-  severityColors,
+  severityStyles: styles,
   onResolve,
 }: {
   group: { title: string; order: number; items: ReviewItem[] };
   hasMultipleTasks: boolean;
   isZh: boolean;
-  severityColors: Record<string, string>;
+  severityStyles: Record<string, { bg: string; border: string; color: string }>;
   onResolve: (id: string, resolved: boolean) => void;
 }) {
   const [expanded, setExpanded] = useState(!hasMultipleTasks || group.items.some(i => !i.resolved));
@@ -717,10 +720,11 @@ function FindingsGroup({
       {expanded && group.items.map((item) => (
         <div
           key={item.id}
-          className={`rounded-lg border p-3 mb-2 ${
-            item.resolved ? "opacity-60" : severityColors[item.severity] || severityColors.info
-          }`}
-          style={item.resolved ? { background: "var(--background)", borderColor: "var(--card-border)" } : undefined}
+          className={`rounded-lg border p-3 mb-2 ${item.resolved ? "opacity-60" : ""}`}
+          style={item.resolved
+            ? { background: "var(--background)", borderColor: "var(--card-border)", color: "var(--foreground)" }
+            : (() => { const s = styles[item.severity] || styles.info; return { background: s.bg, borderColor: s.border, color: s.color }; })()
+          }
         >
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-2 flex-wrap">

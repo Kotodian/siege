@@ -230,14 +230,27 @@ export class AcpClient {
       const title = (raw.title as string) || "";
       const rawInput = raw.rawInput as Record<string, unknown> | undefined;
 
-      // tool_call = start (no input yet), tool_call_update = has rawInput
-      if (u.sessionUpdate === "tool_call_update" && rawInput && Object.keys(rawInput).length > 0) {
+      if (u.sessionUpdate === "tool_call") {
+        // Tool start — show immediately so user sees activity
+        if (title) {
+          this.onUpdate("tool", `> **${toolName}**: ${title}\n`);
+        }
+      } else if (rawInput && Object.keys(rawInput).length > 0) {
+        // Tool update with input details
         const inputStr = JSON.stringify(rawInput).slice(0, 200);
         this.onUpdate("tool", `> **${toolName}**: ${title || inputStr}\n`);
       }
     } else if (u.sessionUpdate === "plan_update" && u.plan) {
       const planText = u.plan.entries.map(e => `- [${e.status}] ${e.content}`).join("\n");
       this.onUpdate("plan", planText);
+    } else if (u.sessionUpdate === "agent_message_start") {
+      // Session starting a new message — no content to show
+    } else if (u.sessionUpdate === "agent_message_end") {
+      // Message complete
+    } else {
+      // Unknown event — log for debugging
+      const summary = JSON.stringify(u).slice(0, 200);
+      console.log(`[acp] unhandled event: ${u.sessionUpdate} ${summary}`);
     }
   }
 

@@ -10,6 +10,7 @@ import { GanttChart } from "@/components/gantt/gantt-chart";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { MarkdownRenderer } from "@/components/markdown/markdown-renderer";
 import { useGlobalLoading } from "@/components/ui/global-loading";
+import { GitBranchIcon, PlusIcon, RefreshIcon, PlayIcon, SparklesIcon, HourglassIcon, XIcon } from "@/components/ui/icons";
 
 interface ScheduleItem {
   id: string;
@@ -423,18 +424,18 @@ export function ScheduleView({
                 {gitInfo.currentBranch}
               </span>
               <Button variant="ghost" size="sm" onClick={() => { setBranchName(`feat/plan-${planId.slice(0, 8)}`); setBranchDialogOpen(true); }}>
-                {isZh ? "\u{1F33F} 创建分支" : "\u{1F33F} New Branch"}
+                <><GitBranchIcon size={14} className="inline-block align-[-2px]" /> {isZh ? "创建分支" : "New Branch"}</>
               </Button>
             </div>
           )}
           {schedule && canEdit && (
             <Button variant="ghost" size="sm" onClick={() => setAddDialogOpen(true)}>
-              {isZh ? "\u2795 添加任务" : "\u2795 Add Task"}
+              <><PlusIcon size={14} className="inline-block align-[-2px]" /> {isZh ? "添加任务" : "Add Task"}</>
             </Button>
           )}
           {schedule && pendingCount > 0 && canEdit && (
             <Button variant="secondary" size="sm" onClick={handleReschedule}>
-              {isZh ? "\u{1F504} 重新排期" : "\u{1F504} Reschedule"}
+              <><RefreshIcon size={14} className="inline-block align-[-2px]" /> {isZh ? "重新排期" : "Reschedule"}</>
             </Button>
           )}
           {schedule && canExecute && (
@@ -448,18 +449,18 @@ export function ScheduleView({
               style={!autoExecute ? { background: "var(--card-border)", color: "var(--muted)" } : undefined}
             >
               <span className={`w-2 h-2 rounded-full ${autoExecute ? "bg-green-500 animate-pulse" : ""}`} style={!autoExecute ? { background: "var(--muted)" } : undefined} />
-              {autoExecute
-                ? (isZh ? "\u25B6\uFE0F 自动执行中" : "\u25B6\uFE0F Auto-Executing")
-                : (isZh ? "\u25B6\uFE0F 自动执行" : "\u25B6\uFE0F Auto-Execute")}
+              <><PlayIcon size={14} className="inline-block align-[-2px]" /> {autoExecute
+                ? (isZh ? "自动执行中" : "Auto-Executing")
+                : (isZh ? "自动执行" : "Auto-Execute")}</>
             </button>
           )}
           {(canGenerate || planStatus === "scheduled") && (
             <Button onClick={handleGenerate} disabled={generating}>
               {generating
-                ? (isZh ? "\u23F3 生成中..." : "\u23F3 Generating...")
+                ? <><HourglassIcon size={14} className="inline-block align-[-2px]" /> {isZh ? "生成中..." : "Generating..."}</>
                 : schedule
-                  ? (isZh ? "\u2728 重新生成" : "\u2728 Regenerate")
-                  : (isZh ? "\u2728 生成排期" : "\u2728 Generate")}
+                  ? <><SparklesIcon size={14} className="inline-block align-[-2px]" /> {isZh ? "重新生成" : "Regenerate"}</>
+                  : <><SparklesIcon size={14} className="inline-block align-[-2px]" /> {isZh ? "生成排期" : "Generate"}</>}
             </Button>
           )}
         </div>
@@ -550,10 +551,10 @@ export function ScheduleView({
                         )}
                         {canExecute && (item.status === "pending" || item.status === "failed") && (
                           <Button size="sm" onClick={() => handleRetry(item)} disabled={executing !== null}>
-                            {executing === item.id ? t("common.loading") : item.status === "failed" ? (isZh ? "🔄 重试" : "🔄 Retry") : (isZh ? "运行" : "Run")}
+                            {executing === item.id ? t("common.loading") : item.status === "failed" ? <><RefreshIcon size={14} className="inline-block align-[-2px]" /> {isZh ? "重试" : "Retry"}</> : (isZh ? "运行" : "Run")}
                           </Button>
                         )}
-                        <button onClick={() => setSelectedItem(null)} className="text-xs px-2 py-1 rounded" style={{ color: "var(--muted)" }}>✕</button>
+                        <button onClick={() => setSelectedItem(null)} className="text-xs px-2 py-1 rounded" style={{ color: "var(--muted)" }}><XIcon size={14} /></button>
                       </div>
                     </div>
                     {item.description && (

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, ReactNode } from "react";
+import { XIcon } from "@/components/ui/icons";
 
 interface DialogProps {
   open: boolean;
@@ -38,7 +39,7 @@ export function Dialog({ open, onClose, title, children, maxWidth }: DialogProps
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600"
           >
-            ✕
+            <XIcon size={16} />
           </button>
         </div>
         {children}

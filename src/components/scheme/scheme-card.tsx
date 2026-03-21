@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { SchemeEditor } from "./scheme-editor";
 import { SchemeVersions } from "./scheme-versions";
 import { useGlobalLoading } from "@/components/ui/global-loading";
+import { FolderOpenIcon, PencilIcon, TrashIcon, ClipboardIcon, CheckIcon, SparklesIcon, HourglassIcon } from "@/components/ui/icons";
 
 interface Scheme {
   id: string;
@@ -107,7 +108,7 @@ export function SchemeCard({
           await new Promise((r) => setTimeout(r, 1000));
           setChatHistory((prev) => [
             ...prev,
-            { role: "ai", text: isZh ? "修改完成 ✓" : "Done ✓" },
+            { role: "ai", text: isZh ? "修改完成" : "Done" },
           ]);
           // Refetch to get the saved version
           const schemeRes = await fetch(`/api/schemes/${scheme.id}`);
@@ -166,7 +167,7 @@ export function SchemeCard({
             size="sm"
             onClick={() => setVersionsOpen(true)}
           >
-            {isZh ? "\u{1F4C2} 版本" : "\u{1F4C2} Versions"}
+            <><FolderOpenIcon size={14} className="inline-block align-[-2px]" /> {isZh ? "版本" : "Versions"}</>
           </Button>
           {!readonly && (
             <>
@@ -175,7 +176,7 @@ export function SchemeCard({
                 size="sm"
                 onClick={() => setEditing(true)}
               >
-                {"\u270F\uFE0F"} {t("common.edit")}
+                <PencilIcon size={14} className="inline-block align-[-2px]" /> {t("common.edit")}
               </Button>
               <Button
                 variant="ghost"
@@ -186,7 +187,7 @@ export function SchemeCard({
                   }
                 }}
               >
-                {"\u{1F5D1}\uFE0F"} {t("common.delete")}
+                <TrashIcon size={14} className="inline-block align-[-2px]" /> {t("common.delete")}
               </Button>
             </>
           )}
@@ -265,8 +266,8 @@ export function SchemeCard({
             disabled={chatting || !chatInput.trim()}
           >
             {chatting
-              ? isZh ? "\u23F3 修改中" : "\u23F3 ..."
-              : isZh ? "\u2728 AI 修改" : "\u2728 AI Edit"}
+              ? <><HourglassIcon size={14} className="inline-block align-[-2px]" /> {isZh ? "修改中" : "..."}</>
+              : <><SparklesIcon size={14} className="inline-block align-[-2px]" /> {isZh ? "AI 修改" : "AI Edit"}</>}
           </Button>
         </div>
       )}
@@ -316,7 +317,9 @@ function CopyButton({ text, isZh }: { text: string; isZh: boolean }) {
         });
       }}
     >
-      {copied ? "\u2705 " + (isZh ? "已复制" : "Copied") : "\u{1F4CB} " + (isZh ? "复制" : "Copy")}
+      {copied
+        ? <><CheckIcon size={14} className="inline-block align-[-2px]" /> {isZh ? "已复制" : "Copied"}</>
+        : <><ClipboardIcon size={14} className="inline-block align-[-2px]" /> {isZh ? "复制" : "Copy"}</>}
     </Button>
   );
 }

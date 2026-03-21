@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog } from "@/components/ui/dialog";
 import { useGlobalLoading } from "@/components/ui/global-loading";
+import { BotIcon, MessageSquareIcon, PackageIcon, SettingsIcon, TargetIcon, InboxIcon, LayoutGridIcon, BrainIcon, GlobeIcon, SearchIcon, CalendarIcon, ZapIcon, FlaskIcon, FileTextIcon } from "@/components/ui/icons";
 
 interface ProviderStatus {
   configured: boolean;
@@ -32,23 +33,28 @@ interface SkillSummary {
 const PROVIDERS = [
   {
     id: "anthropic",
-    label: "\u{1F9E0} Anthropic (Claude)",
+    label: "Anthropic (Claude)",
     keyPlaceholder: "sk-ant-api03-...",
     models: ["claude-sonnet-4-20250514", "claude-opus-4-20250514", "claude-haiku-4-20250414", "claude-3-5-sonnet-20241022"],
   },
   {
     id: "openai",
-    label: "\u{1F4A0} OpenAI (GPT)",
+    label: "OpenAI (GPT)",
     keyPlaceholder: "sk-...",
     models: ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-3.5-turbo", "o1", "o1-mini", "o3-mini"],
   },
   {
     id: "glm",
-    label: "\u{1F30F} GLM (\u667A\u8C31)",
+    label: "GLM (\u667A\u8C31)",
     keyPlaceholder: "glm-api-key...",
     models: ["glm-4-plus", "glm-4", "glm-4-air", "glm-4-flash"],
   },
 ] as const;
+
+const PROVIDER_ICONS: Record<string, (props: { size?: number; className?: string }) => React.ReactNode> = {
+  anthropic: BrainIcon,
+  glm: GlobeIcon,
+};
 
 export default function SettingsPage({
   params,
@@ -134,14 +140,14 @@ export default function SettingsPage({
       {/* AI Providers */}
       <section className="mb-8">
         <h2 className="text-xl font-semibold mb-4">
-          {isZh ? "\u{1F916} AI 服务配置" : "\u{1F916} AI Provider Configuration"}
+          <><BotIcon size={18} className="inline-block align-[-3px]" /> {isZh ? "AI 服务配置" : "AI Provider Configuration"}</>
         </h2>
 
         {/* Claude Code Login — for ACP engine */}
         <div className="rounded-lg border p-4 mb-3" style={{ background: "var(--card)", borderColor: "var(--card-border)" }}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="font-medium text-sm">{"\u{1F4AC}"} Claude Code</span>
+              <span className="font-medium text-sm"><MessageSquareIcon size={14} className="inline-block align-[-2px]" /> Claude Code</span>
               <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-50 text-purple-600 font-medium">ACP</span>
             </div>
             <div className="flex items-center gap-2">
@@ -191,7 +197,7 @@ export default function SettingsPage({
         <div className="rounded-lg border p-4 mb-3" style={{ background: "var(--card)", borderColor: "var(--card-border)" }}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="font-medium text-sm">{"\u{1F4E6}"} Codex</span>
+              <span className="font-medium text-sm"><PackageIcon size={14} className="inline-block align-[-2px]" /> Codex</span>
               <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-600 font-medium">ACP</span>
             </div>
             <div className="flex items-center gap-2">
@@ -238,7 +244,7 @@ export default function SettingsPage({
             return (
               <div key={prov.id} className="rounded-lg border p-4" style={{ background: "var(--card)", borderColor: "var(--card-border)" }}>
                 <div className="flex items-center justify-between">
-                  <span className="font-medium text-sm">{prov.label}</span>
+                  <span className="font-medium text-sm">{PROVIDER_ICONS[prov.id] ? <>{PROVIDER_ICONS[prov.id]({ size: 14, className: "inline-block align-[-2px]" })} </> : null}{prov.label}</span>
                   <div className="flex items-center gap-2">
                     {status?.configured ? (
                       <>
@@ -406,7 +412,7 @@ export default function SettingsPage({
       {/* General Settings */}
       <section className="mb-8">
         <h2 className="text-xl font-semibold mb-4">
-          {isZh ? "\u2699\uFE0F 通用设置" : "\u2699\uFE0F General Settings"}
+          <><SettingsIcon size={18} className="inline-block align-[-3px]" /> {isZh ? "通用设置" : "General Settings"}</>
         </h2>
         <div className="rounded-lg border p-6 space-y-4" style={{ background: "var(--card)", borderColor: "var(--card-border)" }}>
           <div>
@@ -533,7 +539,7 @@ function SkillsSection({
   return (
     <section className="mb-8">
       <h2 className="text-xl font-semibold mb-4">
-        {isZh ? "\u{1F3AF} 技能" : "\u{1F3AF} Skills"} ({skills.length})
+        <><TargetIcon size={18} className="inline-block align-[-3px]" /> {isZh ? "技能" : "Skills"}</> ({skills.length})
       </h2>
 
       {/* Generate skill from prompt */}
@@ -722,7 +728,7 @@ function ImportSourcesSection({ isZh }: { isZh: boolean }) {
     <section className="mb-8">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-semibold">
-          {isZh ? "\u{1F4E5} 导入来源" : "\u{1F4E5} Import Sources"}
+          <><InboxIcon size={18} className="inline-block align-[-3px]" /> {isZh ? "导入来源" : "Import Sources"}</>
         </h2>
         <Button size="sm" onClick={() => setAddOpen(true)}>
           {isZh ? "添加导入来源" : "Add Import Source"}
@@ -847,13 +853,13 @@ function ImportSourcesSection({ isZh }: { isZh: boolean }) {
 }
 
 const AI_STEPS = [
-  { id: "scheme", labelZh: "\u{1F4D0} 方案生成", labelEn: "\u{1F4D0} Scheme Generation" },
-  { id: "review", labelZh: "\u{1F50D} 代码审查", labelEn: "\u{1F50D} Code Review" },
-  { id: "schedule", labelZh: "\u{1F4C5} 排期生成", labelEn: "\u{1F4C5} Schedule Generation" },
-  { id: "execute", labelZh: "\u26A1 任务执行", labelEn: "\u26A1 Task Execution" },
-  { id: "test", labelZh: "\u{1F9EA} 测试生成", labelEn: "\u{1F9EA} Test Generation" },
-  { id: "skills", labelZh: "\u{1F3AF} 技能生成", labelEn: "\u{1F3AF} Skill Generation" },
-] as const;
+  { id: "scheme", labelZh: "方案生成", labelEn: "Scheme Generation", icon: FileTextIcon },
+  { id: "review", labelZh: "代码审查", labelEn: "Code Review", icon: SearchIcon },
+  { id: "schedule", labelZh: "排期生成", labelEn: "Schedule Generation", icon: CalendarIcon },
+  { id: "execute", labelZh: "任务执行", labelEn: "Task Execution", icon: ZapIcon },
+  { id: "test", labelZh: "测试生成", labelEn: "Test Generation", icon: FlaskIcon },
+  { id: "skills", labelZh: "技能生成", labelEn: "Skill Generation", icon: TargetIcon },
+];
 
 const ALL_PROVIDER_OPTIONS = [
   { value: "", labelZh: "使用全局默认", labelEn: "Use Global Default" },
@@ -886,7 +892,7 @@ function StepModelSection({
   return (
     <section className="mb-8">
       <h2 className="text-xl font-semibold mb-2">
-        {isZh ? "\u{1F3DB}\uFE0F 各步骤 AI 配置" : "\u{1F3DB}\uFE0F Per-Step AI Configuration"}
+        <><LayoutGridIcon size={18} className="inline-block align-[-3px]" /> {isZh ? "各步骤 AI 配置" : "Per-Step AI Configuration"}</>
       </h2>
       <p className="text-xs mb-4" style={{ color: "var(--muted)" }}>
         {isZh
@@ -904,7 +910,7 @@ function StepModelSection({
             <div key={step.id} className="px-4 py-3">
               <div className="flex items-center gap-4">
                 <span className="text-sm font-medium w-24 shrink-0">
-                  {isZh ? step.labelZh : step.labelEn}
+                  <>{step.icon({ size: 14, className: "inline-block align-[-2px]" })} {isZh ? step.labelZh : step.labelEn}</>
                 </span>
                 <select
                   value={selectedProvider}

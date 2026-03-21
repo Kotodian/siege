@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from "react";
 import { MarkdownRenderer } from "@/components/markdown/markdown-renderer";
+import { CheckIcon } from "@/components/ui/icons";
 
 interface GlobalLoadingContextType {
   loading: boolean;
@@ -134,7 +135,7 @@ export function GlobalLoadingProvider({ children }: { children: ReactNode }) {
       {toast && (
         <div className="fixed bottom-6 right-6 z-50">
           <div className="bg-green-600 text-white px-5 py-3 rounded-lg shadow-lg text-sm font-medium">
-            ✓ {toast}
+            <CheckIcon size={14} className="inline-block align-[-2px]" /> {toast}
           </div>
         </div>
       )}

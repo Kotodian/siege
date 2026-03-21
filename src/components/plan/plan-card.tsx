@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { TimeAgo } from "@/components/ui/time-ago";
+import { statusIcons, TrashIcon, ClipboardIcon, type IconProps } from "@/components/ui/icons";
 
 interface PlanCardProps {
   plan: {
@@ -19,15 +20,9 @@ interface PlanCardProps {
   onDelete: (id: string) => void;
 }
 
-const statusEmoji: Record<string, string> = {
-  draft: "\u{1F4DD}",
-  reviewing: "\u{1F50D}",
-  confirmed: "\u2705",
-  scheduled: "\u{1F4C5}",
-  executing: "\u26A1",
-  code_review: "\u{1F9D0}",
-  testing: "\u{1F9EA}",
-  completed: "\u{1F389}",
+const StatusIcon = ({ status }: { status: string }) => {
+  const Ic = statusIcons[status] || ((p: IconProps) => <ClipboardIcon {...p} />);
+  return <Ic size={16} className="inline-block align-[-2px]" />;
 };
 
 export function PlanCard({ plan, locale, onDelete }: PlanCardProps) {
@@ -44,7 +39,7 @@ export function PlanCard({ plan, locale, onDelete }: PlanCardProps) {
     >
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-2">
-          <h3 className="font-semibold">{statusEmoji[plan.status] || "\u{1F4CB}"} {plan.name}</h3>
+          <h3 className="font-semibold"><StatusIcon status={plan.status} /> {plan.name}</h3>
           {plan.tag && (
             <StatusBadge
               status={plan.tag}
@@ -68,7 +63,7 @@ export function PlanCard({ plan, locale, onDelete }: PlanCardProps) {
             className="hover:text-red-500 text-sm"
             style={{ color: "var(--muted)" }}
           >
-            {"\u{1F5D1}\uFE0F"} {t("common.delete")}
+            <TrashIcon size={14} className="inline-block align-[-2px]" /> {t("common.delete")}
           </button>
         </div>
       </div>

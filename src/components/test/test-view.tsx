@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { MarkdownRenderer } from "@/components/markdown/markdown-renderer";
+import { CheckIcon, XIcon, CircleIcon } from "@/components/ui/icons";
 
 interface TestResult {
   id: string;
@@ -149,10 +150,10 @@ export function TestView({
                 <div className="flex items-center gap-2">
                   <span className="text-lg">
                     {tc.status === "passed"
-                      ? "✓"
+                      ? <CheckIcon size={18} className="inline-block text-green-600" />
                       : tc.status === "failed"
-                        ? "✗"
-                        : "○"}
+                        ? <XIcon size={18} className="inline-block text-red-600" />
+                        : <CircleIcon size={18} className="inline-block text-gray-400" />}
                   </span>
                   <span className="font-mono text-sm">{tc.name}</span>
                   <StatusBadge status={tc.status} label={tc.status} />

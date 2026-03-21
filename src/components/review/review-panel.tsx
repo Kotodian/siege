@@ -9,6 +9,7 @@ import { useGlobalLoading } from "@/components/ui/global-loading";
 import { computeDiffStats } from "@/lib/diff";
 import { FileSidebar } from "./file-sidebar";
 import { DiffViewer } from "./diff-viewer";
+import { severityIcons, FileStackIcon, CodeIcon, SearchIcon, RefreshIcon, HourglassIcon, BarChartIcon, ClipboardIcon, WrenchIcon, CheckIcon, type IconProps } from "@/components/ui/icons";
 
 interface ReviewComment {
   id: string;
@@ -67,10 +68,9 @@ const severityColors: Record<string, string> = {
   info: "bg-blue-50 border-blue-200 text-blue-800",
 };
 
-const severityEmoji: Record<string, string> = {
-  critical: "\u{1F6A8}",
-  warning: "\u26A0\uFE0F",
-  info: "\u{1F4A1}",
+const SeverityIcon = ({ severity }: { severity: string }) => {
+  const Ic = severityIcons[severity] || ((p: IconProps) => <SearchIcon {...p} />);
+  return <Ic size={14} className="inline-block align-[-2px]" />;
 };
 
 export function ReviewPanel({
@@ -314,7 +314,7 @@ export function ReviewPanel({
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h4 className="font-semibold">
-          {type === "scheme" ? "\u{1F4D1} " : "\u{1F4BB} "}{type === "scheme" ? t("review.schemeReview") : t("review.codeReview")}
+          {type === "scheme" ? <><FileStackIcon size={16} className="inline-block align-[-2px]" /> </> : <><CodeIcon size={16} className="inline-block align-[-2px]" /> </>}{type === "scheme" ? t("review.schemeReview") : t("review.codeReview")}
         </h4>
         {(canReview || isInProgress) && (
           <div className="flex items-center gap-2">
@@ -333,10 +333,10 @@ export function ReviewPanel({
             </select>
             <Button onClick={handleGenerate} disabled={generating} size="sm">
               {generating
-                ? "\u23F3 " + t("common.loading")
+                ? <><HourglassIcon size={14} className="inline-block align-[-2px]" /> {t("common.loading")}</>
                 : latestReview
-                  ? "\u{1F504} " + t("review.reReview")
-                  : "\u{1F50D} " + t("review.runReview")}
+                  ? <><RefreshIcon size={14} className="inline-block align-[-2px]" /> {t("review.reReview")}</>
+                  : <><SearchIcon size={14} className="inline-block align-[-2px]" /> {t("review.runReview")}</>}
             </Button>
           </div>
         )}
@@ -404,14 +404,14 @@ export function ReviewPanel({
                 variant={viewMode === "diff" ? "primary" : "secondary"}
                 onClick={() => setViewMode("diff")}
               >
-                {"\u{1F4CA}"} {t("review.viewDiff")}
+                <BarChartIcon size={14} className="inline-block align-[-2px]" /> {t("review.viewDiff")}
               </Button>
               <Button
                 size="sm"
                 variant={viewMode === "list" ? "primary" : "secondary"}
                 onClick={() => setViewMode("list")}
               >
-                {"\u{1F4CB}"} {t("review.viewFindings")}
+                <ClipboardIcon size={14} className="inline-block align-[-2px]" /> {t("review.viewFindings")}
               </Button>
             </div>
           )}
@@ -479,7 +479,7 @@ export function ReviewPanel({
                       <div className="flex items-start justify-between">
                         <div className="flex items-center gap-2">
                           <StatusBadge status={item.severity} label={item.severity} />
-                          <span className="font-medium text-sm">{severityEmoji[item.severity] || "\u{1F4A1}"} {item.title}</span>
+                          <span className="font-medium text-sm"><SeverityIcon severity={item.severity} /> {item.title}</span>
                         </div>
                         <div className="flex gap-1">
                           <button
@@ -489,7 +489,7 @@ export function ReviewPanel({
                               ? { background: "var(--card-border)", color: "var(--muted)" }
                               : { background: "rgba(255,255,255,0.5)", color: "var(--foreground)" }}
                           >
-                            {item.resolved ? "\u2705 " + t("review.resolved") : t("review.resolve")}
+                            {item.resolved ? <><CheckIcon size={12} className="inline-block align-[-1px]" /> {t("review.resolved")}</> : t("review.resolve")}
                           </button>
                         </div>
                       </div>
@@ -530,7 +530,7 @@ export function ReviewPanel({
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-2">
                       <StatusBadge status={item.severity} label={item.severity} />
-                      <span className="font-medium text-sm">{severityEmoji[item.severity] || "\u{1F4A1}"} {item.title}</span>
+                      <span className="font-medium text-sm"><SeverityIcon severity={item.severity} /> {item.title}</span>
                     </div>
                     <div className="flex gap-1">
                       {!item.resolved && item.targetId && (
@@ -541,8 +541,8 @@ export function ReviewPanel({
                           style={{ background: "var(--card-border)", color: "var(--foreground)" }}
                         >
                           {fixingItem === item.id
-                            ? isZh ? "\u23F3 修复中..." : "\u23F3 Fixing..."
-                            : isZh ? "\u{1F527} AI 修复" : "\u{1F527} AI Fix"}
+                            ? <><HourglassIcon size={12} className="inline-block align-[-1px]" /> {isZh ? "修复中..." : "Fixing..."}</>
+                            : <><WrenchIcon size={12} className="inline-block align-[-1px]" /> {isZh ? "AI 修复" : "AI Fix"}</>}
                         </button>
                       )}
                       <button
@@ -552,7 +552,7 @@ export function ReviewPanel({
                           ? { background: "var(--card-border)", color: "var(--muted)" }
                           : { background: "rgba(255,255,255,0.5)", color: "var(--foreground)" }}
                       >
-                        {item.resolved ? "\u2705 " + t("review.resolved") : t("review.resolve")}
+                        {item.resolved ? <><CheckIcon size={12} className="inline-block align-[-1px]" /> {t("review.resolved")}</> : t("review.resolve")}
                       </button>
                     </div>
                   </div>

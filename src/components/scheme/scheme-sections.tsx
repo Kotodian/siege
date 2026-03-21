@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { MarkdownRenderer } from "@/components/markdown/markdown-renderer";
 import { Button } from "@/components/ui/button";
 import { useGlobalLoading } from "@/components/ui/global-loading";
+import { LightbulbIcon, XIcon, HourglassIcon, HelpCircleIcon, PencilIcon } from "@/components/ui/icons";
 
 interface Section {
   title: string;
@@ -362,10 +363,10 @@ export function SchemeSections({
                     <div className="mt-3 p-3 rounded-md text-xs" style={{ background: "var(--background)", color: "var(--foreground)" }}>
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-[10px] font-medium" style={{ color: "var(--muted)" }}>
-                          {isZh ? "💡 AI 解释" : "💡 AI Explanation"}
+                          <><LightbulbIcon size={12} className="inline-block align-[-1px]" /> {isZh ? "AI 解释" : "AI Explanation"}</>
                         </span>
                         <button onClick={() => setExplanation((prev) => { const n = { ...prev }; delete n[i]; return n; })}
-                          className="text-[10px]" style={{ color: "var(--muted)" }}>✕</button>
+                          className="text-[10px]" style={{ color: "var(--muted)" }}><XIcon size={10} /></button>
                       </div>
                       <MarkdownRenderer content={explanation[i]} />
                     </div>
@@ -379,7 +380,9 @@ export function SchemeSections({
                       className="text-xs hover:underline"
                       style={{ color: "var(--muted)" }}
                     >
-                      {explaining === i ? (isZh ? "⏳ 解释中..." : "⏳ Explaining...") : (isZh ? "❓ 解释" : "❓ Explain")}
+                      {explaining === i
+                        ? <><HourglassIcon size={12} className="inline-block align-[-1px]" /> {isZh ? "解释中..." : "Explaining..."}</>
+                        : <><HelpCircleIcon size={12} className="inline-block align-[-1px]" /> {isZh ? "解释" : "Explain"}</>}
                     </button>
                     {!readonly && schemeId && (
                       <>
@@ -403,7 +406,7 @@ export function SchemeSections({
                           </div>
                         ) : (
                           <button onClick={() => setEditingIndex(i)} className="text-xs hover:underline" style={{ color: "var(--muted)" }}>
-                            {isZh ? "✏️ AI 修改" : "✏️ AI Edit"}
+                            <><PencilIcon size={12} className="inline-block align-[-1px]" /> {isZh ? "AI 修改" : "AI Edit"}</>
                           </button>
                         )}
                       </>

@@ -8,6 +8,7 @@ import { MarkdownEditor } from "@/components/markdown/markdown-editor";
 import { RepoPicker } from "@/components/repo-picker/repo-picker";
 import { AnalyzePrompt } from "@/components/project/analyze-prompt";
 import { IconPicker } from "@/components/ui/icon-picker";
+import { ClipboardIcon, SearchIcon, BarChartIcon, ZapIcon, CodeIcon, CheckCircleIcon, AlertTriangleIcon } from "@/components/ui/icons";
 
 function GitHubIcon({ className }: { className?: string }) {
   return (
@@ -311,7 +312,7 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
                 </div>
               ) : githubStatus && !githubStatus.ghInstalled ? (
                 <div className="text-center space-y-4 py-4">
-                  <div className="text-4xl">⚠️</div>
+                  <div className="text-4xl"><AlertTriangleIcon size={40} className="text-yellow-500" /></div>
                   <p className="text-gray-600">
                     {isZh
                       ? "未检测到 GitHub CLI (gh)。安装后可以连接。"
@@ -502,8 +503,8 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
                   {!anyAiConfigured && !claudeStatus?.loggedIn && (
                     <p className="text-xs text-amber-600 text-center">
                       {isZh
-                        ? "⚠️ 至少配置一个提供商才能使用 AI 功能"
-                        : "⚠️ At least one provider is required for AI features"}
+                        ? <><AlertTriangleIcon size={12} className="inline-block align-[-1px]" /> 至少配置一个提供商才能使用 AI 功能</>
+                        : <><AlertTriangleIcon size={12} className="inline-block align-[-1px]" /> At least one provider is required for AI features</>}
                     </p>
                   )}
                 </>
@@ -534,15 +535,15 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
             </h2>
             <div className="grid grid-cols-1 gap-4">
               {[
-                { icon: "📋", title: isZh ? "1. 创建计划" : "1. Create Plan", desc: isZh ? "描述你的需求，AI 自动生成标题。在文件夹中组织多个计划。" : "Describe your needs, AI generates the title. Organize plans in folders." },
-                { icon: "🔍", title: isZh ? "2. 生成方案" : "2. Generate Scheme", desc: isZh ? "AI 搜索互联网和本地代码，生成技术方案。你可以编辑和审查。" : "AI searches the web and local code to generate technical schemes. Edit and review." },
-                { icon: "📊", title: isZh ? "3. 生成排期" : "3. Generate Schedule", desc: isZh ? "确认方案后，AI 拆解为可执行任务，甘特图可视化排期。" : "After confirming schemes, AI breaks them into executable tasks with Gantt chart." },
-                { icon: "⚡", title: isZh ? "4. 执行" : "4. Execute", desc: isZh ? "AI 自动执行任务，实时查看进度。" : "AI executes tasks automatically with real-time progress." },
-                { icon: "🔎", title: isZh ? "5. 代码审查" : "5. Code Review", desc: isZh ? "AI 审查实现代码的质量、安全性和可维护性。" : "AI reviews code quality, security, and maintainability." },
-                { icon: "✅", title: isZh ? "6. 测试" : "6. Test", desc: isZh ? "AI 生成测试用例并运行，确保实现正确。" : "AI generates and runs tests to verify the implementation." },
+                { icon: ClipboardIcon, title: isZh ? "1. 创建计划" : "1. Create Plan", desc: isZh ? "描述你的需求，AI 自动生成标题。在文件夹中组织多个计划。" : "Describe your needs, AI generates the title. Organize plans in folders." },
+                { icon: SearchIcon, title: isZh ? "2. 生成方案" : "2. Generate Scheme", desc: isZh ? "AI 搜索互联网和本地代码，生成技术方案。你可以编辑和审查。" : "AI searches the web and local code to generate technical schemes. Edit and review." },
+                { icon: BarChartIcon, title: isZh ? "3. 生成排期" : "3. Generate Schedule", desc: isZh ? "确认方案后，AI 拆解为可执行任务，甘特图可视化排期。" : "After confirming schemes, AI breaks them into executable tasks with Gantt chart." },
+                { icon: ZapIcon, title: isZh ? "4. 执行" : "4. Execute", desc: isZh ? "AI 自动执行任务，实时查看进度。" : "AI executes tasks automatically with real-time progress." },
+                { icon: CodeIcon, title: isZh ? "5. 代码审查" : "5. Code Review", desc: isZh ? "AI 审查实现代码的质量、安全性和可维护性。" : "AI reviews code quality, security, and maintainability." },
+                { icon: CheckCircleIcon, title: isZh ? "6. 测试" : "6. Test", desc: isZh ? "AI 生成测试用例并运行，确保实现正确。" : "AI generates and runs tests to verify the implementation." },
               ].map((item) => (
                 <div key={item.title} className="flex gap-4 items-start rounded-lg border bg-white p-4">
-                  <span className="text-2xl">{item.icon}</span>
+                  <span className="shrink-0">{item.icon({ size: 24 })}</span>
                   <div>
                     <h3 className="font-semibold">{item.title}</h3>
                     <p className="text-sm text-gray-600">{item.desc}</p>

@@ -293,7 +293,7 @@ export async function POST(req: NextRequest) {
           }
         } else {
           db.update(reviews)
-            .set({ status: "changes_requested", content: fullText.trim() || "Review completed.", updatedAt: new Date().toISOString() })
+            .set({ status: "changes_requested", content: fullText.trim() || "AI 未返回有效的审查结果，请重试。/ AI returned no valid review output, please retry.", updatedAt: new Date().toISOString() })
             .where(eq(reviews.id, reviewId))
             .run();
         }

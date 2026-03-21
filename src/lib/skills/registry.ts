@@ -71,26 +71,68 @@ export function scanAllSkills(): SkillInfo[] {
 
   const skills: SkillInfo[] = [];
 
-  if (!fs.existsSync(skillsBaseDir)) return skills;
+  // 1. Scan ~/.claude/skills/ (user custom skills)
+  if (fs.existsSync(skillsBaseDir)) {
+    const entries = fs.readdirSync(skillsBaseDir);
+    for (const entry of entries) {
+      const entryPath = path.join(skillsBaseDir, entry);
+      const stat = fs.statSync(entryPath);
 
-  // Scan top-level directories as sources
-  const entries = fs.readdirSync(skillsBaseDir);
-  for (const entry of entries) {
-    const entryPath = path.join(skillsBaseDir, entry);
-    const stat = fs.statSync(entryPath);
+      if (stat.isDirectory()) {
+        skills.push(...scanSkillDirectory(entryPath, entry));
+      } else if (stat.isFile() && entry.endsWith(".md")) {
+        const content = fs.readFileSync(entryPath, "utf-8");
+        const frontmatter = parseFrontmatter(content);
+        skills.push({
+          name: frontmatter.name || path.basename(entry, ".md"),
+          source: "custom",
+          description: frontmatter.description || "",
+          filePath: entryPath,
+          content,
+        });
+      }
+    }
+  }
 
-    if (stat.isDirectory()) {
-      skills.push(...scanSkillDirectory(entryPath, entry));
-    } else if (stat.isFile() && entry.endsWith(".md")) {
-      const content = fs.readFileSync(entryPath, "utf-8");
-      const frontmatter = parseFrontmatter(content);
-      skills.push({
-        name: frontmatter.name || path.basename(entry, ".md"),
-        source: "custom",
-        description: frontmatter.description || "",
-        filePath: entryPath,
-        content,
-      });
+  // 2. Scan ~/.claude/plugins/cache/ (plugin skills)
+  const pluginsDir = path.join(homeDir, ".claude", "plugins", "cache");
+  if (fs.existsSync(pluginsDir)) {
+    try {
+      // Walk: plugins/cache/<org>/<plugin>/<version>/skills/<skill-name>/SKILL.md
+      for (const org of fs.readdirSync(pluginsDir)) {
+        const orgPath = path.join(pluginsDir, org);
+        if (!fs.statSync(orgPath).isDirectory()) continue;
+        for (const plugin of fs.readdirSync(orgPath)) {
+          const pluginPath = path.join(orgPath, plugin);
+          if (!fs.statSync(pluginPath).isDirectory()) continue;
+          for (const version of fs.readdirSync(pluginPath)) {
+            const skillsPath = path.join(pluginPath, version, "skills");
+            if (!fs.existsSync(skillsPath) || !fs.statSync(skillsPath).isDirectory()) continue;
+            for (const skillDir of fs.readdirSync(skillsPath)) {
+              const skillDirPath = path.join(skillsPath, skillDir);
+              if (!fs.statSync(skillDirPath).isDirectory()) continue;
+              const skillFile = path.join(skillDirPath, "SKILL.md");
+              if (!fs.existsSync(skillFile)) continue;
+
+              const content = fs.readFileSync(skillFile, "utf-8");
+              const frontmatter = parseFrontmatter(content);
+              const source = `${plugin}`;
+              const name = frontmatter.name || skillDir;
+              // Deduplicate: skip if already added with same name
+              if (skills.some(s => s.name === name || s.name === `${source}:${name}`)) continue;
+              skills.push({
+                name,
+                source,
+                description: frontmatter.description || "",
+                filePath: skillFile,
+                content,
+              });
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error("[skills] Failed to scan plugins:", err);
     }
   }
 

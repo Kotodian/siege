@@ -43,7 +43,7 @@ export function MarkdownRenderer({
 }: MarkdownRendererProps) {
   return (
     <div
-      className={`prose prose-sm prose-invert max-w-none ${className}`}
+      className={`prose prose-sm max-w-none ${className}`}
     >
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}

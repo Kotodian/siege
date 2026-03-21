@@ -40,6 +40,27 @@ body {
   --tw-prose-pre-bg: #1a1a1a;
   --tw-prose-th-borders: #3a3a3a;
   --tw-prose-td-borders: #303030;
+  color: #d4d4d4;
+}
+
+.prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6 {
+  color: #e5e5e5;
+}
+
+.prose a {
+  color: #60a5fa;
+}
+
+.prose strong, .prose b {
+  color: #e5e5e5;
+}
+
+.prose code {
+  color: #e5e5e5;
+}
+
+.prose p, .prose li, .prose td, .prose th, .prose blockquote {
+  color: #d4d4d4;
 }
 
 /* Gantt chart dark overrides */

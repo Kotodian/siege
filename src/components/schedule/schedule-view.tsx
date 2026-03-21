@@ -90,7 +90,7 @@ export function ScheduleView({
     }
   };
 
-  const { startLoading, updateContent, stopLoading } = useGlobalLoading();
+  const { startLoading, updateContent, stopLoading, setTasks, updateTaskStatus } = useGlobalLoading();
 
   useEffect(() => {
     fetchSchedule();
@@ -121,24 +121,32 @@ export function ScheduleView({
     let cancelled = false;
 
     const runLoop = async () => {
+      let firstRun = true;
       while (!cancelled) {
         try {
           const res = await fetch("/api/schedules/tick", { method: "POST" });
           if (!res.ok) break;
           const data = await res.json();
-          if (!data.executed || !data.nextTask) {
-            // No more pending tasks — keep polling in case new ones appear
-            break;
+          if (!data.executed || !data.nextTask) break;
+
+          // Set task timeline on first run
+          if (firstRun && data.allTasks) {
+            setTasks(data.allTasks);
+            firstRun = false;
           }
-          // Execute with progress label showing task order
-          const { title, order, completedCount, totalCount } = data.nextTask;
+          // Mark current task as running
+          updateTaskStatus(data.nextTask.itemId, "running");
+
+          const { title, order } = data.nextTask;
           const label = isZh
-            ? `[${completedCount + 1}/${totalCount}] #${order} ${title}`
-            : `[${completedCount + 1}/${totalCount}] #${order} ${title}`;
+            ? `#${order} ${title}`
+            : `#${order} ${title}`;
           await handleExecuteItem(data.nextTask.itemId, [], label);
+
+          // Mark completed and refresh
+          updateTaskStatus(data.nextTask.itemId, "completed");
           await fetchSchedule();
           onPlanStatusChange();
-          // Immediately continue to next task (no delay)
         } catch {
           break;
         }

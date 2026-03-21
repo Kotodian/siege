@@ -55,18 +55,15 @@ export async function POST() {
         .run();
     }
 
-    const completedCount = allItems.filter(i => i.status === "completed").length;
-    const totalCount = allItems.length;
-
     return NextResponse.json({
       executed: true,
-      nextTask: {
-        itemId: nextPending.id,
-        title: nextPending.title,
-        order: nextPending.order,
-        completedCount,
-        totalCount,
-      },
+      nextTask: { itemId: nextPending.id, title: nextPending.title, order: nextPending.order },
+      allTasks: allItems.map(i => ({
+        id: i.id,
+        order: i.order,
+        title: i.title,
+        status: i.id === nextPending.id ? "running" : i.status === "completed" ? "completed" : i.status === "failed" ? "failed" : "pending",
+      })),
     });
   }
 

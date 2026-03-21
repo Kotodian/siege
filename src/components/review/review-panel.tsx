@@ -441,6 +441,38 @@ export function ReviewPanel({
               <MarkdownRenderer content={latestReview.content} />
             </div>
           )}
+          {/* Review action buttons for code review */}
+          {type === "implementation" && latestReview.status !== "in_progress" && (
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                onClick={async () => {
+                  await fetch(`/api/plans/${planId}/review-action`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ action: "accept" }),
+                  });
+                  onPlanStatusChange();
+                }}
+              >
+                {isZh ? "确认并进入测试" : "Accept & Test"}
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={async () => {
+                  await fetch(`/api/plans/${planId}/review-action`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ action: "rework" }),
+                  });
+                  onPlanStatusChange();
+                }}
+              >
+                {isZh ? "返回排期修复" : "Rework"}
+              </Button>
+            </div>
+          )}
         </div>
       )}
 

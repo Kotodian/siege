@@ -78,12 +78,20 @@ function buildReviewPrompt(
 
 CRITICAL: Do NOT ask questions, request access, or use tools. Review based solely on the content provided.
 
-Review for: completeness, correctness, quality, risks, security.
+Review for: correctness, security vulnerabilities, logic bugs, runtime errors.
+
+Severity guidelines:
+- "critical": ONLY for real bugs that will cause crashes, data loss, or security vulnerabilities
+- "warning": potential issues, missing error handling, performance concerns
+- "info": style suggestions, naming improvements, minor refactoring opportunities
+- Do NOT mark as critical: missing tests (testing is a separate phase), code style, naming conventions, missing docs
+
+Be practical — approve if the code works correctly even if it could be cleaner.
 
 Output a JSON object with:
 - summary: overall review summary as markdown (string)
 ${itemsSchema}
-- approved: boolean (false if any critical items)
+- approved: boolean (true if no critical bugs or security issues)
 
 Output ONLY the JSON object. No other text before or after.${langInstruction}`,
     prompt: `Plan: ${planName}\n\n${itemsSummary}`,

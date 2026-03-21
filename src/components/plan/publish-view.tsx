@@ -5,7 +5,9 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { GitBranchIcon, CheckIcon, AlertTriangleIcon } from "@/components/ui/icons";
+import { GitBranchIcon, CheckIcon, AlertTriangleIcon, SparklesIcon } from "@/components/ui/icons";
+import { useGlobalLoading } from "@/components/ui/global-loading";
+import { ProviderModelSelect, useDefaultProvider } from "@/components/ui/provider-model-select";
 
 interface GitStatus {
   isGit: boolean;
@@ -25,6 +27,13 @@ interface PublishViewProps {
   projectId: string;
 }
 
+const DEPLOY_PRESETS = [
+  { label: "Git Push + PR", cmd: "Push all changes to remote and create a pull request if not exists." },
+  { label: "Docker Build & Push", cmd: "Build Docker image and push to container registry." },
+  { label: "npm publish", cmd: "Run tests, build, and publish the npm package." },
+  { label: "cargo publish", cmd: "Run cargo test, then cargo publish to crates.io." },
+];
+
 export function PublishView({ planId, projectId }: PublishViewProps) {
   const t = useTranslations();
   const isZh = t("common.back") === "返回";
@@ -38,6 +47,52 @@ export function PublishView({ planId, projectId }: PublishViewProps) {
   const [prBody, setPrBody] = useState("");
   const [prBase, setPrBase] = useState("");
   const [creatingPR, setCreatingPR] = useState(false);
+  const [deployCmd, setDeployCmd] = useState("");
+  const [deploying, setDeploying] = useState(false);
+  const [deployProvider, setDeployProvider] = useState("");
+  const [deployModel, setDeployModel] = useState("");
+  const { startLoading, updateContent, stopLoading } = useGlobalLoading();
+  const defaultProvider = useDefaultProvider();
+
+  useState(() => { if (defaultProvider) setDeployProvider(defaultProvider); });
+
+  const handleDeploy = async () => {
+    if (!deployCmd.trim() || deploying) return;
+    setDeploying(true);
+    startLoading(isZh ? "AI 正在执行部署..." : "AI deploying...");
+    try {
+      const res = await fetch("/api/execute/deploy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          repoPath,
+          instruction: deployCmd.trim(),
+          provider: deployProvider || undefined,
+          model: deployModel || undefined,
+        }),
+      });
+      if (res.ok && res.body) {
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let content = "";
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          content += decoder.decode(value, { stream: true });
+          updateContent(content);
+        }
+        await fetchStatus();
+        stopLoading(isZh ? "部署完成" : "Deploy complete");
+      } else {
+        const data = await res.json().catch(() => ({ error: "Failed" }));
+        stopLoading(isZh ? `部署失败: ${data.error}` : `Deploy failed: ${data.error}`);
+      }
+    } catch (e) {
+      stopLoading(isZh ? `部署失败: ${e}` : `Deploy failed: ${e}`);
+    } finally {
+      setDeploying(false);
+    }
+  };
 
   const fetchStatus = async () => {
     const projRes = await fetch(`/api/projects/${projectId}`);
@@ -191,6 +246,48 @@ export function PublishView({ planId, projectId }: PublishViewProps) {
             </Button>
           </div>
         )}
+      </div>
+
+      {/* AI Deploy */}
+      <div className="rounded-lg border p-4" style={{ background: "var(--card)", borderColor: "var(--card-border)" }}>
+        <h4 className="text-sm font-medium mb-3" style={{ color: "var(--foreground)" }}>
+          <SparklesIcon size={14} className="inline-block align-[-2px]" /> {isZh ? "AI 部署" : "AI Deploy"}
+        </h4>
+        <div className="flex flex-wrap gap-2 mb-3">
+          {DEPLOY_PRESETS.map((p) => (
+            <button
+              key={p.label}
+              onClick={() => setDeployCmd(p.cmd)}
+              className="text-[11px] px-2 py-1 rounded hover:opacity-80"
+              style={{ background: "var(--card-border)", color: "var(--foreground)" }}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+        <textarea
+          value={deployCmd}
+          onChange={(e) => setDeployCmd(e.target.value)}
+          rows={3}
+          className="w-full rounded-md border px-3 py-2 text-sm mb-3 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          style={{ background: "var(--card)", color: "var(--foreground)", borderColor: "var(--card-border)" }}
+          placeholder={isZh
+            ? "告诉 AI 怎么部署，例如：推送代码、构建 Docker 镜像并部署到 K8s..."
+            : "Tell AI how to deploy, e.g.: push code, build Docker image and deploy to K8s..."}
+        />
+        <div className="flex items-center gap-2">
+          <ProviderModelSelect
+            provider={deployProvider}
+            model={deployModel}
+            onProviderChange={setDeployProvider}
+            onModelChange={setDeployModel}
+            disabled={deploying}
+            compact
+          />
+          <Button onClick={handleDeploy} disabled={deploying || !deployCmd.trim()} size="sm">
+            <SparklesIcon size={14} className="inline-block align-[-2px]" /> {deploying ? (isZh ? "部署中..." : "Deploying...") : (isZh ? "执行部署" : "Deploy")}
+          </Button>
+        </div>
       </div>
 
       {/* PR creation dialog */}

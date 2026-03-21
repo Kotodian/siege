@@ -3,15 +3,15 @@ import { getDb } from "@/lib/db";
 import { plans, projects, schedules, scheduleItems, fileSnapshots } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { execSync } from "child_process";
-import fs from "fs";
 import path from "path";
+import fs from "fs";
 
 /**
  * POST /api/snapshots/backfill?planId=xxx
  *
- * For completed tasks that have no file_snapshots, attempt to generate them
- * from git log. Each commit is matched to a task by order/title keywords.
- * Unmatched commits are assigned to the nearest task by order.
+ * For completed tasks that have no file_snapshots, generate them from git log.
+ * Each commit maps to one task (by order). Initial commit uses --root.
+ * If there are more tasks than commits, remaining tasks share the last commit's state.
  */
 export async function POST(req: NextRequest) {
   const planId = req.nextUrl.searchParams.get("planId");
@@ -31,33 +31,32 @@ export async function POST(req: NextRequest) {
   if (!schedule) return NextResponse.json({ error: "No schedule" }, { status: 400 });
 
   const cwd = project.targetRepoPath;
-  const items = db.select().from(scheduleItems)
+  const completedItems = db.select().from(scheduleItems)
     .where(eq(scheduleItems.scheduleId, schedule.id))
     .all()
     .filter(i => i.status === "completed")
     .sort((a, b) => a.order - b.order);
 
   // Find tasks with no snapshots
-  const tasksWithoutSnapshots = items.filter(item => {
-    const count = db.select().from(fileSnapshots)
+  const tasksNeedBackfill = completedItems.filter(item => {
+    return db.select().from(fileSnapshots)
       .where(eq(fileSnapshots.scheduleItemId, item.id))
-      .all().length;
-    return count === 0;
+      .all().length === 0;
   });
 
-  if (tasksWithoutSnapshots.length === 0) {
+  if (tasksNeedBackfill.length === 0) {
     return NextResponse.json({ message: "All tasks already have snapshots", backfilled: 0 });
   }
 
-  // Get commit list (oldest first)
+  // Get commits oldest-first
   let commits: Array<{ hash: string; parent: string; message: string }>;
   try {
     const log = execSync('git log --reverse --format="%H|%P|%s"', {
       cwd, encoding: "utf-8", timeout: 10000,
     }).trim();
     commits = log.split("\n").filter(Boolean).map(line => {
-      const [hash, parent, ...msgParts] = line.split("|");
-      return { hash, parent: parent || "", message: msgParts.join("|") };
+      const parts = line.split("|");
+      return { hash: parts[0], parent: parts[1] || "", message: parts.slice(2).join("|") };
     });
   } catch {
     return NextResponse.json({ error: "Failed to read git log" }, { status: 500 });
@@ -67,34 +66,26 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "No commits found" }, { status: 400 });
   }
 
-  // Strategy: distribute commits evenly across tasks without snapshots
-  // Each commit's diff goes to the corresponding task
   let backfilled = 0;
 
-  if (commits.length <= tasksWithoutSnapshots.length) {
-    // Fewer commits than tasks: assign one commit per task, remaining tasks get nothing
-    for (let i = 0; i < commits.length; i++) {
+  // Assign commits to tasks round-robin style
+  for (let i = 0; i < tasksNeedBackfill.length; i++) {
+    const task = tasksNeedBackfill[i];
+
+    if (i < commits.length) {
+      // This task gets one commit's diff
       const commit = commits[i];
-      const task = tasksWithoutSnapshots[i];
-      const count = captureCommitDiff(db, task.id, cwd, commit.hash, commit.parent);
-      backfilled += count;
-    }
-  } else {
-    // More commits than tasks: distribute evenly
-    const chunkSize = Math.ceil(commits.length / tasksWithoutSnapshots.length);
-    for (let i = 0; i < tasksWithoutSnapshots.length; i++) {
-      const task = tasksWithoutSnapshots[i];
-      const startIdx = i * chunkSize;
-      const endIdx = Math.min((i + 1) * chunkSize, commits.length);
-      // Use first commit's parent as before, last commit as after
-      const firstParent = commits[startIdx].parent;
-      const lastHash = commits[endIdx - 1].hash;
-      const count = captureCommitDiff(db, task.id, cwd, lastHash, firstParent);
-      backfilled += count;
+      backfilled += captureCommitDiff(db, task.id, cwd, commit.hash, commit.parent);
+    } else {
+      // More tasks than commits: give remaining tasks the range from their
+      // "position" in the commit list to the final commit
+      // For simplicity, assign the full repo diff (empty -> HEAD) to each
+      const lastHash = commits[commits.length - 1].hash;
+      backfilled += captureCommitDiff(db, task.id, cwd, lastHash, "");
     }
   }
 
-  return NextResponse.json({ message: `Backfilled ${backfilled} snapshots`, backfilled });
+  return NextResponse.json({ message: `Backfilled ${backfilled} file snapshots`, backfilled });
 }
 
 function captureCommitDiff(
@@ -106,13 +97,18 @@ function captureCommitDiff(
 ): number {
   let count = 0;
   try {
-    const diffCmd = parentHash
-      ? `git diff --name-only ${parentHash}..${commitHash}`
-      : `git diff-tree --no-commit-id --name-only -r ${commitHash}`;
-
-    const files = execSync(diffCmd, {
-      cwd, encoding: "utf-8", timeout: 5000,
-    }).trim().split("\n").filter(Boolean);
+    // Get list of changed files
+    let files: string[];
+    if (parentHash) {
+      files = execSync(`git diff --name-only ${parentHash}..${commitHash}`, {
+        cwd, encoding: "utf-8", timeout: 5000,
+      }).trim().split("\n").filter(Boolean);
+    } else {
+      // Initial commit or full-repo diff: use --root
+      files = execSync(`git diff-tree --root --no-commit-id --name-only -r ${commitHash}`, {
+        cwd, encoding: "utf-8", timeout: 5000,
+      }).trim().split("\n").filter(Boolean);
+    }
 
     for (const filePath of files) {
       if (isBinaryPath(filePath)) continue;
@@ -145,7 +141,7 @@ function captureCommitDiff(
       count++;
     }
   } catch (err) {
-    console.error(`[backfill] Failed for ${commitHash}:`, err);
+    console.error(`[backfill] Failed for commit ${commitHash}:`, err);
   }
   return count;
 }
@@ -154,7 +150,7 @@ function isBinaryPath(filePath: string): boolean {
   const binaryExts = new Set([
     ".png", ".jpg", ".jpeg", ".gif", ".ico", ".svg", ".webp",
     ".woff", ".woff2", ".ttf", ".eot",
-    ".zip", ".tar", ".gz", ".bz2",
+    ".zip", ".tar", ".gz", ".bz2", ".lock",
     ".pdf", ".exe", ".dll", ".so", ".dylib",
     ".db", ".sqlite",
   ]);

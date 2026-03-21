@@ -35,19 +35,19 @@ const PROVIDERS = [
     id: "anthropic",
     label: "Anthropic (Claude)",
     keyPlaceholder: "sk-ant-api03-...",
-    models: ["claude-sonnet-4-20250514", "claude-opus-4-20250514", "claude-haiku-4-20250414", "claude-3-5-sonnet-20241022"],
+    models: ["claude-opus-4-6", "claude-sonnet-4-6", "claude-haiku-4-5-20251001", "claude-sonnet-4-5-20250929", "claude-opus-4-5-20251101", "claude-sonnet-4-20250514", "claude-opus-4-20250514"],
   },
   {
     id: "openai",
     label: "OpenAI (GPT)",
     keyPlaceholder: "sk-...",
-    models: ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-3.5-turbo", "o1", "o1-mini", "o3-mini"],
+    models: ["gpt-5.4", "gpt-5.4-mini", "gpt-5.4-nano", "gpt-5.3-codex", "o3-pro", "o3-mini", "gpt-4o", "gpt-4o-mini"],
   },
   {
     id: "glm",
     label: "GLM (\u667A\u8C31)",
     keyPlaceholder: "glm-api-key...",
-    models: ["glm-4-plus", "glm-4", "glm-4-air", "glm-4-flash"],
+    models: ["glm-5", "glm-4-plus", "glm-4", "glm-4-air", "glm-4-flash", "glm-4-long"],
   },
 ] as const;
 

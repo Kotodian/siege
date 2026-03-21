@@ -114,31 +114,37 @@ export function ScheduleView({
     if (schedule?.autoExecute !== undefined) setAutoExecute(schedule.autoExecute);
   }, [schedule?.autoExecute]);
 
-  // Auto-execute polling: tick finds next task, then we execute with progress
+  // Auto-execute: run tasks one after another with progress display
   useEffect(() => {
     if (tickRef.current) { clearInterval(tickRef.current); tickRef.current = null; }
     if (!autoExecute || !schedule) return;
-    let running = false;
-    const tick = async () => {
-      if (running || executing) return; // don't overlap
-      try {
-        const res = await fetch("/api/schedules/tick", { method: "POST" });
-        if (!res.ok) return;
-        const data = await res.json();
-        if (data.executed && data.nextTask) {
-          running = true;
-          // Execute with full progress display (same as manual)
+    let cancelled = false;
+
+    const runLoop = async () => {
+      while (!cancelled) {
+        try {
+          const res = await fetch("/api/schedules/tick", { method: "POST" });
+          if (!res.ok) break;
+          const data = await res.json();
+          if (!data.executed || !data.nextTask) {
+            // No more pending tasks — keep polling in case new ones appear
+            break;
+          }
+          // Execute with full progress display
           await handleExecuteItem(data.nextTask.itemId);
-          running = false;
-          // After completion, immediately check for next task
           await fetchSchedule();
           onPlanStatusChange();
+          // Immediately continue to next task (no delay)
+        } catch {
+          break;
         }
-      } catch { running = false; }
+      }
     };
-    tick();
-    tickRef.current = setInterval(tick, 10000);
-    return () => { if (tickRef.current) clearInterval(tickRef.current); };
+
+    runLoop();
+    // Also poll periodically in case tasks become pending later (e.g. rescheduled)
+    tickRef.current = setInterval(() => { if (!executing) runLoop(); }, 30000);
+    return () => { cancelled = true; if (tickRef.current) clearInterval(tickRef.current); };
   }, [autoExecute, schedule?.id]);
 
   const handleToggleAutoExecute = async () => {

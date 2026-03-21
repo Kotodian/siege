@@ -27,9 +27,20 @@ export async function POST() {
       .all()
       .sort((a, b) => a.order - b.order);
 
-    // Skip if any task is already running
-    const hasRunning = allItems.some(i => i.status === "in_progress");
-    if (hasRunning) continue;
+    // Skip if any task is already running (but auto-reset stuck tasks)
+    const runningItem = allItems.find(i => i.status === "in_progress");
+    if (runningItem) {
+      // If in_progress with no log for >10 min, reset to pending (stuck)
+      const stuckMinutes = (Date.now() - new Date(runningItem.startDate).getTime()) / 60000;
+      if (stuckMinutes > 10 && !runningItem.executionLog) {
+        db.update(scheduleItems)
+          .set({ status: "pending", progress: 0 })
+          .where(eq(scheduleItems.id, runningItem.id))
+          .run();
+      } else {
+        continue;
+      }
+    }
 
     // Find first pending task
     const nextPending = allItems.find(i => i.status === "pending");

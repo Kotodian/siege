@@ -59,16 +59,16 @@ Siege 将 Claude Code / Codex 包装成一个**完整的开发生命周期管理
 
 <table>
   <tr>
-    <td><img src="docs/screenshots/zh/03-project-list.png" alt="项目列表" /><br /><em>项目列表</em></td>
     <td><img src="docs/screenshots/zh/05-scheme-detail.png" alt="技术方案" /><br /><em>AI 生成的技术方案</em></td>
-  </tr>
-  <tr>
     <td><img src="docs/screenshots/zh/09-schedule-gantt.png" alt="甘特图" /><br /><em>甘特图 + 自动执行时间轴</em></td>
-    <td><img src="docs/screenshots/zh/07-code-review-diff.png" alt="代码审查" /><br /><em>代码审查 — 按任务筛选 Diff + Findings</em></td>
   </tr>
   <tr>
-    <td><img src="docs/screenshots/zh/06-settings.png" alt="设置" /><br /><em>AI 提供商 + 各步骤模型选择</em></td>
-    <td><img src="docs/screenshots/zh/04-plan-list.png" alt="计划列表" /><br /><em>计划列表 + 状态流转</em></td>
+    <td><img src="docs/screenshots/zh/07-code-review-diff.png" alt="代码审查" /><br /><em>代码审查 — 采纳/忽略 Findings</em></td>
+    <td><img src="docs/screenshots/zh/14-test-view.png" alt="测试" /><br /><em>按任务生成测试 + 运行</em></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/zh/15-publish.png" alt="发布" /><br /><em>推送、PR、AI 部署</em></td>
+    <td><img src="docs/screenshots/zh/06-settings.png" alt="设置" /><br /><em>AI 提供商 + 各步骤模型</em></td>
   </tr>
 </table>
 

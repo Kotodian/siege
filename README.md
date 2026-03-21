@@ -59,16 +59,16 @@ Describe   AI Gen    Gantt       Claude      Diff View   AI Gen
 
 <table>
   <tr>
-    <td><img src="docs/screenshots/zh/03-project-list.png" alt="Projects" /><br /><em>Project List</em></td>
-    <td><img src="docs/screenshots/zh/05-scheme-detail.png" alt="Schemes" /><br /><em>AI-Generated Schemes</em></td>
+    <td><img src="docs/screenshots/zh/05-scheme-detail.png" alt="Scheme" /><br /><em>AI-Generated Technical Scheme</em></td>
+    <td><img src="docs/screenshots/zh/09-schedule-gantt.png" alt="Schedule" /><br /><em>Gantt Chart + Auto-Execute Timeline</em></td>
   </tr>
   <tr>
-    <td><img src="docs/screenshots/zh/09-schedule-gantt.png" alt="Gantt Chart" /><br /><em>Gantt Chart + Auto-Execute with Timeline</em></td>
-    <td><img src="docs/screenshots/zh/07-code-review-diff.png" alt="Code Review" /><br /><em>Code Review — Diff by Task with Findings</em></td>
+    <td><img src="docs/screenshots/zh/07-code-review-diff.png" alt="Review" /><br /><em>Code Review — Accept/Dismiss Findings</em></td>
+    <td><img src="docs/screenshots/zh/14-test-view.png" alt="Test" /><br /><em>Task-Based Test Generation & Run</em></td>
   </tr>
   <tr>
-    <td><img src="docs/screenshots/zh/06-settings.png" alt="Settings" /><br /><em>AI Provider + Model Selection per Step</em></td>
-    <td><img src="docs/screenshots/zh/04-plan-list.png" alt="Plans" /><br /><em>Plans with Status Workflow</em></td>
+    <td><img src="docs/screenshots/zh/15-publish.png" alt="Publish" /><br /><em>Push, PR & AI Deploy</em></td>
+    <td><img src="docs/screenshots/zh/06-settings.png" alt="Settings" /><br /><em>AI Provider + Model per Step</em></td>
   </tr>
 </table>
 

@@ -27,39 +27,35 @@ interface RepoPickerProps {
 
 export function RepoPicker({ onSelect, locale, githubAuthed = false }: RepoPickerProps) {
   const isZh = locale === "zh";
-  const [tab, setTab] = useState<"local" | "github">("local");
+  const [tab, setTab] = useState<"local" | "github" | "giturl">("local");
+
+  const tabStyle = (active: boolean) =>
+    `py-2 px-3 text-sm font-medium border-b-2 ${
+      active ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500"
+    }`;
 
   return (
     <div>
-      <div className="flex gap-2 mb-3 border-b">
-        <button
-          onClick={() => setTab("local")}
-          className={`py-2 px-3 text-sm font-medium border-b-2 ${
-            tab === "local"
-              ? "border-blue-600 text-blue-600"
-              : "border-transparent text-gray-500"
-          }`}
-        >
-          {isZh ? "本地目录" : "Local Directory"}
+      <div className="flex gap-2 mb-3 border-b" style={{ borderColor: "var(--card-border)" }}>
+        <button onClick={() => setTab("local")} className={tabStyle(tab === "local")}>
+          {isZh ? "本地目录" : "Local"}
         </button>
         {githubAuthed && (
-          <button
-            onClick={() => setTab("github")}
-            className={`py-2 px-3 text-sm font-medium border-b-2 ${
-              tab === "github"
-                ? "border-blue-600 text-blue-600"
-                : "border-transparent text-gray-500"
-            }`}
-          >
+          <button onClick={() => setTab("github")} className={tabStyle(tab === "github")}>
             GitHub
           </button>
         )}
+        <button onClick={() => setTab("giturl")} className={tabStyle(tab === "giturl")}>
+          {isZh ? "Git URL" : "Git URL"}
+        </button>
       </div>
 
       {tab === "local" ? (
         <LocalBrowser onSelect={onSelect} isZh={isZh} />
-      ) : (
+      ) : tab === "github" ? (
         <GitHubBrowser onSelect={onSelect} isZh={isZh} />
+      ) : (
+        <GitUrlCloner onSelect={onSelect} isZh={isZh} />
       )}
     </div>
   );
@@ -158,6 +154,61 @@ function LocalBrowser({
         onClick={() => onSelect(currentPath)}
       >
         {isZh ? "选择当前目录" : "Select Current Directory"}: {currentPath.split("/").pop()}
+      </Button>
+    </div>
+  );
+}
+
+function GitUrlCloner({
+  onSelect,
+  isZh,
+}: {
+  onSelect: (path: string) => void;
+  isZh: boolean;
+}) {
+  const [url, setUrl] = useState("");
+  const [cloning, setCloning] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleClone = async () => {
+    if (!url.trim()) return;
+    setCloning(true);
+    setError("");
+    try {
+      const res = await fetch("/api/git/clone", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: url.trim() }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        onSelect(data.path);
+      } else {
+        setError(data.error);
+      }
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setCloning(false);
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <p className="text-xs" style={{ color: "var(--muted)" }}>
+        {isZh
+          ? "支持 GitLab、Gitea、Bitbucket 等任何 Git 仓库 URL"
+          : "Works with GitLab, Gitea, Bitbucket, or any Git repository URL"}
+      </p>
+      <Input
+        value={url}
+        onChange={(e) => setUrl(e.target.value)}
+        placeholder="https://gitlab.com/user/repo.git"
+        onKeyDown={(e) => e.key === "Enter" && handleClone()}
+      />
+      {error && <p className="text-xs text-red-500">{error}</p>}
+      <Button onClick={handleClone} disabled={cloning || !url.trim()} className="w-full">
+        {cloning ? (isZh ? "克隆中..." : "Cloning...") : (isZh ? "克隆仓库" : "Clone Repository")}
       </Button>
     </div>
   );

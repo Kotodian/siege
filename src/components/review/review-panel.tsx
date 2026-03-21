@@ -194,7 +194,7 @@ export function ReviewPanel({
       const res = await fetch("/api/reviews/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ planId, type, ...(reviewProvider && { provider: reviewProvider }), ...(reviewModel && { model: reviewModel }) }),
+        body: JSON.stringify({ planId, type, ...(reviewProvider && { provider: reviewProvider }), ...(reviewModel && { model: reviewModel }), ...(reviewTaskId && { scheduleItemId: reviewTaskId }) }),
       });
 
       if (!res.ok) {
@@ -246,6 +246,7 @@ export function ReviewPanel({
   const [fixUserNote, setFixUserNote] = useState("");
   const [reviewProvider, setReviewProvider] = useState("");
   const [reviewModel, setReviewModel] = useState("");
+  const [reviewTaskId, setReviewTaskId] = useState<string>("");
 
   const handleFix = async (item: ReviewItem, userNote?: string) => {
     if (!item.targetId || fixingItem) return;
@@ -365,7 +366,7 @@ export function ReviewPanel({
           {type === "scheme" ? <><FileStackIcon size={16} className="inline-block align-[-2px]" /> </> : <><CodeIcon size={16} className="inline-block align-[-2px]" /> </>}{type === "scheme" ? t("review.schemeReview") : t("review.codeReview")}
         </h4>
         {(canReview || isInProgress || latestReview) && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <ProviderModelSelect
               provider={reviewProvider}
               model={reviewModel}
@@ -374,6 +375,29 @@ export function ReviewPanel({
               disabled={generating}
               compact
             />
+            {type === "implementation" && snapshots.length > 0 && (() => {
+              const taskSet = new Map<string, { title: string; order: number }>();
+              for (const s of snapshots) {
+                if (s.scheduleItemId && !taskSet.has(s.scheduleItemId)) {
+                  taskSet.set(s.scheduleItemId, { title: s.taskTitle || "", order: s.taskOrder ?? 999 });
+                }
+              }
+              const taskOptions = [...taskSet.entries()].sort((a, b) => a[1].order - b[1].order);
+              return taskOptions.length > 0 ? (
+                <select
+                  value={reviewTaskId}
+                  onChange={(e) => setReviewTaskId(e.target.value)}
+                  disabled={generating}
+                  className="rounded-md border px-2 py-1.5 text-xs"
+                  style={{ background: "var(--card)", color: "var(--foreground)", borderColor: "var(--card-border)" }}
+                >
+                  <option value="">{isZh ? "全部任务" : "All Tasks"}</option>
+                  {taskOptions.map(([id, t]) => (
+                    <option key={id} value={id}>#{t.order} {t.title}</option>
+                  ))}
+                </select>
+              ) : null;
+            })()}
             <Button onClick={handleGenerate} disabled={generating} size="sm">
               {generating
                 ? <><HourglassIcon size={14} className="inline-block align-[-2px]" /> {t("common.loading")}</>

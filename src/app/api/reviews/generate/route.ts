@@ -101,9 +101,10 @@ Output ONLY the JSON object. No other text before or after.${langInstruction}`,
 export async function POST(req: NextRequest) {
   const [body, errRes] = await parseJsonBody(req);
   if (errRes) return errRes;
-  const { planId, type, provider: rawProvider, model } = body as {
+  const { planId, type, provider: rawProvider, model, scheduleItemId } = body as {
     planId: string;
     type: "scheme" | "implementation";
+    scheduleItemId?: string;
     provider?: string;
     model?: string;
   };
@@ -137,12 +138,17 @@ export async function POST(req: NextRequest) {
     const project = db.select().from(projects).where(eq(projects.id, plan.projectId)).get();
     const repoPath = project?.targetRepoPath;
 
-    const allScheduleItems = db
+    let allScheduleItems = db
       .select()
       .from(scheduleItems)
       .where(eq(scheduleItems.scheduleId, schedule.id))
       .all()
       .sort((a, b) => a.order - b.order);
+
+    // Filter to single task if scheduleItemId provided
+    if (scheduleItemId) {
+      allScheduleItems = allScheduleItems.filter(i => i.id === scheduleItemId);
+    }
 
     // Build per-task diffs from file snapshots
     let hasSnapshotDiffs = false;

@@ -59,16 +59,16 @@ Describe   AI Gen    Gantt       Claude      Diff View   AI Gen
 
 <table>
   <tr>
-    <td><img src="docs/screenshots/en/03-project-list.png" alt="Projects" /><br /><em>Project List (Dark Theme)</em></td>
-    <td><img src="docs/screenshots/en/05-scheme-detail.png" alt="Schemes" /><br /><em>AI-Generated Schemes with Collapsible Sections</em></td>
+    <td><img src="docs/screenshots/zh/03-project-list.png" alt="Projects" /><br /><em>Project List</em></td>
+    <td><img src="docs/screenshots/zh/05-scheme-detail.png" alt="Schemes" /><br /><em>AI-Generated Schemes</em></td>
   </tr>
   <tr>
-    <td><img src="docs/screenshots/en/12-scheme-findings.png" alt="Review Findings" /><br /><em>Scheme Review — Inline Findings with AI Fix</em></td>
-    <td><img src="docs/screenshots/en/09-schedule-gantt.png" alt="Gantt Chart" /><br /><em>Task Schedule with Gantt Chart</em></td>
+    <td><img src="docs/screenshots/zh/09-schedule-gantt.png" alt="Gantt Chart" /><br /><em>Gantt Chart + Auto-Execute with Timeline</em></td>
+    <td><img src="docs/screenshots/zh/07-code-review-diff.png" alt="Code Review" /><br /><em>Code Review — Diff by Task with Findings</em></td>
   </tr>
   <tr>
-    <td><img src="docs/screenshots/en/06-settings.png" alt="Settings" /><br /><em>AI Provider & Per-Step Model Configuration</em></td>
-    <td><img src="docs/screenshots/en/11-import-dialog.png" alt="Import" /><br /><em>Multi-Source Import — GitHub, GitLab, Notion, Jira, Confluence, Feishu, MCP</em></td>
+    <td><img src="docs/screenshots/zh/06-settings.png" alt="Settings" /><br /><em>AI Provider + Model Selection per Step</em></td>
+    <td><img src="docs/screenshots/zh/04-plan-list.png" alt="Plans" /><br /><em>Plans with Status Workflow</em></td>
   </tr>
 </table>
 
@@ -82,28 +82,42 @@ Describe   AI Gen    Gantt       Claude      Diff View   AI Gen
 
 **4. Generate Schedule** — AI breaks confirmed schemes into executable tasks with a Gantt chart timeline.
 
-**5. Execute** — Run tasks via Claude Code or Codex CLI with real-time SSE progress streaming. Each task inherits context from previously completed tasks.
+**5. Execute** — Auto-execute runs tasks sequentially with a vertical task timeline showing progress. Cancel anytime. Each task uses focused prompts to minimize token usage.
 
-**6. Code Review** — View `git diff` with syntax highlighting and file tree navigation. AI reviews for quality, security, and correctness. Findings are pinned to specific lines. Click "AI Fix" for one-click remediation.
+**6. Code Review** — View `git diff` filtered by task with syntax highlighting. AI reviews for quality, security, and correctness. Findings grouped by task with collapsible panels. One-click "Fix All" for bulk AI remediation.
 
-**7. Test** — AI generates and runs test cases to verify the implementation.
+**7. Test** — Select completed tasks, AI generates test cases from actual code changes (not just proposals). Tests grouped by task with pass/fail tracking.
 
 ## Features
 
 ### AI Integration
-- **Multi-provider**: Anthropic (Claude), OpenAI (GPT), GLM (ZhiPu)
+- **Multi-provider**: Anthropic (Claude), OpenAI (GPT), GLM (ZhiPu) — latest models (Claude 4.6, GPT-5.4, GLM-5)
+- **Model selection**: Dropdown model picker on every AI action (generate, review, execute, test)
 - **Proxy support**: Custom base URL for API relays
-- **Claude Code login**: Works with your subscription, no API key needed
-- **Session reuse**: Subsequent AI calls in the same plan resume the session (~10x faster)
-- **Serial queue**: One AI task at a time, no process pile-up
+- **Claude Code / Codex ACP**: Works via Agent Client Protocol, no API key needed
+- **Session reuse**: Subsequent AI calls in the same plan resume the session
+- **Token-efficient**: Focused prompts, no redundant codebase scanning
+
+### Execution
+- **Auto-execute**: One click to run all tasks sequentially with vertical task timeline
+- **Cancel anytime**: Abort button in the loading dialog stops immediately
+- **Skills injection**: Select from 70+ skills (custom + plugins) per task
+- **File snapshot capture**: Per-task incremental diffs for accurate code review
 
 ### Code Review
 - **Git diff viewer** with syntax highlighting (highlight.js)
-- **File tree sidebar** with collapsible directories, +/- stats, and finding count badges
-- **Inline findings** pinned to specific lines with severity badges
-- **Inline comments** with AI-generated fix suggestions
+- **Task filter**: Dropdown to view diffs from a specific task
+- **File tree sidebar** grouped by task with +/- stats and finding count
+- **Findings grouped by task**: Collapsible panels with unresolved count badges
+- **"Fix All" button**: Bulk AI fix for all unresolved findings in one click
+- **Inline findings** pinned to specific lines with dark-theme-safe severity colors
 - **One-click "AI Fix"** — apply AI suggestions directly to files
-- **View mode toggle** — switch between diff view and findings list
+
+### Testing
+- **Task-based generation**: Select completed tasks, AI generates tests from actual code changes
+- **Tests grouped by task**: Visual pass/fail per task group
+- **Provider/model selection**: Choose AI provider for test generation
+- **Run all with progress**: Loading dialog shows `[2/5] test_forward_tcp...`
 
 ### Project Management
 - **Folder hierarchy** for organizing plans
@@ -112,16 +126,11 @@ Describe   AI Gen    Gantt       Claude      Diff View   AI Gen
 - **Custom icons** per project
 
 ### Scheme Management
-- **AI generation** with provider and skill selection
+- **Interactive generation**: AI asks 2-4 key design questions via dialog before generating
+- **One-shot mode**: Toggle off interactive for fast generation
 - **Conversational modification** — chat to refine schemes
 - **Version history** with line-by-line diff
 - **Scheme review** with severity-tagged findings
-
-### Execution
-- **Claude Code** and **Codex CLI** as execution engines
-- **Skills integration** from `~/.claude/skills/`
-- **SSE real-time progress** streaming
-- **Gantt chart** schedule visualization
 
 ### Multi-Source Import
 - **Markdown** — import plans from local `.md` files

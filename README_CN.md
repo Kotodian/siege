@@ -59,16 +59,16 @@ Siege 将 Claude Code / Codex 包装成一个**完整的开发生命周期管理
 
 <table>
   <tr>
-    <td><img src="docs/screenshots/zh/03-project-list.png" alt="项目列表" /><br /><em>项目列表（暗色主题）</em></td>
-    <td><img src="docs/screenshots/zh/05-scheme-detail.png" alt="技术方案" /><br /><em>AI 生成的技术方案（手风琴分段展示）</em></td>
+    <td><img src="docs/screenshots/zh/03-project-list.png" alt="项目列表" /><br /><em>项目列表</em></td>
+    <td><img src="docs/screenshots/zh/05-scheme-detail.png" alt="技术方案" /><br /><em>AI 生成的技术方案</em></td>
   </tr>
   <tr>
-    <td><img src="docs/screenshots/zh/12-scheme-findings.png" alt="方案审查" /><br /><em>方案审查 — 内联审查结果 + AI 修复</em></td>
-    <td><img src="docs/screenshots/zh/09-schedule-gantt.png" alt="甘特图" /><br /><em>甘特图任务排期</em></td>
+    <td><img src="docs/screenshots/zh/09-schedule-gantt.png" alt="甘特图" /><br /><em>甘特图 + 自动执行时间轴</em></td>
+    <td><img src="docs/screenshots/zh/07-code-review-diff.png" alt="代码审查" /><br /><em>代码审查 — 按任务筛选 Diff + Findings</em></td>
   </tr>
   <tr>
-    <td><img src="docs/screenshots/zh/06-settings.png" alt="设置" /><br /><em>AI 提供商 & 各步骤模型配置</em></td>
-    <td><img src="docs/screenshots/zh/11-import-dialog.png" alt="导入" /><br /><em>多来源导入 — GitHub、GitLab、Notion、Jira、Confluence、飞书、MCP</em></td>
+    <td><img src="docs/screenshots/zh/06-settings.png" alt="设置" /><br /><em>AI 提供商 + 各步骤模型选择</em></td>
+    <td><img src="docs/screenshots/zh/04-plan-list.png" alt="计划列表" /><br /><em>计划列表 + 状态流转</em></td>
   </tr>
 </table>
 
@@ -82,11 +82,11 @@ Siege 将 Claude Code / Codex 包装成一个**完整的开发生命周期管理
 
 **4. 生成排期** — AI 将确认的方案拆解为可执行任务，以甘特图展示时间线。按小时粒度排期，支持手动调整。
 
-**5. 执行** — 通过 Claude Code 或 Codex CLI 执行任务，支持 SSE 实时进度流。每个任务继承前序任务的上下文。支持定时自动执行。
+**5. 执行** — 一键自动执行所有任务，垂直时间轴显示进度，随时可取消。Token 优化的精简 prompt。
 
-**6. 代码审查** — 查看 `git diff` 语法高亮视图，文件树导航。AI 审查代码质量、安全性和正确性。发现标注精确到行，点击"AI 修复"一键修复。
+**6. 代码审查** — 按任务筛选 `git diff`，语法高亮。AI 审查结果按任务分组展示，折叠面板。"一键修复"批量修复所有未解决的 findings。
 
-**7. 测试** — AI 生成并运行测试用例验证实现。
+**7. 测试** — 选择已完成任务，AI 基于实际代码变更生成测试用例（非方案），按任务分组展示通过率。
 
 ## 功能特性
 

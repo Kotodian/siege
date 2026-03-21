@@ -441,20 +441,15 @@ export function ReviewPanel({
                   taskSet.set(s.scheduleItemId, { title: s.taskTitle || "", order: s.taskOrder ?? 999 });
                 }
               }
-              const taskOptions = [...taskSet.entries()].sort((a, b) => a[1].order - b[1].order);
+              const taskOptions = [...taskSet.entries()].sort((a, b) => a[1].order - b[1].order).map(([id, t]) => ({ id, title: t.title, order: t.order, fileCount: 0 }));
               return taskOptions.length > 0 ? (
-                <select
-                  value={reviewTaskId}
-                  onChange={(e) => setReviewTaskId(e.target.value)}
-                  disabled={generating}
-                  className="rounded-md border px-2 py-1.5 text-xs"
-                  style={{ background: "var(--card)", color: "var(--foreground)", borderColor: "var(--card-border)" }}
-                >
-                  <option value="">{isZh ? "全部任务" : "All Tasks"}</option>
-                  {taskOptions.map(([id, t]) => (
-                    <option key={id} value={id}>#{t.order} {t.title}</option>
-                  ))}
-                </select>
+                <TaskFilterDropdown
+                  tasks={taskOptions}
+                  selectedTask={reviewTaskId || null}
+                  onSelect={(id) => setReviewTaskId(id || "")}
+                  totalFiles={0}
+                  isZh={isZh}
+                />
               ) : null;
             })()}
             <Button onClick={handleGenerate} disabled={generating} size="sm">
@@ -1109,7 +1104,7 @@ function TaskFilterDropdown({
         <span className="flex-1 text-left truncate">
           {selected
             ? `#${selected.order} ${selected.title.startsWith("[fix]") ? selected.title.replace("[fix] ", "↳ ") : selected.title}`
-            : (isZh ? `全部任务 (${totalFiles})` : `All Tasks (${totalFiles})`)}
+            : (isZh ? `全部任务${totalFiles ? ` (${totalFiles})` : ""}` : `All Tasks${totalFiles ? ` (${totalFiles})` : ""}`)}
         </span>
         <svg className={`w-3 h-3 shrink-0 transition-transform ${open ? "rotate-180" : ""}`} viewBox="0 0 20 20" fill="currentColor">
           <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
@@ -1129,7 +1124,7 @@ function TaskFilterDropdown({
               borderBottom: "1px solid var(--card-border)",
             }}
           >
-            {isZh ? "全部任务" : "All Tasks"} ({totalFiles})
+            {isZh ? "全部任务" : "All Tasks"}{totalFiles ? ` (${totalFiles})` : ""}
           </button>
           {tasks.map((task) => {
             const isFix = task.title.startsWith("[fix]");
@@ -1153,7 +1148,7 @@ function TaskFilterDropdown({
                 {isFix && (
                   <span className="text-[9px] px-1 py-0.5 rounded shrink-0" style={{ background: "rgba(124,58,237,0.2)" }}>fix</span>
                 )}
-                <span className="shrink-0" style={{ color: "var(--muted)" }}>({task.fileCount})</span>
+                {task.fileCount > 0 && <span className="shrink-0" style={{ color: "var(--muted)" }}>({task.fileCount})</span>}
               </button>
             );
           })}

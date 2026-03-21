@@ -146,15 +146,17 @@ function LoadingDialog({
               {content ? "" : "约 1-2 分钟"}
             </p>
           </div>
-          {onCancel && (
-            <button
-              onClick={onCancel}
-              className="shrink-0 px-3 py-1.5 rounded-md text-xs font-medium hover:opacity-80"
-              style={{ background: "rgba(239,68,68,0.15)", color: "#ef4444" }}
-            >
-              取消 / Cancel
-            </button>
-          )}
+          <button
+            onClick={onCancel || (() => {
+              // Fallback: force close the dialog
+              const dialog = document.querySelector("dialog[open]") as HTMLDialogElement;
+              if (dialog) dialog.close();
+            })}
+            className="shrink-0 px-3 py-1.5 rounded-md text-xs font-medium hover:opacity-80"
+            style={{ background: "rgba(239,68,68,0.15)", color: "#ef4444" }}
+          >
+            {onCancel ? (tasks.length > 0 ? "停止 / Stop" : "取消 / Cancel") : "关闭 / Close"}
+          </button>
         </div>
         <TaskTimeline tasks={tasks} />
         <div
@@ -183,11 +185,22 @@ export function GlobalLoadingProvider({ children }: { children: ReactNode }) {
   const cancelRef = useRef<(() => void) | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
+  const loadingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const startLoading = useCallback((msg: string) => {
     setLoading(true);
     setMessage(msg);
     setContent("");
     setToast("");
+    // Safety: auto-close after 10 minutes to prevent stuck dialogs
+    if (loadingTimerRef.current) clearTimeout(loadingTimerRef.current);
+    loadingTimerRef.current = setTimeout(() => {
+      setLoading(false);
+      setMessage("");
+      setContent("");
+      setTasksState([]);
+      cancelRef.current = null;
+    }, 600000);
   }, []);
 
   const updateContent = useCallback((c: string) => {
@@ -217,6 +230,7 @@ export function GlobalLoadingProvider({ children }: { children: ReactNode }) {
     setContent("");
     setTasksState([]);
     cancelRef.current = null;
+    if (loadingTimerRef.current) { clearTimeout(loadingTimerRef.current); loadingTimerRef.current = null; }
     if (toastMsg) {
       setToast(toastMsg);
       setTimeout(() => setToast(""), 4000);

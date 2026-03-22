@@ -396,23 +396,27 @@ export function SchemeSections({
         {sections.map((section, i) => {
           const isOpen = expandedIndex === i;
           const isEditing = editingIndex === i;
-          // Match findings to section by target_id hint, keyword overlap, or content search
+          // Match findings to section — prefer deterministic section-N index, fallback to fuzzy
           const sectionFindings = findings.filter((f) => {
-            // 1. Match by target_id section hint (e.g. "schemeId:event-loop")
-            const hint = f.targetId?.split(":")[1]?.toLowerCase() || "";
+            const parts = f.targetId?.split(":") || [];
+            const hint = parts[1] || "";
+            // 1. Exact section index match (e.g. "section-2" → section index 2)
+            const sectionMatch = hint.match(/^section-(\d+)$/);
+            if (sectionMatch) return parseInt(sectionMatch[1], 10) === i;
+            // 2. "full" means whole scheme — show on first section
+            if (hint === "full") return i === 0;
+            // 3. Fuzzy: match by hint keyword in section title/content
             if (hint) {
               const sectionLower = `${section.title} ${section.content}`.toLowerCase();
-              if (sectionLower.includes(hint) || sectionLower.includes(hint.replace(/-/g, " "))) return true;
+              if (sectionLower.includes(hint.toLowerCase()) || sectionLower.includes(hint.replace(/-/g, " ").toLowerCase())) return true;
             }
-            // 2. Match by keyword overlap (works for same-language titles)
+            // 4. Keyword overlap fallback
             const text = `${f.title} ${f.content || ""}`.toLowerCase();
             const words = section.title.toLowerCase().split(/[\s\u3000]+/).filter(w => w.length > 2);
             if (words.some(w => text.includes(w))) return true;
-            // 3. Search finding keywords in section content
             const findingWords = f.title.toLowerCase().split(/[\s\u3000、，]+/).filter(w => w.length > 2);
             const contentLower = section.content.toLowerCase();
-            const matchCount = findingWords.filter(w => contentLower.includes(w)).length;
-            if (matchCount >= 2) return true;
+            if (findingWords.filter(w => contentLower.includes(w)).length >= 2) return true;
             return false;
           });
           const unresolvedCount = sectionFindings.filter(f => !f.resolved).length;
@@ -539,11 +543,18 @@ export function SchemeSections({
       {/* Unmatched findings — show at the bottom if they didn't match any section */}
       {(() => {
         const matchedIds = new Set<string>();
-        for (const section of sections) {
+        for (let si = 0; si < sections.length; si++) {
+          const section = sections[si];
           for (const f of findings) {
-            const hint = f.targetId?.split(":")[1]?.toLowerCase() || "";
-            const sectionLower = `${section.title} ${section.content}`.toLowerCase();
-            if (hint && (sectionLower.includes(hint) || sectionLower.includes(hint.replace(/-/g, " ")))) { matchedIds.add(f.id); continue; }
+            const parts = f.targetId?.split(":") || [];
+            const hint = parts[1] || "";
+            const sectionMatch = hint.match(/^section-(\d+)$/);
+            if (sectionMatch && parseInt(sectionMatch[1], 10) === si) { matchedIds.add(f.id); continue; }
+            if (hint === "full" && si === 0) { matchedIds.add(f.id); continue; }
+            if (hint) {
+              const sectionLower = `${section.title} ${section.content}`.toLowerCase();
+              if (sectionLower.includes(hint.toLowerCase()) || sectionLower.includes(hint.replace(/-/g, " ").toLowerCase())) { matchedIds.add(f.id); continue; }
+            }
             const text = `${f.title} ${f.content || ""}`.toLowerCase();
             const words = section.title.toLowerCase().split(/[\s\u3000]+/).filter(w => w.length > 2);
             if (words.some(w => text.includes(w))) { matchedIds.add(f.id); continue; }

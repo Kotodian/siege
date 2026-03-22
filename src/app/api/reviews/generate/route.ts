@@ -66,7 +66,9 @@ function buildReviewPrompt(
   const itemsSchema =
     type === "implementation"
       ? `- items: array of findings, each with targetId (string), title (string), content (string describing the issue), severity ("info"|"warning"|"critical"), filePath (string), lineNumber (number), options (array of 1-3 short solution suggestions, e.g. ["Use environment variables for credentials", "Move to .env file with gitignore", "Use a secrets manager"])`
-      : `- items: array of findings, each with targetId (string), title (string), content (string), severity ("info"|"warning"|"critical"), options (array of 1-3 short solution suggestions)`;
+      : `- items: array of findings, each with targetId (string — MUST be the exact "id" from the section header, e.g. "abc123:section-2"), title (string), content (string), severity ("info"|"warning"|"critical"), options (array of 1-3 short solution suggestions)
+
+IMPORTANT: Each finding's targetId MUST exactly match the "(id: ...)" from the section it refers to. This is how findings are linked to scheme sections.`;
 
   // Detect language from content
   const hasChinese = /[\u4e00-\u9fff]/.test(itemsSummary);
@@ -214,12 +216,32 @@ export async function POST(req: NextRequest) {
   let itemsToReview: Array<{ id: string; title: string; content: string }> = [];
 
   if (type === "scheme") {
-    itemsToReview = db
-      .select()
-      .from(schemes)
-      .where(eq(schemes.planId, planId))
-      .all()
-      .map((s) => ({ id: s.id, title: s.title, content: s.content || "" }));
+    // Split scheme into sections so AI can reference specific sections by ID
+    const allSchemes = db.select().from(schemes).where(eq(schemes.planId, planId)).all();
+    for (const s of allSchemes) {
+      const content = s.content || "";
+      const sectionRegex = /^(#{1,3})\s+(.+)/gm;
+      const sectionStarts: Array<{ level: number; title: string; start: number }> = [];
+      let match;
+      while ((match = sectionRegex.exec(content)) !== null) {
+        sectionStarts.push({ level: match[1].length, title: match[2].trim(), start: match.index });
+      }
+      if (sectionStarts.length <= 1) {
+        // No sections or just one — use whole scheme
+        itemsToReview.push({ id: `${s.id}:full`, title: s.title, content });
+      } else {
+        for (let idx = 0; idx < sectionStarts.length; idx++) {
+          const sec = sectionStarts[idx];
+          const nextStart = idx + 1 < sectionStarts.length ? sectionStarts[idx + 1].start : content.length;
+          const sectionContent = content.slice(sec.start, nextStart).trim();
+          itemsToReview.push({
+            id: `${s.id}:section-${idx}`,
+            title: sec.title,
+            content: sectionContent,
+          });
+        }
+      }
+    }
   } else {
     const schedule = db.select().from(schedules).where(eq(schedules.planId, planId)).get();
     if (!schedule) {

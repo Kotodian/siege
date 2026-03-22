@@ -557,21 +557,26 @@ export function ReviewPanel({
                 disabled={reviewActing}
                 onClick={async () => {
                   setReviewActing(true);
-                  if (type === "scheme") {
-                    await fetch(`/api/plans/${planId}/confirm`, {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ action: "confirm" }),
-                    });
-                  } else {
-                    await fetch(`/api/plans/${planId}/review-action`, {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ action: "accept" }),
-                    });
-                  }
-                  await fetchReviews();
-                  onPlanStatusChange();
+                  try {
+                    if (type === "scheme") {
+                      await fetch(`/api/plans/${planId}/confirm`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ action: "confirm" }),
+                      });
+                    } else {
+                      await fetch(`/api/plans/${planId}/review-action`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ action: "accept" }),
+                      });
+                    }
+                    await fetchReviews();
+                    onPlanStatusChange();
+                    stopLoading(type === "scheme"
+                      ? (isZh ? "审查通过，方案已确认" : "Review approved, scheme confirmed")
+                      : (isZh ? "审查通过，已进入测试" : "Review approved, entering testing"));
+                  } catch { /* ignore */ }
                   setReviewActing(false);
                 }}
               >
@@ -587,20 +592,25 @@ export function ReviewPanel({
                 disabled={reviewActing}
                 onClick={async () => {
                   setReviewActing(true);
-                  if (type === "scheme") {
-                    await fetch(`/api/plans/${planId}/confirm`, {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ action: "revoke" }),
-                    });
-                  } else {
-                    await fetch(`/api/plans/${planId}/review-action`, {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ action: "rework" }),
-                    });
-                  }
-                  onPlanStatusChange();
+                  try {
+                    if (type === "scheme") {
+                      await fetch(`/api/plans/${planId}/confirm`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ action: "revoke" }),
+                      });
+                    } else {
+                      await fetch(`/api/plans/${planId}/review-action`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ action: "rework" }),
+                      });
+                    }
+                    onPlanStatusChange();
+                    stopLoading(type === "scheme"
+                      ? (isZh ? "审查已驳回" : "Review rejected")
+                      : (isZh ? "已返回排期修复" : "Returned to rework"), "warning");
+                  } catch { /* ignore */ }
                   setReviewActing(false);
                 }}
               >

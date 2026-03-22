@@ -471,9 +471,29 @@ export function ReviewPanel({
                 {isZh ? "AI 正在审查中..." : "AI reviewing..."}
               </span>
             </div>
-            <span className="text-xs font-mono" style={{ color: "var(--muted)" }}>
-              {elapsed}s
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-mono" style={{ color: "var(--muted)" }}>{elapsed}s</span>
+              <button
+                onClick={async () => {
+                  // Cancel: reset in_progress reviews for this plan
+                  await fetch("/api/reviews/cancel", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ planId }),
+                  }).catch(() => {});
+                  if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+                  stopElapsedTimer();
+                  setGenerating(false);
+                  generatingRef.current = false;
+                  setStreamContent("");
+                  await fetchReviews();
+                }}
+                className="text-xs px-2 py-1 rounded hover:opacity-80"
+                style={{ background: "rgba(239,68,68,0.15)", color: "#ef4444" }}
+              >
+                {isZh ? "取消" : "Cancel"}
+              </button>
+            </div>
           </div>
           {streamContent ? (
             <div className="mt-3 max-h-40 overflow-y-auto text-xs rounded p-2 whitespace-pre-wrap" style={{ background: "var(--background)", color: "var(--foreground)" }}>

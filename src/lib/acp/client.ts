@@ -311,10 +311,15 @@ export class AcpClient {
       const options = (params?.options as Array<{ optionId: string }> | undefined)
         || ((params?.permission as Record<string, unknown>)?.options as Array<{ optionId: string }> | undefined);
       const allowOption = options?.find(o => o.optionId === "allow_always") || options?.find(o => o.optionId === "allow") || options?.[0];
-      result = { outcome: { type: "selected", optionId: allowOption?.optionId || "allow_always" } };
+      const selectedId = allowOption?.optionId || "allow_always";
+      console.log(`[acp] permission: found ${options?.length ?? 0} options, selected: ${selectedId}`);
+      result = { outcome: { type: "selected", optionId: selectedId } };
     } else if (method === "fs/read_text_file") {
       const uri = (params?.uri as string) || "";
-      const filePath = uri.replace("file://", "");
+      let filePath = uri.replace("file://", "");
+      if (filePath && !filePath.startsWith("/")) {
+        filePath = require("path").resolve(this.repoPath, filePath);
+      }
       try {
         result = { text: fs.readFileSync(filePath, "utf-8") };
       } catch {
@@ -322,8 +327,13 @@ export class AcpClient {
       }
     } else if (method === "fs/write_text_file") {
       const uri = (params?.uri as string) || "";
-      const filePath = uri.replace("file://", "");
+      let filePath = uri.replace("file://", "");
+      // Resolve relative paths against repo root
+      if (filePath && !filePath.startsWith("/")) {
+        filePath = require("path").resolve(this.repoPath, filePath);
+      }
       const text = (params?.text as string) || "";
+      console.log(`[acp] write: ${filePath} (${text.length} bytes)`);
       try {
         const dir = require("path").dirname(filePath);
         if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
@@ -331,6 +341,7 @@ export class AcpClient {
         if (this.onWrite) this.onWrite(filePath, text);
         result = {};
       } catch (e) {
+        console.error(`[acp] write failed:`, e);
         result = { error: String(e) };
       }
     } else if (method === "terminal/create") {
@@ -395,6 +406,10 @@ export class AcpClient {
       result = {};
     }
 
-    this.send({ jsonrpc: "2.0", id, result });
+    const response = { jsonrpc: "2.0", id, result };
+    if (method === "session/request_permission") {
+      console.log(`[acp] permission response:`, JSON.stringify(response));
+    }
+    this.send(response);
   }
 }

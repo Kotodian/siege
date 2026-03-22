@@ -330,3 +330,18 @@ export const aiTasks = sqliteTable("ai_tasks", {
     .default(sql`(datetime('now'))`)
     .notNull(),
 });
+
+export const memories = sqliteTable("memories", {
+  id: text("id").primaryKey(),
+  projectId: text("project_id"),
+  type: text("type", { enum: ["project", "user", "feedback"] }).notNull().default("project"),
+  title: text("title").notNull(),
+  content: text("content").notNull(),
+  source: text("source", { enum: ["auto", "manual"] }).notNull().default("manual"),
+  createdAt: text("created_at")
+    .default(sql`(datetime('now'))`)
+    .notNull(),
+  updatedAt: text("updated_at")
+    .default(sql`(datetime('now'))`)
+    .notNull(),
+});

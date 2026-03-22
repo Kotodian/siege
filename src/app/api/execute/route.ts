@@ -14,6 +14,7 @@ import { streamText, tool, stepCountIs } from "ai";
 import { z } from "zod";
 import { getStepModel, resolveStepConfig } from "@/lib/ai/config";
 import { scanAllSkills, getSkillContent } from "@/lib/skills/registry";
+import { loadMemoryContext } from "@/lib/ai/memory";
 import { parseJsonBody } from "@/lib/utils";
 import fs from "fs";
 import path from "path";
@@ -409,7 +410,9 @@ export async function POST(req: NextRequest) {
     .map(prev => `- #${prev.order} ${prev.title} [${prev.status}]`)
     .join("\n");
 
-  const prompt = `${previousTasks ? `Context — other tasks in this plan:\n${previousTasks}\n\n---\n` : ""}Implement task #${item.order}: ${item.title}
+  const memoryContext = loadMemoryContext(project.id);
+
+  const prompt = `${memoryContext ? `${memoryContext}\n\n---\n` : ""}${previousTasks ? `Context — other tasks in this plan:\n${previousTasks}\n\n---\n` : ""}Implement task #${item.order}: ${item.title}
 
 ${item.description || ""}
 

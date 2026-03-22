@@ -11,6 +11,7 @@ import { parseJsonBody } from "@/lib/utils";
 import { sseEncode } from "@/lib/ai/sse";
 import { createSession, removeSession } from "@/lib/ai/interactive-session";
 import { buildAnalysisPrompt, buildSynthesisPrompt, parseQuestionsFromAIOutput } from "@/lib/ai/interactive-prompt";
+import { loadMemoryContext } from "@/lib/ai/memory";
 import fs from "fs";
 import path from "path";
 
@@ -341,7 +342,8 @@ export async function POST(req: NextRequest) {
   }
 
   // --- Standard (non-interactive) mode ---
-  const prompt = buildPrompt(project, plan);
+  const memCtx = loadMemoryContext(project.id);
+  const prompt = buildPrompt(project, plan) + (memCtx ? `\n\n${memCtx}` : "");
 
   // ACP engine: use Claude Code / Codex via Agent Client Protocol
   if (resolved.provider === "acp" || resolved.provider === "codex-acp") {

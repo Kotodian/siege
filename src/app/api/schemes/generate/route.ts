@@ -102,20 +102,25 @@ function saveScheme(planId: string, content: string, planStatus: string): boolea
   return true;
 }
 
-function buildPrompt(project: { name: string; targetRepoPath: string }, plan: { name: string; description: string | null }) {
+function buildPrompt(project: { name: string; targetRepoPath: string; description?: string | null; guidelines?: string | null }, plan: { name: string; description: string | null }, forAcp: boolean) {
+  const projectContext = [
+    project.description ? `Project description: ${project.description}` : "",
+    project.guidelines ? `Project guidelines:\n${project.guidelines}` : "",
+  ].filter(Boolean).join("\n\n");
+
   return `You are a senior software architect. Generate a detailed technical scheme for this plan.
 
 Project: ${project.name}
-Repository: ${project.targetRepoPath}
 Plan: ${plan.name}
 
 Description:
 ${plan.description || "No description provided."}
 
-Steps:
-1. Use the provided tools to explore the project structure (listDir, readFile, bash)
-2. Read relevant source files to understand the codebase
-3. Generate a Markdown technical scheme
+${projectContext}
+
+${forAcp
+  ? "Steps:\n1. List the project root directory to understand the structure\n2. Read ONLY the 2-3 most relevant files to the plan (not every file)\n3. Generate the scheme based on what you found\n\nIMPORTANT: Do NOT read more than 5 files total. Focus on files directly related to the plan description."
+  : "Steps:\n1. Use the provided tools to briefly explore the project structure\n2. Read only the most relevant source files (max 5 files)\n3. Generate the scheme"}
 
 You MUST use EXACTLY these section headings:
 
@@ -431,7 +436,15 @@ export async function POST(req: NextRequest) {
 
   // --- Standard (non-interactive) mode ---
   const memCtx = loadMemoryContext(project.id);
-  const prompt = buildPrompt(project, plan) + (memCtx ? `\n\n${memCtx}` : "");
+  const isAcp = resolved.provider === "acp" || resolved.provider === "codex-acp";
+
+  // Check if regenerating — inject old scheme as context to avoid re-reading files
+  const existingSchemes = db.select().from(schemes).where(eq(schemes.planId, planId)).all();
+  const oldSchemeCtx = existingSchemes.length > 0
+    ? `\nPrevious scheme (improve upon this, do NOT re-read files already covered):\n${existingSchemes[0].content?.slice(0, 3000) || ""}\n`
+    : "";
+
+  const prompt = buildPrompt(project, plan, isAcp) + oldSchemeCtx + (memCtx ? `\n\n${memCtx}` : "");
 
   // ACP engine: use Claude Code / Codex via Agent Client Protocol
   if (resolved.provider === "acp" || resolved.provider === "codex-acp") {

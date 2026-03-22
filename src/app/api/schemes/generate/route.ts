@@ -82,12 +82,18 @@ Steps:
 2. Read relevant source files to understand the codebase
 3. Generate a Markdown technical scheme with:
    ## Overview
-   ## Technical Details (reference specific file paths, describe what needs to change and why, but DO NOT include code blocks or code snippets — code changes belong in the scheduling/implementation phase)
+   ## Architecture & Definitions (define key types, interfaces, data structures, modules. Focus on WHAT and WHY, not HOW. No code blocks — implementation belongs in the scheduling phase)
    ## Key Decisions
    ## Risks & Mitigations
    ## Estimated Effort
 
-IMPORTANT: The scheme is a design document, not an implementation. Describe architecture, approaches, and file-level changes in prose. Do NOT write code blocks, code examples, or implementation snippets. Code will be written during the scheduling and execution phase.
+IMPORTANT: The scheme is a DESIGN document focused on definitions and architecture, NOT implementation details.
+- Define types, interfaces, data structures, module boundaries
+- Describe relationships and data flow between components
+- Explain trade-offs and rationale for key decisions
+- Do NOT write code blocks, code examples, or implementation snippets
+- Do NOT describe step-by-step implementation procedures
+- Code will be written during the scheduling and execution phase
 
 Write in the same language as the description.`;
 }

@@ -11,10 +11,12 @@ export async function POST(req: NextRequest) {
   const [body, errRes] = await parseJsonBody(req);
   if (errRes) return errRes;
 
-  const { schemeId, message, sectionOnly } = body as {
+  const { schemeId, message, sectionOnly, provider, model: modelId } = body as {
     schemeId: string;
     message: string;
     sectionOnly?: boolean;
+    provider?: string;
+    model?: string;
   };
 
   if (!schemeId || !message) {
@@ -37,7 +39,7 @@ export async function POST(req: NextRequest) {
 
   let model;
   try {
-    model = getStepModel("scheme");
+    model = getStepModel("scheme", provider, modelId);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ error: msg }, { status: 503 });

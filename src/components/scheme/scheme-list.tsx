@@ -275,11 +275,19 @@ export function SchemeList({
               >
                 {t("scheme.create")}
               </Button>
-              {planStatus === "reviewing" && schemes.length > 0 && (
-                <Button onClick={handleConfirm}>
-                  {t("scheme.confirmSchemes")}
-                </Button>
-              )}
+              {planStatus === "reviewing" && schemes.length > 0 && (() => {
+                const unresolvedCount = reviewFindings.filter(f => !f.resolved).length;
+                return (
+                  <Button
+                    onClick={handleConfirm}
+                    disabled={unresolvedCount > 0}
+                    title={unresolvedCount > 0 ? (isZh ? `还有 ${unresolvedCount} 条审查发现未处理` : `${unresolvedCount} unresolved findings`) : ""}
+                  >
+                    {t("scheme.confirmSchemes")}
+                    {unresolvedCount > 0 && <span className="ml-1 text-xs opacity-70">({unresolvedCount})</span>}
+                  </Button>
+                );
+              })()}
             </>
           )}
           {planStatus === "confirmed" && (

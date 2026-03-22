@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { MarkdownRenderer } from "@/components/markdown/markdown-renderer";
 import { Button } from "@/components/ui/button";
 import { useGlobalLoading } from "@/components/ui/global-loading";
 import { LightbulbIcon, XIcon, HourglassIcon, HelpCircleIcon, PencilIcon } from "@/components/ui/icons";
+import { ProviderModelSelect, useDefaultProvider } from "@/components/ui/provider-model-select";
 
 interface Section {
   title: string;
@@ -233,6 +234,10 @@ export function SchemeSections({
   const t = useTranslations();
   const isZh = t("common.back") === "返回";
   const { startLoading, updateContent, stopLoading } = useGlobalLoading();
+  const defaultProvider = useDefaultProvider();
+  const [editProvider, setEditProvider] = useState("");
+  const [editModel, setEditModel] = useState("");
+  useEffect(() => { if (defaultProvider && !editProvider) setEditProvider(defaultProvider); }, [defaultProvider]);
   const { preamble, sections } = useMemo(() => splitIntoSections(content), [content]);
   const [expandedIndex, setExpandedIndex] = useState<number | null>(0);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -273,7 +278,7 @@ export function SchemeSections({
     const res = await fetch("/api/schemes/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ schemeId, message: prompt, sectionOnly: true }),
+      body: JSON.stringify({ schemeId, message: prompt, sectionOnly: true, ...(editProvider && { provider: editProvider }), ...(editModel && { model: editModel }) }),
     });
     if (!res.ok || !res.body) return false;
 
@@ -332,6 +337,8 @@ export function SchemeSections({
           schemeId: schemeId || "explain",
           message: `请用通俗易懂的语言解释以下技术方案段落的含义、目的和关键点。不要修改方案，只做解释。\n\n${section.heading}\n${section.content}`,
           sectionOnly: true,
+          ...(editProvider && { provider: editProvider }),
+          ...(editModel && { model: editModel }),
         }),
       });
       if (res.ok && res.body) {
@@ -371,6 +378,18 @@ export function SchemeSections({
       {preamble && (
         <div className="pb-3 mb-2">
           <MarkdownRenderer content={preamble} />
+        </div>
+      )}
+      {!readonly && (
+        <div className="flex items-center gap-2 mb-2">
+          <span className="text-xs shrink-0" style={{ color: "var(--muted)" }}>{isZh ? "AI 模型：" : "AI Model:"}</span>
+          <ProviderModelSelect
+            provider={editProvider}
+            model={editModel}
+            onProviderChange={setEditProvider}
+            onModelChange={setEditModel}
+            compact
+          />
         </div>
       )}
       <div className="border rounded-lg divide-y" style={{ borderColor: "var(--card-border)", "--tw-divide-color": "var(--card-border)" } as React.CSSProperties}>

@@ -71,10 +71,17 @@ function captureFileSnapshots(itemId: string, cwd: string, beforeHash: string) {
       cwd, encoding: "utf-8", timeout: 5000,
     }).trim().split("\n").filter(Boolean);
 
-    // Untracked files
-    const untrackedFiles = execSync("git ls-files --others --exclude-standard", {
-      cwd, encoding: "utf-8", timeout: 5000,
-    }).trim().split("\n").filter(Boolean);
+    // Only include untracked files that were created during this task
+    // (i.e., after beforeHash). Skip pre-existing untracked files.
+    let untrackedFiles: string[] = [];
+    if (beforeHash && beforeHash !== afterHash) {
+      // New files added in commits between beforeHash..afterHash
+      try {
+        untrackedFiles = execSync(`git diff --name-only --diff-filter=A ${beforeHash}..${afterHash}`, {
+          cwd, encoding: "utf-8", timeout: 5000,
+        }).trim().split("\n").filter(Boolean);
+      } catch { /* ignore */ }
+    }
 
     const allFiles = [...new Set([...committedFiles, ...uncommittedFiles, ...untrackedFiles])];
     if (allFiles.length === 0) return;

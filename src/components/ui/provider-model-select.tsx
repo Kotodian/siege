@@ -10,12 +10,23 @@ const PROVIDERS = [
   { id: "glm", label: "GLM", models: ["glm-5", "glm-4-plus", "glm-4", "glm-4-air", "glm-4-flash", "glm-4-long"] },
 ] as const;
 
-const ACP_MODELS = [
+const CLAUDE_ACP_MODELS = [
   "claude-opus-4-6",
   "claude-sonnet-4-6",
   "claude-haiku-4-5-20251001",
   "claude-sonnet-4-5-20250929",
   "claude-opus-4-5-20251101",
+];
+
+const CODEX_ACP_MODELS = [
+  "gpt-5.4",
+  "gpt-5.4-mini",
+  "gpt-5.4-nano",
+  "gpt-5.3-codex",
+  "o3-pro",
+  "o3-mini",
+  "gpt-4o",
+  "gpt-4o-mini",
 ];
 
 interface ProviderModelSelectProps {
@@ -37,9 +48,11 @@ export function ProviderModelSelect({
 }: ProviderModelSelectProps) {
   const isAcp = provider === "acp" || provider === "codex-acp";
   const currentProvider = PROVIDERS.find(p => p.id === provider);
-  const models = isAcp
-    ? ACP_MODELS
-    : ("models" in (currentProvider || {}) ? (currentProvider as { models: readonly string[] }).models : []);
+  const models = provider === "acp"
+    ? CLAUDE_ACP_MODELS
+    : provider === "codex-acp"
+      ? CODEX_ACP_MODELS
+      : ("models" in (currentProvider || {}) ? (currentProvider as { models: readonly string[] }).models : []);
 
   if (compact) {
     return (

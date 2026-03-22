@@ -281,8 +281,9 @@ export function ReviewPanel({
 
   const handleFix = async (item: ReviewItem, userNote?: string) => {
     if (!item.targetId || fixingItem) return;
-    // Extract pure schemeId from targetId (may have ":section-N" suffix)
-    const pureSchemeId = item.targetId.split(":")[0];
+    const parts = item.targetId.split(":");
+    const pureSchemeId = parts[0];
+    const sectionHint = parts[1] || "";
     setFixingItem(item.id);
     setFixPromptItem(null);
     setFixUserNote("");
@@ -290,41 +291,105 @@ export function ReviewPanel({
     try {
       const schemeRes = await fetch(`/api/schemes/${pureSchemeId}`);
       const schemeData = schemeRes.ok ? await schemeRes.json() : null;
-      const originalUpdatedAt = schemeData?.updatedAt;
-
-      let fixMessage = `Fix the following issue:\n\n**${item.title}**\n\n${item.content}`;
-      if (userNote) {
-        fixMessage += `\n\nAdditional instructions from user: ${userNote}`;
+      if (!schemeData?.content) {
+        stopLoading(isZh ? "找不到方案" : "Scheme not found", "error");
+        setFixingItem(null);
+        return;
       }
 
-      await fetch("/api/schemes/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          schemeId: pureSchemeId,
-          message: fixMessage,
-          ...(reviewProvider && { provider: reviewProvider }),
-          ...(reviewModel && { model: reviewModel }),
-        }),
-      });
+      // Extract the specific section to edit
+      const schemeContent = schemeData.content as string;
+      const sectionMatch = sectionHint.match(/^section-(\d+)$/);
+      let sectionHeading = "";
+      let sectionContent = "";
 
-      // Poll for scheme update
-      if (originalUpdatedAt) {
-        for (let i = 0; i < 60; i++) {
-          await new Promise((r) => setTimeout(r, 3000));
-          const checkRes = await fetch(`/api/schemes/${pureSchemeId}`);
-          if (checkRes.ok) {
-            const checkData = await checkRes.json();
-            if (checkData.updatedAt !== originalUpdatedAt) break;
+      if (sectionMatch) {
+        const sectionIdx = parseInt(sectionMatch[1], 10);
+        const headingRegex = /^(#{1,3})\s+(.+)/gm;
+        const starts: Array<{ title: string; start: number; heading: string }> = [];
+        let m;
+        while ((m = headingRegex.exec(schemeContent)) !== null) {
+          starts.push({ title: m[2].trim(), start: m.index, heading: m[0] });
+        }
+        if (sectionIdx < starts.length) {
+          const sec = starts[sectionIdx];
+          const nextStart = sectionIdx + 1 < starts.length ? starts[sectionIdx + 1].start : schemeContent.length;
+          sectionHeading = sec.heading;
+          sectionContent = schemeContent.slice(sec.start, nextStart).trim();
+        }
+      }
+
+      if (sectionContent) {
+        // Section-level fix: only modify the specific section
+        let fixMessage = `请根据以下审查意见修复方案中「${sectionHeading.replace(/^#+\s*/, "")}」段落：\n\n**${item.title}**\n${item.content || ""}`;
+        if (userNote) fixMessage += `\n\n用户补充说明：${userNote}`;
+        fixMessage += `\n\n当前该段落内容：\n${sectionContent}`;
+
+        const chatRes = await fetch("/api/schemes/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            schemeId: pureSchemeId,
+            message: fixMessage,
+            sectionOnly: true,
+            ...(reviewProvider && { provider: reviewProvider }),
+            ...(reviewModel && { model: reviewModel }),
+          }),
+        });
+
+        if (chatRes.ok && chatRes.body) {
+          const reader = chatRes.body.getReader();
+          const decoder = new TextDecoder();
+          let aiContent = "";
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            aiContent += decoder.decode(value, { stream: true });
+          }
+
+          // Replace the section in the full scheme
+          if (aiContent.trim()) {
+            const sectionIdx = parseInt(sectionMatch![1], 10);
+            const headingRegex2 = /^(#{1,3})\s+(.+)/gm;
+            const starts2: Array<{ start: number; heading: string }> = [];
+            let m2;
+            while ((m2 = headingRegex2.exec(schemeContent)) !== null) {
+              starts2.push({ start: m2.index, heading: m2[0] });
+            }
+            if (sectionIdx < starts2.length) {
+              const secStart = starts2[sectionIdx].start;
+              const secEnd = sectionIdx + 1 < starts2.length ? starts2[sectionIdx + 1].start : schemeContent.length;
+              const newContent = schemeContent.slice(0, secStart) + starts2[sectionIdx].heading + "\n" + aiContent.trim() + "\n\n" + schemeContent.slice(secEnd);
+              await fetch(`/api/schemes/${pureSchemeId}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ content: newContent.trim() }),
+              });
+            }
           }
         }
+      } else {
+        // Fallback: full scheme edit
+        let fixMessage = `Fix the following issue:\n\n**${item.title}**\n\n${item.content}`;
+        if (userNote) fixMessage += `\n\nAdditional instructions from user: ${userNote}`;
+
+        await fetch("/api/schemes/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            schemeId: pureSchemeId,
+            message: fixMessage,
+            ...(reviewProvider && { provider: reviewProvider }),
+            ...(reviewModel && { model: reviewModel }),
+          }),
+        });
       }
 
       // Mark as resolved
       await fetch(`/api/review-items/${item.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ resolved: true }),
+        body: JSON.stringify({ resolved: true, resolution: "approved" }),
       });
       await fetchReviews();
       onPlanStatusChange();
@@ -353,18 +418,7 @@ export function ReviewPanel({
         ? `正在修复 ${fixed + failed + 1}/${unresolvedItems.length}: ${item.title}...`
         : `Fixing ${fixed + failed + 1}/${unresolvedItems.length}: ${item.title}...`);
       try {
-        const fixMessage = `Fix the following issue:\n\n**${item.title}**\n\n${item.content}`;
-        const fixSchemeId = item.targetId.split(":")[0];
-        await fetch("/api/schemes/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ schemeId: fixSchemeId, message: fixMessage, ...(reviewProvider && { provider: reviewProvider }), ...(reviewModel && { model: reviewModel }) }),
-        });
-        await fetch(`/api/review-items/${item.id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ resolved: true }),
-        });
+        await handleFix(item);
         fixed++;
       } catch {
         failed++;

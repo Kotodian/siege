@@ -44,13 +44,12 @@ export async function POST(req: NextRequest) {
     const msg = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ error: msg }, { status: 503 });
   }
-  // Detect if this is a section-level edit (contains section heading + content)
-  const isSectionEdit = /当前该段落/.test(message) || /当前该段落内容/.test(message);
+  const isSectionEdit = !!sectionOnly;
 
   const system = isSectionEdit
     ? `You are a scheme section editor. Output Markdown only. No conversation.
 
-CRITICAL: You are editing ONE SECTION of a larger scheme. Output ONLY the modified section content (without the heading). Do NOT output the full scheme. Do NOT add explanations.`
+CRITICAL: You are editing ONE SECTION of a larger scheme. Output ONLY the modified section content (without the heading). Do NOT output the full scheme. Do NOT repeat other sections. Do NOT add explanations or preamble.`
     : `You are a scheme editor. Output Markdown only. No conversation.
 
 CRITICAL: Do NOT ask questions, request access, or use tools. Just modify the scheme as requested.

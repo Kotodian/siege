@@ -158,6 +158,7 @@ export class AcpClient {
       const result = await this.request("session/load", {
         sessionId,
         cwd: this.repoPath,
+        mcpServers: [],
       }) as AcpSessionInfo;
       return result;
     } catch {
@@ -310,7 +311,7 @@ export class AcpClient {
       const perm = params?.permission as Record<string, unknown> | undefined;
       const options = perm?.options as Array<{ optionId: string }> | undefined;
       const allowOption = options?.find(o => o.optionId.includes("allow_always")) || options?.find(o => o.optionId.includes("allow")) || options?.[0];
-      console.log(`[acp] permission request: ${perm?.type || "unknown"} options: ${options?.map(o => o.optionId).join(", ")} → ${allowOption?.optionId}`);
+      console.log(`[acp] permission request:`, JSON.stringify(params).slice(0, 500));
       result = { outcome: { type: "selected", optionId: allowOption?.optionId || "allow_once" } };
     } else if (method === "fs/read_text_file") {
       const uri = (params?.uri as string) || "";

@@ -107,7 +107,7 @@ function saveReviewResult(
   planId: string,
   type: "scheme" | "implementation",
   dbInstance: ReturnType<typeof getDb>,
-) {
+): boolean {
   try {
     const trimmed = fullText.trim();
     let parsed: any = null;
@@ -173,6 +173,7 @@ function saveReviewResult(
           .where(eq(plans.id, planId))
           .run();
       }
+      return true;
     } else {
       const fallbackContent = (trimmed.startsWith("{") || trimmed.startsWith("["))
         ? "AI 返回了无法解析的结果，请重试。/ AI returned unparseable result, please retry."
@@ -181,6 +182,7 @@ function saveReviewResult(
         .set({ status: "changes_requested", content: fallbackContent, updatedAt: new Date().toISOString() })
         .where(eq(reviews.id, reviewId))
         .run();
+      return false;
     }
   } catch (err) {
     console.error("[review-generate] save failed:", err);
@@ -188,6 +190,7 @@ function saveReviewResult(
       .set({ status: "changes_requested", content: `Save error: ${err instanceof Error ? err.message : err}`, updatedAt: new Date().toISOString() })
       .where(eq(reviews.id, reviewId))
       .run();
+    return false;
   }
 }
 
@@ -384,19 +387,31 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: String(err) }, { status: 503 });
   }
 
+  const zh = /[\u4e00-\u9fff]/.test(plan.name || "");
   const result = streamText({ model: aiModel, system, prompt });
 
   const responseStream = new ReadableStream({
     async start(controller) {
+      controller.enqueue(encoder.encode(zh
+        ? `AI 正在审查 ${itemsToReview.length} 个段落...\n`
+        : `AI reviewing ${itemsToReview.length} sections...\n`));
+
+      let lastProgressAt = Date.now();
       try {
       for await (const part of result.fullStream) {
         if (part.type === "text-delta") {
           fullText += part.text;
-          controller.enqueue(encoder.encode(part.text));
+          // Show progress dots every 2 seconds (JSON output isn't useful to display)
+          const now = Date.now();
+          if (now - lastProgressAt > 2000) {
+            controller.enqueue(encoder.encode("."));
+            lastProgressAt = now;
+          }
         } else if (part.type === "error") {
           console.error("[review] stream error part:", part);
         }
       }
+      controller.enqueue(encoder.encode(zh ? "\n解析结果中...\n" : "\nParsing results...\n"));
       } catch (streamErr) {
         const msg = streamErr instanceof Error ? streamErr.message : String(streamErr);
         controller.enqueue(encoder.encode(`\nError: ${msg}`));
@@ -408,9 +423,12 @@ export async function POST(req: NextRequest) {
         controller.close();
         return;
       }
-      controller.close();
 
-      saveReviewResult(fullText, reviewId, planId, type, getDb());
+      const saved = saveReviewResult(fullText, reviewId, planId, type, getDb());
+      controller.enqueue(encoder.encode(saved
+        ? (zh ? "审查完成\n" : "Review complete\n")
+        : (zh ? "审查结果解析失败，请重试\n" : "Failed to parse review result, please retry\n")));
+      controller.close();
     },
   });
 

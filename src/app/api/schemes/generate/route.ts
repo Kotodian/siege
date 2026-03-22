@@ -438,13 +438,7 @@ export async function POST(req: NextRequest) {
   const memCtx = loadMemoryContext(project.id);
   const isAcp = resolved.provider === "acp" || resolved.provider === "codex-acp";
 
-  // Check if regenerating — inject old scheme as context to avoid re-reading files
-  const existingSchemes = db.select().from(schemes).where(eq(schemes.planId, planId)).all();
-  const oldSchemeCtx = existingSchemes.length > 0
-    ? `\nPrevious scheme (improve upon this, do NOT re-read files already covered):\n${existingSchemes[0].content?.slice(0, 3000) || ""}\n`
-    : "";
-
-  const prompt = buildPrompt(project, plan, isAcp) + oldSchemeCtx + (memCtx ? `\n\n${memCtx}` : "");
+  const prompt = buildPrompt(project, plan, isAcp) + (memCtx ? `\n\n${memCtx}` : "");
 
   // ACP engine: use Claude Code / Codex via Agent Client Protocol
   if (resolved.provider === "acp" || resolved.provider === "codex-acp") {

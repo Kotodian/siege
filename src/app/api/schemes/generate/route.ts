@@ -478,6 +478,8 @@ export async function POST(req: NextRequest) {
           const msg = err instanceof Error ? err.message : String(err);
           controller.enqueue(encoder.encode(`\nError: ${msg}`));
           controller.close();
+        } finally {
+          // Don't stop ACP client here — keep alive for session reuse
         }
       },
     });

@@ -64,6 +64,8 @@ Use the available tools to run commands, read/write files as needed. Report prog
         } catch (err) {
           controller.enqueue(encoder.encode(`\nError: ${err instanceof Error ? err.message : err}`));
           controller.close();
+        } finally {
+          try { await acpClient.stop(); } catch {}
         }
       },
     });

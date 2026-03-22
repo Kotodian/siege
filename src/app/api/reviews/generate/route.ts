@@ -337,9 +337,10 @@ export async function POST(req: NextRequest) {
           const msg = err instanceof Error ? err.message : String(err);
           controller.enqueue(encoder.encode(`\nError: ${msg}`));
           controller.close();
+        } finally {
+          try { await acpClient.stop(); } catch {}
         }
 
-        // Parse and save (same logic below)
         saveReviewResult(fullText, reviewId, planId, type, db);
       },
     });

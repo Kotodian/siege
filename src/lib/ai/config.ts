@@ -78,8 +78,9 @@ export function getStepModel(
   // ACP/Codex are CLI engines, not SDK providers.
   // For steps that only support SDK (review, test, etc.), fall back to
   // the first configured SDK provider instead of throwing.
+  // Don't pass the ACP model name — it may not exist on the SDK provider.
   if (provider === "acp" || provider === "codex-acp") {
-    return getConfiguredModel(undefined, model);
+    return getConfiguredModel(undefined, undefined);
   }
   return getConfiguredModel(provider as Provider, model);
 }

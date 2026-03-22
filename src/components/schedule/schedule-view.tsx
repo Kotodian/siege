@@ -148,7 +148,7 @@ export function ScheduleView({
           updateTaskStatus(data.nextTask.itemId, "running");
 
           const { title, order } = data.nextTask;
-          await handleExecuteItem(data.nextTask.itemId, [], `#${order} ${title}`, undefined, undefined, controller.signal);
+          await handleExecuteItem(data.nextTask.itemId, [], `#${order} ${title}`, schedProvider || undefined, schedModel || undefined, controller.signal);
 
           if (controller.signal.aborted) break;
           updateTaskStatus(data.nextTask.itemId, "completed");

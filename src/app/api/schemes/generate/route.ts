@@ -261,6 +261,9 @@ export async function POST(req: NextRequest) {
     const session = createSession(generationId, planId);
     const hasChinese = /[\u4e00-\u9fff]/.test(plan.description || plan.name);
 
+    const isAcpInteractive = resolved.provider === "acp" || resolved.provider === "codex-acp";
+    let sharedAcpClient: AcpClient | null = null;
+
     const responseStream = new ReadableStream({
       async start(controller) {
         try {
@@ -275,13 +278,14 @@ export async function POST(req: NextRequest) {
           );
 
           let analysisText = "";
+          let sharedSessionId = "";
 
-          if (resolved.provider === "acp" || resolved.provider === "codex-acp") {
-            // ACP: use Claude Code for analysis
-            const acpClient = new AcpClient(cwd, resolved.provider === "codex-acp" ? "codex" : "claude");
-            await acpClient.start();
-            const acpSession = await acpClient.createSession(resolved.model);
-            await acpClient.prompt(acpSession.sessionId, analysisPrompt, (t, text) => {
+          if (isAcpInteractive) {
+            sharedAcpClient = new AcpClient(cwd, resolved.provider === "codex-acp" ? "codex" : "claude");
+            await sharedAcpClient.start();
+            const acpSession = await sharedAcpClient.createSession(resolved.model);
+            sharedSessionId = acpSession.sessionId;
+            await sharedAcpClient.prompt(sharedSessionId, analysisPrompt, (t, text) => {
               if (t === "text") {
                 analysisText += text;
                 controller.enqueue(sseEncode("text", "."));
@@ -380,11 +384,8 @@ export async function POST(req: NextRequest) {
 
           let schemeText = "";
 
-          if (resolved.provider === "acp" || resolved.provider === "codex-acp") {
-            const acpClient = new AcpClient(cwd, resolved.provider === "codex-acp" ? "codex" : "claude");
-            await acpClient.start();
-            const acpSession = await acpClient.createSession(resolved.model);
-            await acpClient.prompt(acpSession.sessionId, synthesisPrompt, (t, text) => {
+          if (isAcpInteractive && sharedAcpClient) {
+            await sharedAcpClient.prompt(sharedSessionId, synthesisPrompt, (t, text) => {
               if (t === "text") {
                 schemeText += text;
                 controller.enqueue(sseEncode("text", text));
@@ -417,6 +418,9 @@ export async function POST(req: NextRequest) {
           controller.close();
         } finally {
           removeSession(generationId);
+          if (sharedAcpClient) {
+            try { await sharedAcpClient.stop(); } catch {}
+          }
         }
       },
     });

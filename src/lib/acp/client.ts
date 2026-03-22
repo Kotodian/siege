@@ -218,10 +218,11 @@ export class AcpClient {
     if (!this.onUpdate) return;
     const u = params.update;
 
-    if (u.sessionUpdate === "agent_message_chunk" && u.content?.text) {
-      this.onUpdate("text", u.content.text);
-    } else if (u.sessionUpdate === "agent_thought_chunk" && u.content?.text) {
-      this.onUpdate("thought", u.content.text);
+    if (u.sessionUpdate === "agent_message_chunk") {
+      if (u.content?.text) this.onUpdate("text", u.content.text);
+      // Empty text chunks are normal heartbeats — ignore silently
+    } else if (u.sessionUpdate === "agent_thought_chunk") {
+      if (u.content?.text) this.onUpdate("thought", u.content.text);
     } else if (u.sessionUpdate === "tool_call" || u.sessionUpdate === "tool_call_update") {
       const raw = u as Record<string, unknown>;
       const meta = raw._meta as Record<string, unknown> | undefined;
@@ -243,14 +244,16 @@ export class AcpClient {
     } else if (u.sessionUpdate === "plan_update" && u.plan) {
       const planText = u.plan.entries.map(e => `- [${e.status}] ${e.content}`).join("\n");
       this.onUpdate("plan", planText);
-    } else if (u.sessionUpdate === "agent_message_start") {
-      // Session starting a new message — no content to show
-    } else if (u.sessionUpdate === "agent_message_end") {
-      // Message complete
+    } else if (
+      u.sessionUpdate === "agent_message_start" ||
+      u.sessionUpdate === "agent_message_end" ||
+      u.sessionUpdate === "usage_update" ||
+      u.sessionUpdate === "available_commands_update"
+    ) {
+      // Known non-content events — ignore silently
     } else {
-      // Unknown event — log for debugging
-      const summary = JSON.stringify(u).slice(0, 200);
-      console.log(`[acp] unhandled event: ${u.sessionUpdate} ${summary}`);
+      // Truly unknown event
+      console.log(`[acp] unhandled event: ${u.sessionUpdate}`);
     }
   }
 

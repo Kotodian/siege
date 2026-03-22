@@ -256,7 +256,8 @@ export async function POST(req: NextRequest) {
   const resolved = resolveStepConfig("scheme", provider as string, model);
 
   // --- Interactive mode: two-phase generation with user Q&A ---
-  if (interactive) {
+  // Skip interactive for ACP — Claude Code does its own exploration
+  if (interactive && resolved.provider !== "acp" && resolved.provider !== "codex-acp") {
     const generationId = crypto.randomUUID();
     const session = createSession(generationId, planId);
     const hasChinese = /[\u4e00-\u9fff]/.test(plan.description || plan.name);
@@ -286,12 +287,24 @@ export async function POST(req: NextRequest) {
             hasChinese,
           );
 
-          const analysisResult = await generateText({
+          // Stream the analysis so user sees progress
+          const analysisStream = streamText({
             model: configuredModel,
             prompt: analysisPrompt,
           });
+          let analysisText = "";
+          for await (const part of analysisStream.fullStream) {
+            if (part.type === "text-delta") {
+              analysisText += part.text;
+              // Send dots as progress indicator
+              if (analysisText.length % 200 < 10) {
+                controller.enqueue(sseEncode("text", "."));
+              }
+            }
+          }
+          controller.enqueue(sseEncode("text", "\n"));
 
-          const questions = parseQuestionsFromAIOutput(analysisResult.text);
+          const questions = parseQuestionsFromAIOutput(analysisText);
 
           if (questions.length === 0) {
             // No questions — fall back to standard generation

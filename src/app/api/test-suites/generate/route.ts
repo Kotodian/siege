@@ -4,7 +4,9 @@ import { plans, schedules, scheduleItems, fileSnapshots, testSuites, testCases, 
 import { eq } from "drizzle-orm";
 import { generateTests } from "@/lib/ai/test-generator";
 import { resolveStepConfig } from "@/lib/ai/config";
+import { AcpClient } from "@/lib/acp/client";
 import type { Provider } from "@/lib/ai/provider";
+import fs from "fs";
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
@@ -80,13 +82,53 @@ export async function POST(req: NextRequest) {
 
   try {
     const resolved = resolveStepConfig("test", provider, model);
-    const generatedCases = await generateTests({
-      planName: plan.name,
-      tasks,
-      targetRepoPath: project.targetRepoPath,
-      provider: resolved.provider as Provider,
-      model: resolved.model,
-    });
+    let generatedCases;
+
+    if (resolved.provider === "acp" || resolved.provider === "codex-acp") {
+      // ACP: let agent inspect code and generate tests directly
+      const cwd = fs.existsSync(project.targetRepoPath) ? project.targetRepoPath : process.cwd();
+      const acpClient = new AcpClient(cwd, resolved.provider === "codex-acp" ? "codex" : "claude");
+      try {
+        await acpClient.start();
+        const session = await acpClient.createSession(resolved.model);
+        if (resolved.model) await acpClient.setModel(session.sessionId, resolved.model);
+
+        const zh = /[\u4e00-\u9fff]/.test(plan.name);
+        const taskList = tasks.map(t => `- #${t.order} ${t.title} (id: "${t.scheduleItemId}")`).join("\n");
+        const acpPrompt = `You are a test engineer. Generate test cases for recently implemented code changes.
+
+Plan: ${plan.name}
+Tasks:
+${taskList}
+
+Steps:
+1. Run \`git log --oneline -10\` to see recent commits
+2. Read the changed files to understand what was implemented
+3. Generate 2-4 test cases per task
+
+Output a JSON array. Each object: scheduleItemId (must match task id), name, description, type ("unit"|"integration"|"e2e"), generatedCode (full test code), filePath.
+Output ONLY the JSON array.${zh ? " 用中文写描述。" : ""}`;
+
+        let fullText = "";
+        await acpClient.prompt(session.sessionId, acpPrompt, (t, text) => {
+          if (t === "text") fullText += text;
+        });
+
+        const jsonStr = fullText.startsWith("[") ? fullText : fullText.match(/\[[\s\S]*\]/)?.[0];
+        if (!jsonStr) throw new Error("ACP agent did not return JSON test cases");
+        generatedCases = JSON.parse(jsonStr);
+      } finally {
+        await acpClient.stop();
+      }
+    } else {
+      generatedCases = await generateTests({
+        planName: plan.name,
+        tasks,
+        targetRepoPath: project.targetRepoPath,
+        provider: resolved.provider as Provider,
+        model: resolved.model,
+      });
+    }
 
     // Delete old cases for the selected tasks only (keep other tasks' tests)
     if (scheduleItemIds && scheduleItemIds.length > 0) {

@@ -89,14 +89,28 @@ ${decisions}
 
 ${schemeSummary ? `Existing schemes for context:\n${schemeSummary}` : ""}
 
-Generate a comprehensive technical scheme in markdown format covering:
-1. **Overview** - What this scheme achieves
-2. **Architecture** - System design, components, data flow
-3. **Key Decisions** - ${qaHistory.length > 0 ? "Reference the user's decisions above" : "Technical choices and rationale"}
-4. **Implementation Details** - Specific files, functions, APIs to create/modify
-5. **Risks & Mitigations** - Potential issues and how to handle them
+You MUST use EXACTLY these section headings:
 
-Be specific about file paths, function names, and data structures. The scheme will be used to generate executable tasks.`;
+## Overview
+Brief summary of what this scheme achieves and why.
+
+## Architecture & Definitions
+Define key types, interfaces, data structures, modules, and their relationships. This is the MOST IMPORTANT section — describe data flow, component boundaries, and how pieces connect. ${qaHistory.length > 0 ? "Reference the user's decisions above." : ""}
+
+## Key Decisions
+Trade-offs, alternatives considered, and rationale.
+
+## Risks & Mitigations
+Potential issues and how to handle them.
+
+## Estimated Effort
+Rough time estimate.
+
+RULES:
+- Focus on WHAT and WHY, not HOW
+- Do NOT write code blocks or step-by-step implementation procedures
+- The "Architecture & Definitions" section must be the longest and most detailed
+- Output the COMPLETE scheme — do not truncate or summarize`;
 }
 
 export function parseQuestionsFromAIOutput(text: string): GeneratedQuestion[] {

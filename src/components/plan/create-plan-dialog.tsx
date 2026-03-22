@@ -55,9 +55,9 @@ export function CreatePlanDialog({
           return;
         }
       }
-      stopLoading(isZh ? "标题生成失败" : "Title generation failed");
+      stopLoading(isZh ? "标题生成失败" : "Title generation failed", "error");
     } catch {
-      stopLoading(isZh ? "标题生成失败" : "Failed");
+      stopLoading(isZh ? "标题生成失败" : "Failed", "error");
     }
   };
 

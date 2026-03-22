@@ -155,7 +155,7 @@ export function SchemeList({
       });
 
       if (!res.ok || !res.body) {
-        stopLoading(isZh ? `生成失败 (${res.status})` : `Failed (${res.status})`);
+        stopLoading(isZh ? `生成失败 (${res.status}, "error")` : `Failed (${res.status})`);
         return;
       }
 
@@ -226,7 +226,7 @@ export function SchemeList({
         }
 
         if (content.includes("Error:") && content.trim().split("\n").length < 5) {
-          stopLoading(isZh ? `生成失败: ${content.trim()}` : `Failed: ${content.trim()}`);
+          stopLoading(isZh ? `生成失败: ${content.trim()}` : `Failed: ${content.trim()}`, "error");
           return;
         }
       }
@@ -238,10 +238,10 @@ export function SchemeList({
       if (newSchemes.length > currentCount) {
         stopLoading(isZh ? "方案生成完成" : "Scheme generated");
       } else {
-        stopLoading(isZh ? "方案生成失败，请检查 AI 配置" : "Scheme generation failed, check AI config");
+        stopLoading(isZh ? "方案生成失败，请检查 AI 配置" : "Scheme generation failed, check AI config", "error");
       }
     } catch (err) {
-      stopLoading(isZh ? `生成失败: ${err instanceof Error ? err.message : "未知错误"}` : `Failed: ${err instanceof Error ? err.message : "Unknown error"}`);
+      stopLoading(isZh ? `生成失败: ${err instanceof Error ? err.message : "未知错误"}` : `Failed: ${err instanceof Error ? err.message : "Unknown error"}`, "error");
     } finally {
       setGenerating(false);
       setStreamingContent("");

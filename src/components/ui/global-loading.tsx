@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from "react";
 import { MarkdownRenderer } from "@/components/markdown/markdown-renderer";
-import { CheckIcon, CircleIcon, HourglassIcon, XIcon } from "@/components/ui/icons";
+import { CheckIcon, XIcon, AlertTriangleIcon } from "@/components/ui/icons";
 
 export interface TaskProgress {
   id: string;
@@ -22,8 +22,9 @@ interface GlobalLoadingContextType {
   setTasks: (tasks: TaskProgress[]) => void;
   updateTaskStatus: (taskId: string, status: TaskProgress["status"]) => void;
   setOnCancel: (fn: (() => void) | null) => void;
-  stopLoading: (toast?: string) => void;
+  stopLoading: (toast?: string, toastType?: "success" | "error" | "warning") => void;
   toast: string;
+  toastType: "success" | "error" | "warning";
 }
 
 const GlobalLoadingContext = createContext<GlobalLoadingContextType>({
@@ -39,6 +40,7 @@ const GlobalLoadingContext = createContext<GlobalLoadingContextType>({
   setOnCancel: () => {},
   stopLoading: () => {},
   toast: "",
+  toastType: "success" as const,
 });
 
 export function useGlobalLoading() {
@@ -182,6 +184,7 @@ export function GlobalLoadingProvider({ children }: { children: ReactNode }) {
   const [content, setContent] = useState("");
   const [tasks, setTasksState] = useState<TaskProgress[]>([]);
   const [toast, setToast] = useState("");
+  const [toastType, setToastType] = useState<"success" | "error" | "warning">("success");
   const cancelRef = useRef<(() => void) | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
@@ -224,7 +227,7 @@ export function GlobalLoadingProvider({ children }: { children: ReactNode }) {
     cancelRef.current = fn;
   }, []);
 
-  const stopLoading = useCallback((toastMsg?: string) => {
+  const stopLoading = useCallback((toastMsg?: string, type?: "success" | "error" | "warning") => {
     setLoading(false);
     setMessage("");
     setContent("");
@@ -233,12 +236,13 @@ export function GlobalLoadingProvider({ children }: { children: ReactNode }) {
     if (loadingTimerRef.current) { clearTimeout(loadingTimerRef.current); loadingTimerRef.current = null; }
     if (toastMsg) {
       setToast(toastMsg);
-      setTimeout(() => setToast(""), 4000);
+      setToastType(type || "success");
+      setTimeout(() => setToast(""), type === "error" ? 6000 : 4000);
     }
   }, []);
 
   return (
-    <GlobalLoadingContext.Provider value={{ loading, message, content, tasks, onCancel: cancelRef.current, startLoading, updateContent, setTasks, updateTaskStatus, setOnCancel, stopLoading, toast }}>
+    <GlobalLoadingContext.Provider value={{ loading, message, content, tasks, onCancel: cancelRef.current, startLoading, updateContent, setTasks, updateTaskStatus, setOnCancel, stopLoading, toast, toastType }}>
       {children}
 
       <LoadingDialog
@@ -252,8 +256,18 @@ export function GlobalLoadingProvider({ children }: { children: ReactNode }) {
 
       {toast && (
         <div className="fixed bottom-6 right-6 z-50">
-          <div className="bg-green-600 text-white px-5 py-3 rounded-lg shadow-lg text-sm font-medium">
-            <CheckIcon size={14} className="inline-block align-[-2px]" /> {toast}
+          <div
+            className="text-white px-5 py-3 rounded-lg shadow-lg text-sm font-medium max-w-md"
+            style={{
+              background: toastType === "error" ? "#dc2626" : toastType === "warning" ? "#d97706" : "#16a34a",
+            }}
+          >
+            {toastType === "error"
+              ? <XIcon size={14} className="inline-block align-[-2px]" />
+              : toastType === "warning"
+                ? <AlertTriangleIcon size={14} className="inline-block align-[-2px]" />
+                : <CheckIcon size={14} className="inline-block align-[-2px]" />}
+            {" "}{toast}
           </div>
         </div>
       )}

@@ -85,10 +85,10 @@ export function PublishView({ planId, projectId }: PublishViewProps) {
         stopLoading(isZh ? "部署完成" : "Deploy complete");
       } else {
         const data = await res.json().catch(() => ({ error: "Failed" }));
-        stopLoading(isZh ? `部署失败: ${data.error}` : `Deploy failed: ${data.error}`);
+        stopLoading(isZh ? `部署失败: ${data.error}` : `Deploy failed: ${data.error}`, "error");
       }
     } catch (e) {
-      stopLoading(isZh ? `部署失败: ${e}` : `Deploy failed: ${e}`);
+      stopLoading(isZh ? `部署失败: ${e}` : `Deploy failed: ${e}`, "error");
     } finally {
       setDeploying(false);
     }
@@ -154,7 +154,7 @@ export function PublishView({ planId, projectId }: PublishViewProps) {
         await fetchStatus();
         window.open(data.url, "_blank");
       } else {
-        alert(data.error || "Failed");
+        stopLoading(isZh ? `PR 创建失败: ${data.error}` : `PR failed: ${data.error}`, "error");
       }
     } finally {
       setCreatingPR(false);

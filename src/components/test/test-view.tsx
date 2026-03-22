@@ -129,7 +129,7 @@ export function TestView({ planId, planStatus, onPlanStatusChange }: TestViewPro
       onPlanStatusChange();
       stopLoading(isZh ? "测试用例生成完成" : "Tests generated");
     } catch {
-      stopLoading(isZh ? "生成失败" : "Generation failed");
+      stopLoading(isZh ? "生成失败" : "Generation failed", "error");
     } finally {
       setGenerating(false);
     }
@@ -148,13 +148,13 @@ export function TestView({ planId, planStatus, onPlanStatusChange }: TestViewPro
       if (freshCase?.status === "passed") {
         stopLoading(isZh ? "测试通过" : "Test passed");
       } else if (freshCase?.status === "failed") {
-        stopLoading(isZh ? "测试未通过" : "Test failed");
+        stopLoading(isZh ? "测试未通过" : "Test failed", "error");
         setFailedPrompt({ cases: [freshCase] });
       } else {
         stopLoading();
       }
     } catch {
-      stopLoading(isZh ? "运行失败" : "Run failed");
+      stopLoading(isZh ? "运行失败" : "Run failed", "error");
     } finally {
       setRunningCase(null);
     }

@@ -119,17 +119,17 @@ export function SchemeCard({
           });
           stopLoading(isZh ? "方案修改完成" : "Scheme modified");
         } else {
-          stopLoading(isZh ? "修改失败" : "Failed");
+          stopLoading(isZh ? "修改失败" : "Failed", "error");
         }
       } else {
-        stopLoading(isZh ? "修改失败" : "Failed");
+        stopLoading(isZh ? "修改失败" : "Failed", "error");
       }
     } catch {
       setChatHistory((prev) => [
         ...prev,
         { role: "ai", text: "Error" },
       ]);
-      stopLoading(isZh ? "修改失败" : "Failed");
+      stopLoading(isZh ? "修改失败" : "Failed", "error");
     } finally {
       setChatting(false);
     }

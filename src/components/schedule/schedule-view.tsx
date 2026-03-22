@@ -173,7 +173,7 @@ export function ScheduleView({
       abortRef.current.abort();
       abortRef.current = null;
       setExecuting(null);
-      stopLoading(isZh ? "已停止自动执行" : "Auto-execute stopped");
+      stopLoading(isZh ? "已停止自动执行" : "Auto-execute stopped", "error");
       setTasks([]);
       await fetchSchedule();
     }
@@ -261,7 +261,7 @@ export function ScheduleView({
         }
 
         if (content.includes("Error:") && content.trim().split("\n").length < 5) {
-          stopLoading(isZh ? `排期生成失败: ${content.trim()}` : `Failed: ${content.trim()}`);
+          stopLoading(isZh ? `排期生成失败: ${content.trim()}` : `Failed: ${content.trim()}`, "error");
         } else {
           await new Promise((r) => setTimeout(r, 500));
           await fetchSchedule();
@@ -269,10 +269,10 @@ export function ScheduleView({
           stopLoading(isZh ? "排期生成完成" : "Schedule generated");
         }
       } else {
-        stopLoading(isZh ? `排期生成失败 (${res.status})` : `Failed (${res.status})`);
+        stopLoading(isZh ? `排期生成失败 (${res.status}, "error")` : `Failed (${res.status})`);
       }
     } catch (err) {
-      stopLoading(isZh ? `排期生成失败: ${err instanceof Error ? err.message : "未知错误"}` : `Failed: ${err instanceof Error ? err.message : "Unknown error"}`);
+      stopLoading(isZh ? `排期生成失败: ${err instanceof Error ? err.message : "未知错误"}` : `Failed: ${err instanceof Error ? err.message : "Unknown error"}`, "error");
     } finally {
       setGenerating(false);
     }
@@ -322,9 +322,9 @@ export function ScheduleView({
       stopLoading(isZh ? "任务执行完成" : "Task completed");
     } catch (err) {
       if (signal?.aborted) {
-        stopLoading(isZh ? "已取消自动执行" : "Auto-execute cancelled");
+        stopLoading(isZh ? "已取消自动执行" : "Auto-execute cancelled", "error");
       } else {
-        stopLoading(isZh ? "执行失败" : "Execution failed");
+        stopLoading(isZh ? "执行失败" : "Execution failed", "error");
       }
     } finally {
       setExecuting(null);

@@ -606,16 +606,6 @@ export function ScheduleView({
                           value={editForm.endDate} onChange={(e) => setEditForm({ ...editForm, endDate: e.target.value })} />
                       </label>
                     </div>
-                    <div>
-                      <span className="text-xs" style={{ color: "var(--muted)" }}>{isZh ? "Provider / 模型" : "Provider / Model"}</span>
-                      <ProviderModelSelect
-                        provider={editForm.provider}
-                        model={editForm.model}
-                        onProviderChange={(p) => setEditForm({ ...editForm, provider: p })}
-                        onModelChange={(m) => setEditForm({ ...editForm, model: m })}
-                        compact
-                      />
-                    </div>
                     <div className="flex gap-2 justify-end">
                       <Button variant="secondary" size="sm" onClick={() => setEditingItem(null)}>{t("common.cancel")}</Button>
                       <Button size="sm" onClick={saveEdit}>{t("common.save")}</Button>

@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
   // Auto-init git if target repo has no .git
   if (fs.existsSync(targetRepoPath) && !fs.existsSync(`${targetRepoPath}/.git`)) {
     try {
-      execSync("git init && git add -A && git commit -m \"initial commit\" --allow-empty", {
+      execSync("git init", {
         cwd: targetRepoPath, encoding: "utf-8", timeout: 10000,
       });
     } catch { /* ignore — may fail if no files or git not installed */ }

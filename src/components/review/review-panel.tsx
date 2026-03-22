@@ -281,12 +281,14 @@ export function ReviewPanel({
 
   const handleFix = async (item: ReviewItem, userNote?: string) => {
     if (!item.targetId || fixingItem) return;
+    // Extract pure schemeId from targetId (may have ":section-N" suffix)
+    const pureSchemeId = item.targetId.split(":")[0];
     setFixingItem(item.id);
     setFixPromptItem(null);
     setFixUserNote("");
     startLoading(isZh ? "AI 正在修复..." : "AI fixing...");
     try {
-      const schemeRes = await fetch(`/api/schemes/${item.targetId}`);
+      const schemeRes = await fetch(`/api/schemes/${pureSchemeId}`);
       const schemeData = schemeRes.ok ? await schemeRes.json() : null;
       const originalUpdatedAt = schemeData?.updatedAt;
 
@@ -299,8 +301,10 @@ export function ReviewPanel({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          schemeId: item.targetId,
+          schemeId: pureSchemeId,
           message: fixMessage,
+          ...(reviewProvider && { provider: reviewProvider }),
+          ...(reviewModel && { model: reviewModel }),
         }),
       });
 
@@ -308,7 +312,7 @@ export function ReviewPanel({
       if (originalUpdatedAt) {
         for (let i = 0; i < 60; i++) {
           await new Promise((r) => setTimeout(r, 3000));
-          const checkRes = await fetch(`/api/schemes/${item.targetId}`);
+          const checkRes = await fetch(`/api/schemes/${pureSchemeId}`);
           if (checkRes.ok) {
             const checkData = await checkRes.json();
             if (checkData.updatedAt !== originalUpdatedAt) break;
@@ -350,10 +354,11 @@ export function ReviewPanel({
         : `Fixing ${fixed + failed + 1}/${unresolvedItems.length}: ${item.title}...`);
       try {
         const fixMessage = `Fix the following issue:\n\n**${item.title}**\n\n${item.content}`;
+        const fixSchemeId = item.targetId.split(":")[0];
         await fetch("/api/schemes/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ schemeId: item.targetId, message: fixMessage }),
+          body: JSON.stringify({ schemeId: fixSchemeId, message: fixMessage, ...(reviewProvider && { provider: reviewProvider }), ...(reviewModel && { model: reviewModel }) }),
         });
         await fetch(`/api/review-items/${item.id}`, {
           method: "PUT",
@@ -389,7 +394,7 @@ export function ReviewPanel({
         planId,
         title: `[fix] ${item.title}`,
         description: desc,
-        afterItemId: item.targetId || undefined,
+        afterItemId: item.targetId?.split(":")[0] || undefined,
       }),
     });
     // Don't mark resolved — wait for fix task to complete

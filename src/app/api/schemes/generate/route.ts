@@ -470,14 +470,29 @@ export async function POST(req: NextRequest) {
               .run();
           }
 
-          await acpClient.prompt(session.sessionId, prompt, (type, text) => {
-            if (type === "text") {
-              fullText += text;
-              controller.enqueue(encoder.encode(text));
-            } else if (type === "tool") {
-              controller.enqueue(encoder.encode(text));
+          // Run prompt, and if truncated (max_tokens), continue generating
+          let attempts = 0;
+          const maxContinuations = 3;
+          while (attempts <= maxContinuations) {
+            const currentPrompt = attempts === 0
+              ? prompt
+              : "Your previous response was truncated. Continue EXACTLY where you left off — do not repeat what was already written. Complete the remaining sections.";
+            const result = await acpClient.prompt(session.sessionId, currentPrompt, (type, text) => {
+              if (type === "text") {
+                fullText += text;
+                controller.enqueue(encoder.encode(text));
+              } else if (type === "tool") {
+                controller.enqueue(encoder.encode(text));
+              }
+            });
+            attempts++;
+            // Check if output was truncated
+            if (result.stopReason === "max_tokens" || result.stopReason === "length") {
+              controller.enqueue(encoder.encode("\n\n<!-- continuing... -->\n\n"));
+              continue;
             }
-          });
+            break;
+          }
 
           if (fullText.trim()) {
             const saved = saveScheme(planId, fullText.trim(), plan.status, plan.name);

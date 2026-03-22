@@ -319,10 +319,17 @@ export async function POST(req: NextRequest) {
           await acpClient.start();
           const session = await acpClient.createSession(resolved.model);
 
+          const zh = /[\u4e00-\u9fff]/.test(plan.name || "");
+          controller.enqueue(encoder.encode(zh ? "AI 正在分析...\n" : "AI analyzing...\n"));
+
           await acpClient.prompt(session.sessionId, `${system}\n\n${prompt}`, (t, text) => {
             if (t === "text") {
               fullText += text;
               controller.enqueue(encoder.encode(text));
+            } else if (t === "tool") {
+              controller.enqueue(encoder.encode(text));
+            } else if (t === "thought") {
+              controller.enqueue(encoder.encode(`[thinking] ${text.slice(0, 100)}\n`));
             }
           });
           controller.close();

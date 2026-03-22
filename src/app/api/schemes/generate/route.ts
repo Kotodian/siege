@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
-import { plans, projects, schemes, reviews, reviewItems } from "@/lib/db/schema";
+import { plans, projects, schemes, schemeVersions, reviews, reviewItems } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { execSync } from "child_process";
 import { streamText, tool, stepCountIs, generateText } from "ai";
@@ -54,11 +54,7 @@ function saveScheme(planId: string, content: string, planStatus: string): boolea
 
   const db = getDb();
 
-  // Delete old schemes + their reviews when regenerating (new replaces old)
-  const oldSchemes = db.select().from(schemes).where(eq(schemes.planId, planId)).all();
-  for (const s of oldSchemes) {
-    db.delete(schemes).where(eq(schemes.id, s.id)).run();
-  }
+  // Delete old scheme reviews + findings
   const oldReviews = db.select().from(reviews)
     .where(and(eq(reviews.planId, planId), eq(reviews.type, "scheme")))
     .all();
@@ -67,10 +63,36 @@ function saveScheme(planId: string, content: string, planStatus: string): boolea
     db.delete(reviews).where(eq(reviews.id, r.id)).run();
   }
 
-  db.insert(schemes).values({
-    id: crypto.randomUUID(), planId,
-    title, content: cleanedContent, sourceType: "local_analysis",
-  }).run();
+  // Update existing scheme (preserve ID for version history) or create new
+  const existing = db.select().from(schemes).where(eq(schemes.planId, planId)).all();
+  if (existing.length > 0) {
+    const old = existing[0];
+    // Save old content as a version snapshot
+    const maxVer = db.select().from(schemeVersions)
+      .where(eq(schemeVersions.schemeId, old.id))
+      .all()
+      .reduce((max, v) => Math.max(max, v.version), 0);
+    db.insert(schemeVersions).values({
+      id: crypto.randomUUID(),
+      schemeId: old.id,
+      version: maxVer + 1,
+      title: old.title,
+      content: old.content || "",
+    }).run();
+    // Update with new content
+    db.update(schemes).set({
+      title, content: cleanedContent, updatedAt: new Date().toISOString(),
+    }).where(eq(schemes.id, old.id)).run();
+    // Delete extra schemes if any
+    for (const s of existing.slice(1)) {
+      db.delete(schemes).where(eq(schemes.id, s.id)).run();
+    }
+  } else {
+    db.insert(schemes).values({
+      id: crypto.randomUUID(), planId,
+      title, content: cleanedContent, sourceType: "local_analysis",
+    }).run();
+  }
 
   if (planStatus === "draft") {
     db.update(plans)

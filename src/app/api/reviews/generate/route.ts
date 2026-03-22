@@ -335,19 +335,44 @@ export async function POST(req: NextRequest) {
   const encoder = new TextEncoder();
   let fullText = "";
 
-  // ACP engine: use Claude Code / Codex
+  // ACP engine: let the agent inspect git commits directly
   if (resolved.provider === "acp" || resolved.provider === "codex-acp") {
+    const zh = /[\u4e00-\u9fff]/.test(plan.name || "");
+
+    // Build a lightweight prompt that tells the agent to check git itself
+    const taskSummary = type === "implementation"
+      ? itemsToReview.map(i => `- ${i.title}`).join("\n")
+      : itemsToReview.map(i => `- ${i.title}`).join("\n");
+
+    const acpPrompt = `You are a code reviewer. Review the recent commits in this repository for the following tasks:
+
+Plan: ${plan.name}
+Tasks:
+${taskSummary}
+
+Steps:
+1. Run \`git log --oneline -10\` to see recent commits
+2. Run \`git diff <before_commit>..<latest_commit>\` to see the actual changes (or \`git show <commit>\` for each commit)
+3. Read the changed files to understand the context
+4. Output your review as a JSON object
+
+${system}
+
+${zh ? "用中文输出所有内容。" : ""}`;
+
     const responseStream = new ReadableStream({
       async start(controller) {
         const acpClient = new AcpClient(cwd, resolved.provider === "codex-acp" ? "codex" : "claude");
         try {
           await acpClient.start();
           const session = await acpClient.createSession(resolved.model);
+          if (resolved.model) {
+            await acpClient.setModel(session.sessionId, resolved.model);
+          }
 
-          const zh = /[\u4e00-\u9fff]/.test(plan.name || "");
-          controller.enqueue(encoder.encode(zh ? "AI 正在分析...\n" : "AI analyzing...\n"));
+          controller.enqueue(encoder.encode(zh ? "AI 正在检查 git 提交...\n" : "AI inspecting git commits...\n"));
 
-          await acpClient.prompt(session.sessionId, `${system}\n\n${prompt}`, (t, text) => {
+          await acpClient.prompt(session.sessionId, acpPrompt, (t, text) => {
             if (t === "text") {
               fullText += text;
               controller.enqueue(encoder.encode(text));

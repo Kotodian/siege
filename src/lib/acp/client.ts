@@ -250,6 +250,14 @@ export class AcpClient {
           continue;
         }
 
+        // Notification (no id) — just log
+        if (msg.id === undefined && msg.method) {
+          if (msg.method !== "session/update") {
+            console.log(`[acp] notification: ${msg.method}`);
+          }
+          continue;
+        }
+
         // Request from agent (needs response)
         if (msg.id !== undefined && msg.method) {
           this.handleAgentRequest(msg.id, msg.method, msg.params);

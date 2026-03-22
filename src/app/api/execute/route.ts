@@ -492,8 +492,9 @@ Implement the changes directly. Only read files you need to modify. Do NOT scan 
             }
           });
 
-          fullLog += `\n[ACP] Stop: ${result.stopReason}, tokens: ${result.usage?.totalTokens || "?"}`;
-          controller.enqueue(encoder.encode(`\n\n---\nStop: ${result.stopReason}`));
+          const stopReason = result?.stopReason || "unknown";
+          fullLog += `\n[ACP] Stop: ${stopReason}, tokens: ${result?.usage?.totalTokens || "?"}`;
+          controller.enqueue(encoder.encode(`\n\n---\nStop: ${stopReason}`));
 
           db.update(scheduleItems)
             .set({ status: "completed", progress: 100, executionLog: fullLog || "No output" })

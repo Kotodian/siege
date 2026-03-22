@@ -487,7 +487,7 @@ export async function POST(req: NextRequest) {
             });
             attempts++;
             // Check if output was truncated
-            if (result.stopReason === "max_tokens" || result.stopReason === "length") {
+            if (result?.stopReason === "max_tokens" || result?.stopReason === "length") {
               controller.enqueue(encoder.encode("\n\n<!-- continuing... -->\n\n"));
               continue;
             }

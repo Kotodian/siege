@@ -270,6 +270,7 @@ export const reviewItems = sqliteTable("review_items", {
     .notNull()
     .default("info"),
   resolved: integer("resolved", { mode: "boolean" }).notNull().default(false),
+  resolution: text("resolution"), // null=pending, "approved"=valid issue, "rejected"=dismissed
   filePath: text("file_path"),
   lineNumber: integer("line_number"),
   options: text("options"),

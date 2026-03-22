@@ -31,6 +31,7 @@ export interface ReviewFinding {
   content: string | null;
   severity: string;
   resolved: boolean;
+  resolution?: string | null;
 }
 
 interface SchemeCardProps {

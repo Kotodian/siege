@@ -71,6 +71,7 @@ interface Finding {
   content: string | null;
   severity: string;
   resolved: boolean;
+  resolution?: string | null; // null=pending, "approved"=valid, "rejected"=dismissed
 }
 
 interface SchemeSectionsProps {
@@ -87,6 +88,139 @@ const severityStyles: Record<string, { bg: string; border: string; text: string 
   warning: { bg: "#3a2a1a", border: "#78350f", text: "#fcd34d" },
   info: { bg: "#1a2a3a", border: "#1e3a5f", text: "#93c5fd" },
 };
+
+const resolutionStyles: Record<string, { label: string; labelZh: string; bg: string; color: string }> = {
+  approved: { label: "Approved", labelZh: "已认可", bg: "rgba(234,179,8,0.2)", color: "#fcd34d" },
+  rejected: { label: "Rejected", labelZh: "已驳回", bg: "rgba(107,114,128,0.2)", color: "#9ca3af" },
+};
+
+function FindingCard({
+  finding: f,
+  readonly,
+  schemeId,
+  isZh,
+  fixingFinding,
+  fixNote,
+  onFixNote,
+  onStartFix,
+  onSubmitFix,
+  onCancelFix,
+  onResolutionChange,
+}: {
+  finding: Finding;
+  readonly: boolean;
+  schemeId?: string;
+  isZh: boolean;
+  fixingFinding: { finding: Finding } | null;
+  fixNote: string;
+  onFixNote: (v: string) => void;
+  onStartFix: () => void;
+  onSubmitFix: () => void;
+  onCancelFix: () => void;
+  onResolutionChange?: () => void;
+}) {
+  const s = severityStyles[f.severity] || severityStyles.info;
+  const rs = f.resolution ? resolutionStyles[f.resolution] : null;
+  const isRejected = f.resolution === "rejected";
+  const isApproved = f.resolution === "approved";
+  const isPending = !f.resolution;
+
+  const handleResolution = async (resolution: "approved" | "rejected") => {
+    await fetch(`/api/review-items/${f.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        resolution,
+        resolved: resolution === "rejected",
+      }),
+    });
+    onResolutionChange?.();
+  };
+
+  return (
+    <div
+      className={`rounded-md border px-3 py-2 text-xs ${isRejected ? "opacity-30" : ""}`}
+      style={{ background: s.bg, borderColor: s.border, color: s.text }}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 font-medium min-w-0">
+          <span className="uppercase text-[10px] px-1.5 py-0.5 rounded shrink-0" style={{ background: s.border }}>
+            {f.severity}
+          </span>
+          <span className="truncate">{f.title}</span>
+          {rs && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded shrink-0" style={{ background: rs.bg, color: rs.color }}>
+              {isZh ? rs.labelZh : rs.label}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-1 shrink-0">
+          {isPending && !readonly && (
+            <>
+              <button
+                onClick={(e) => { e.stopPropagation(); handleResolution("approved"); }}
+                className="px-2 py-0.5 rounded text-[10px] font-medium hover:opacity-80"
+                style={{ background: "rgba(34,197,94,0.2)", color: "#86efac" }}
+                title={isZh ? "认可：这是一个有效问题" : "Approve: this is a valid issue"}
+              >
+                {isZh ? "认可" : "Approve"}
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); handleResolution("rejected"); }}
+                className="px-2 py-0.5 rounded text-[10px] font-medium hover:opacity-80"
+                style={{ background: "rgba(107,114,128,0.2)", color: "#9ca3af" }}
+                title={isZh ? "驳回：不认为这是问题" : "Reject: not a real issue"}
+              >
+                {isZh ? "驳回" : "Reject"}
+              </button>
+            </>
+          )}
+          {isApproved && !readonly && schemeId && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onStartFix(); }}
+              className="px-2 py-0.5 rounded text-[10px] font-medium hover:opacity-80"
+              style={{ background: s.border, color: s.text }}
+            >
+              {isZh ? "AI 修复" : "AI Fix"}
+            </button>
+          )}
+        </div>
+      </div>
+      {f.content && (
+        <div className="mt-1 opacity-90">
+          <MarkdownRenderer content={f.content} />
+        </div>
+      )}
+      {fixingFinding?.finding.id === f.id && (
+        <div className="mt-2 flex gap-2" onClick={(e) => e.stopPropagation()}>
+          <input
+            value={fixNote}
+            onChange={(e) => onFixNote(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && onSubmitFix()}
+            placeholder={isZh ? "补充说明（可选，直接回车修复）" : "Additional notes (optional, Enter to fix)"}
+            autoFocus
+            className="flex-1 rounded border px-2 py-1 text-[11px]"
+            style={{ background: "var(--card)", color: "var(--foreground)", borderColor: "var(--card-border)" }}
+          />
+          <button
+            onClick={onSubmitFix}
+            className="shrink-0 px-2 py-1 rounded text-[10px] font-medium hover:opacity-80"
+            style={{ background: "var(--foreground)", color: "var(--background)" }}
+          >
+            {isZh ? "修复" : "Fix"}
+          </button>
+          <button
+            onClick={onCancelFix}
+            className="shrink-0 px-2 py-1 rounded text-[10px] hover:opacity-80"
+            style={{ color: "var(--muted)" }}
+          >
+            {isZh ? "取消" : "Cancel"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function SchemeSections({
   content,
@@ -303,72 +437,22 @@ export function SchemeSections({
                   {/* Review findings for this section */}
                   {sectionFindings.length > 0 && (
                     <div className="mt-3 space-y-2">
-                      {sectionFindings.map((f) => {
-                        const s = severityStyles[f.severity] || severityStyles.info;
-                        return (
-                          <div
-                            key={f.id}
-                            className={`rounded-md border px-3 py-2 text-xs ${f.resolved ? "opacity-40" : ""}`}
-                            style={{ background: s.bg, borderColor: s.border, color: s.text }}
-                          >
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2 font-medium">
-                                <span className="uppercase text-[10px] px-1.5 py-0.5 rounded"
-                                  style={{ background: s.border }}>
-                                  {f.severity}
-                                </span>
-                                {f.title}
-                                {f.resolved && <span style={{ color: "var(--muted)" }}>(resolved)</span>}
-                              </div>
-                              {!f.resolved && !readonly && schemeId && (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setFixingFinding({ finding: f, section, sectionIndex: i });
-                                    setFixNote("");
-                                  }}
-                                  className="shrink-0 px-2 py-0.5 rounded text-[10px] font-medium hover:opacity-80"
-                                  style={{ background: s.border, color: s.text }}
-                                >
-                                  {isZh ? "AI 修复" : "AI Fix"}
-                                </button>
-                              )}
-                            </div>
-                            {f.content && (
-                              <div className="mt-1 opacity-90">
-                                <MarkdownRenderer content={f.content} />
-                              </div>
-                            )}
-                            {fixingFinding?.finding.id === f.id && (
-                              <div className="mt-2 flex gap-2" onClick={(e) => e.stopPropagation()}>
-                                <input
-                                  value={fixNote}
-                                  onChange={(e) => setFixNote(e.target.value)}
-                                  onKeyDown={(e) => e.key === "Enter" && submitFindingFix()}
-                                  placeholder={isZh ? "补充说明（可选，直接回车修复）" : "Additional notes (optional, Enter to fix)"}
-                                  autoFocus
-                                  className="flex-1 rounded border px-2 py-1 text-[11px]"
-                                  style={{ background: "var(--card)", color: "var(--foreground)", borderColor: "var(--card-border)" }}
-                                />
-                                <button
-                                  onClick={submitFindingFix}
-                                  className="shrink-0 px-2 py-1 rounded text-[10px] font-medium hover:opacity-80"
-                                  style={{ background: "var(--foreground)", color: "var(--background)" }}
-                                >
-                                  {isZh ? "修复" : "Fix"}
-                                </button>
-                                <button
-                                  onClick={() => setFixingFinding(null)}
-                                  className="shrink-0 px-2 py-1 rounded text-[10px] hover:opacity-80"
-                                  style={{ color: "var(--muted)" }}
-                                >
-                                  {isZh ? "取消" : "Cancel"}
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
+                      {sectionFindings.map((f) => (
+                        <FindingCard
+                          key={f.id}
+                          finding={f}
+                          readonly={!!readonly}
+                          schemeId={schemeId}
+                          isZh={isZh}
+                          fixingFinding={fixingFinding}
+                          fixNote={fixNote}
+                          onFixNote={setFixNote}
+                          onStartFix={() => { setFixingFinding({ finding: f, section, sectionIndex: i }); setFixNote(""); }}
+                          onSubmitFix={submitFindingFix}
+                          onCancelFix={() => setFixingFinding(null)}
+                          onResolutionChange={onFindingsChanged}
+                        />
+                      ))}
                     </div>
                   )}
 
@@ -456,23 +540,22 @@ export function SchemeSections({
             <h5 className="text-xs font-medium" style={{ color: "var(--muted)" }}>
               {isZh ? "审查发现" : "Review Findings"}
             </h5>
-            {unmatched.map((f) => {
-              const s = severityStyles[f.severity] || severityStyles.info;
-              return (
-                <div
-                  key={f.id}
-                  className={`rounded-md border px-3 py-2 text-xs ${f.resolved ? "opacity-40" : ""}`}
-                  style={{ background: s.bg, borderColor: s.border, color: s.text }}
-                >
-                  <div className="flex items-center gap-2 font-medium">
-                    <span className="uppercase text-[10px] px-1.5 py-0.5 rounded" style={{ background: s.border }}>{f.severity}</span>
-                    {f.title}
-                    {f.resolved && <span style={{ color: "var(--muted)" }}>(resolved)</span>}
-                  </div>
-                  {f.content && <div className="mt-1 opacity-90"><MarkdownRenderer content={f.content} /></div>}
-                </div>
-              );
-            })}
+            {unmatched.map((f) => (
+              <FindingCard
+                key={f.id}
+                finding={f}
+                readonly={!!readonly}
+                schemeId={schemeId}
+                isZh={isZh}
+                fixingFinding={fixingFinding}
+                fixNote={fixNote}
+                onFixNote={setFixNote}
+                onStartFix={() => { setFixingFinding({ finding: f, section: sections[0], sectionIndex: 0 }); setFixNote(""); }}
+                onSubmitFix={submitFindingFix}
+                onCancelFix={() => setFixingFinding(null)}
+                onResolutionChange={onFindingsChanged}
+              />
+            ))}
           </div>
         );
       })()}

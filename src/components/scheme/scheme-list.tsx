@@ -38,7 +38,7 @@ export function SchemeList({
   const [schemes, setSchemes] = useState<Scheme[]>([]);
   const [reviewFindings, setReviewFindings] = useState<Array<{
     id: string; targetId: string; title: string; content: string | null;
-    severity: string; resolved: boolean;
+    severity: string; resolved: boolean; resolution?: string | null;
   }>>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [generateDialogOpen, setGenerateDialogOpen] = useState(false);

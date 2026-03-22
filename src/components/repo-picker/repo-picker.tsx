@@ -169,6 +169,27 @@ function GitUrlCloner({
   const [url, setUrl] = useState("");
   const [cloning, setCloning] = useState(false);
   const [error, setError] = useState("");
+  const [showDirPicker, setShowDirPicker] = useState(false);
+  const [targetDir, setTargetDir] = useState("");
+
+  // Directory browser state
+  const [browsePath, setBrowsePath] = useState("");
+  const [browseParent, setBrowseParent] = useState("");
+  const [browseDirs, setBrowseDirs] = useState<DirEntry[]>([]);
+  const [browseLoading, setBrowseLoading] = useState(false);
+
+  const browseDir = async (dirPath?: string) => {
+    setBrowseLoading(true);
+    const params = dirPath ? `?path=${encodeURIComponent(dirPath)}` : "";
+    const res = await fetch(`/api/filesystem${params}`);
+    const data = await res.json();
+    if (res.ok) {
+      setBrowsePath(data.current);
+      setBrowseParent(data.parent);
+      setBrowseDirs(data.dirs);
+    }
+    setBrowseLoading(false);
+  };
 
   const handleClone = async () => {
     if (!url.trim()) return;
@@ -178,7 +199,7 @@ function GitUrlCloner({
       const res = await fetch("/api/git/clone", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: url.trim() }),
+        body: JSON.stringify({ url: url.trim(), targetDir: targetDir || undefined }),
       });
       const data = await res.json();
       if (res.ok) {
@@ -206,6 +227,53 @@ function GitUrlCloner({
         placeholder="https://gitlab.com/user/repo.git"
         onKeyDown={(e) => e.key === "Enter" && handleClone()}
       />
+
+      {/* Target directory selector */}
+      <div>
+        <button
+          onClick={() => { if (!showDirPicker) browseDir(); setShowDirPicker(!showDirPicker); }}
+          className="text-xs hover:opacity-80 flex items-center gap-1"
+          style={{ color: "var(--muted)" }}
+        >
+          {isZh ? "克隆到:" : "Clone to:"}{" "}
+          <span className="font-mono" style={{ color: "var(--foreground)" }}>
+            {targetDir || (isZh ? "~/projects/ (默认)" : "~/projects/ (default)")}
+          </span>
+          <span className="text-[10px]">{showDirPicker ? "▲" : "▼"}</span>
+        </button>
+
+        {showDirPicker && (
+          <div className="mt-2 rounded-lg border max-h-48 overflow-y-auto" style={{ borderColor: "var(--card-border)", background: "var(--card)" }}>
+            <div className="flex items-center gap-2 px-3 py-1.5" style={{ borderBottom: "1px solid var(--card-border)" }}>
+              <button onClick={() => browseDir(browseParent)} disabled={browsePath === browseParent} className="text-xs" style={{ color: "var(--muted)" }}>..</button>
+              <span className="text-[10px] font-mono truncate" style={{ color: "var(--muted)" }}>{browsePath}</span>
+              <button
+                onClick={() => { setTargetDir(browsePath); setShowDirPicker(false); }}
+                className="ml-auto text-[10px] px-2 py-0.5 rounded"
+                style={{ background: "rgba(34,197,94,0.15)", color: "#86efac" }}
+              >
+                {isZh ? "选择" : "Select"}
+              </button>
+            </div>
+            {browseLoading ? (
+              <p className="text-xs text-center py-3" style={{ color: "var(--muted)" }}>...</p>
+            ) : (
+              browseDirs.map((dir) => (
+                <button
+                  key={dir.path}
+                  onClick={() => browseDir(dir.path)}
+                  className="w-full text-left px-3 py-1.5 text-xs hover:opacity-80 flex items-center gap-1.5"
+                  style={{ color: "var(--foreground)" }}
+                >
+                  <span style={{ color: "var(--muted)" }}>📁</span>
+                  <span className="truncate">{dir.name}</span>
+                </button>
+              ))
+            )}
+          </div>
+        )}
+      </div>
+
       {error && <p className="text-xs text-red-500">{error}</p>}
       <Button onClick={handleClone} disabled={cloning || !url.trim()} className="w-full">
         {cloning ? (isZh ? "克隆中..." : "Cloning...") : (isZh ? "克隆仓库" : "Clone Repository")}

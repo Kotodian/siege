@@ -226,7 +226,7 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
             <h1 className="text-4xl font-bold">
               {isZh ? "欢迎使用 Siege" : "Welcome to Siege"}
             </h1>
-            <p className="text-lg text-gray-600">
+            <p className="text-lg text-[var(--muted)]">
               {isZh
                 ? "AI 驱动的智能体开发工具，从方案设计到代码实现的完整工作流。"
                 : "AI-powered agent development tool. From design to implementation, all in one place."}
@@ -236,27 +236,27 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
             {(githubStatus || aiStatus) && (
               <div className="flex justify-center gap-4 text-xs">
                 {githubStatus?.authenticated && (
-                  <span className="text-green-600 bg-green-50 px-2 py-1 rounded-full inline-flex items-center gap-1">
+                  <span className="text-green-600 bg-green-500/15 px-2 py-1 rounded-full inline-flex items-center gap-1">
                     <GitHubIcon className="w-3 h-3" /> {githubStatus.username}
                   </span>
                 )}
                 {aiStatus?.anthropic.configured && (
-                  <span className="text-green-600 bg-green-50 px-2 py-1 rounded-full">
+                  <span className="text-green-600 bg-green-500/15 px-2 py-1 rounded-full">
                     ✓ Anthropic
                   </span>
                 )}
                 {claudeStatus?.loggedIn && !aiStatus?.anthropic.configured && (
-                  <span className="text-green-600 bg-green-50 px-2 py-1 rounded-full">
+                  <span className="text-green-600 bg-green-500/15 px-2 py-1 rounded-full">
                     ✓ Claude Login
                   </span>
                 )}
                 {aiStatus?.openai.configured && (
-                  <span className="text-green-600 bg-green-50 px-2 py-1 rounded-full">
+                  <span className="text-green-600 bg-green-500/15 px-2 py-1 rounded-full">
                     ✓ OpenAI
                   </span>
                 )}
                 {aiStatus?.glm?.configured && (
-                  <span className="text-green-600 bg-green-50 px-2 py-1 rounded-full">
+                  <span className="text-green-600 bg-green-500/15 px-2 py-1 rounded-full">
                     ✓ GLM
                   </span>
                 )}
@@ -287,33 +287,33 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
                 <GitHubIcon className="w-7 h-7" />
                 {isZh ? "关联 GitHub" : "Connect GitHub"}
               </h2>
-              <p className="text-gray-500 mt-1">
+              <p className="text-[var(--muted)] mt-1">
                 {isZh
                   ? "关联后可以直接从 GitHub 仓库列表选择项目并克隆。不关联可以从本地目录选择。"
                   : "Connect to select and clone repos from GitHub. You can also use local directories."}
               </p>
             </div>
 
-            <div className="rounded-lg border bg-white p-6">
+            <div className="rounded-lg border bg-[var(--card)] p-6">
               {checkingGithub ? (
-                <div className="text-center py-8 text-gray-400">
+                <div className="text-center py-8 text-[var(--muted)]">
                   {isZh ? "检查中..." : "Checking..."}
                 </div>
               ) : githubStatus?.authenticated ? (
                 <div className="text-center space-y-3 py-4">
                   <div className="flex justify-center">
-                    <div className="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center">
+                    <div className="w-12 h-12 rounded-full bg-green-500/15 flex items-center justify-center">
                       <GitHubIcon className="w-7 h-7 text-green-600" />
                     </div>
                   </div>
-                  <p className="text-gray-800 font-medium">
+                  <p className="text-[var(--foreground)] font-medium">
                     {isZh ? `已连接：${githubStatus.username}` : `Connected: ${githubStatus.username}`}
                   </p>
                 </div>
               ) : githubStatus && !githubStatus.ghInstalled ? (
                 <div className="text-center space-y-4 py-4">
                   <div className="text-4xl"><AlertTriangleIcon size={40} className="text-yellow-500" /></div>
-                  <p className="text-gray-600">
+                  <p className="text-[var(--muted)]">
                     {isZh
                       ? "未检测到 GitHub CLI (gh)。安装后可以连接。"
                       : "GitHub CLI (gh) not detected."}
@@ -331,17 +331,17 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
               ) : githubLoggingIn && githubLoginCode ? (
                 <div className="text-center space-y-4 py-4">
                   <div className="flex justify-center">
-                    <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center animate-pulse">
-                      <GitHubIcon className="w-7 h-7 text-gray-700" />
+                    <div className="w-12 h-12 rounded-full bg-[var(--card-border)] flex items-center justify-center animate-pulse">
+                      <GitHubIcon className="w-7 h-7 text-[var(--foreground)]" />
                     </div>
                   </div>
-                  <p className="text-gray-600">
+                  <p className="text-[var(--muted)]">
                     {isZh
                       ? "已在浏览器中打开 GitHub 授权页面，请输入以下验证码："
                       : "GitHub authorization page opened. Enter this code:"}
                   </p>
                   <div className="flex items-center justify-center gap-2">
-                    <code className="text-2xl font-bold font-mono tracking-widest bg-gray-100 rounded-lg px-6 py-3">
+                    <code className="text-2xl font-bold font-mono tracking-widest bg-[var(--card-border)] rounded-lg px-6 py-3">
                       {githubLoginCode}
                     </code>
                     <Button
@@ -352,7 +352,7 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
                       {isZh ? "复制" : "Copy"}
                     </Button>
                   </div>
-                  <p className="text-xs text-gray-400">
+                  <p className="text-xs text-[var(--muted)]">
                     {isZh ? "等待授权完成..." : "Waiting for authorization..."}
                   </p>
                   <Button
@@ -408,7 +408,7 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
               <h2 className="text-2xl font-bold">
                 {isZh ? "配置 AI 服务" : "Configure AI Service"}
               </h2>
-              <p className="text-gray-500 mt-1">
+              <p className="text-[var(--muted)] mt-1">
                 {isZh
                   ? "至少配置一个 AI 提供商，支持直连 API 或中转站代理。"
                   : "Configure at least one AI provider. Supports direct API or proxy relay."}
@@ -417,7 +417,7 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
 
             <div className="space-y-4">
               {checkingAi ? (
-                <div className="text-center py-8 text-gray-400">
+                <div className="text-center py-8 text-[var(--muted)]">
                   {isZh ? "检查中..." : "Checking..."}
                 </div>
               ) : (
@@ -439,27 +439,27 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
 
                   {/* Claude Login */}
                   {claudeStatus?.installed && (
-                    <div className="rounded-lg border bg-white p-4">
+                    <div className="rounded-lg border bg-[var(--card)] p-4">
                       <div className="flex items-center justify-between">
                         <span className="font-medium text-sm">Claude Code Login</span>
                         {claudeStatus.loggedIn ? (
-                          <span className="text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
+                          <span className="text-xs text-green-600 bg-green-500/15 px-2 py-0.5 rounded-full">
                             ✓ {claudeStatus.email || (isZh ? "已登录" : "Logged in")}
                           </span>
                         ) : (
-                          <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                          <span className="text-xs text-[var(--muted)] bg-[var(--card-border)] px-2 py-0.5 rounded-full">
                             {isZh ? "未登录" : "Not logged in"}
                           </span>
                         )}
                       </div>
                       {!claudeStatus.loggedIn && (
                         <div className="mt-2 space-y-2">
-                          <p className="text-xs text-gray-500">
+                          <p className="text-xs text-[var(--muted)]">
                             {isZh
                               ? "通过 Claude Code 登录可免 API Key 使用 Anthropic 模型："
                               : "Login via Claude Code to use Anthropic without API key:"}
                           </p>
-                          <code className="block bg-gray-100 rounded px-3 py-1.5 text-xs font-mono">
+                          <code className="block bg-[var(--card-border)] rounded px-3 py-1.5 text-xs font-mono">
                             claude login
                           </code>
                           <Button variant="secondary" size="sm" onClick={checkAiConfig}>
@@ -513,7 +513,7 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
 
             {/* Default provider selection */}
             {anyAiConfigured && (
-              <div className="rounded-lg border bg-white p-4">
+              <div className="rounded-lg border p-4" style={{ background: "var(--card)", borderColor: "var(--card-border)" }}>
                 <label className="block text-sm font-medium mb-2" style={{ color: "var(--foreground)" }}>
                   {isZh ? "默认 AI 引擎" : "Default AI Engine"}
                 </label>
@@ -523,21 +523,33 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
                     ...(aiStatus?.anthropic?.configured ? [{ id: "anthropic", label: "Anthropic API", desc: isZh ? "需要 API Key" : "Requires API key" }] : []),
                     ...(aiStatus?.openai?.configured ? [{ id: "openai", label: "OpenAI API", desc: isZh ? "需要 API Key" : "Requires API key" }] : []),
                     ...(aiStatus?.glm?.configured ? [{ id: "glm", label: "GLM API", desc: isZh ? "需要 API Key" : "Requires API key" }] : []),
-                  ].map((p) => (
+                  ].map((p, i) => (
                     <button
                       key={p.id}
-                      onClick={async () => {
+                      onClick={async (e) => {
+                        // Visual feedback
+                        document.querySelectorAll("[data-provider-btn]").forEach(b => {
+                          (b as HTMLElement).style.borderColor = "var(--card-border)";
+                          (b as HTMLElement).style.background = "transparent";
+                        });
+                        (e.currentTarget as HTMLElement).style.borderColor = "#22c55e";
+                        (e.currentTarget as HTMLElement).style.background = "rgba(34,197,94,0.1)";
                         await fetch("/api/settings", {
                           method: "PUT",
                           headers: { "Content-Type": "application/json" },
                           body: JSON.stringify({ default_provider: p.id }),
                         });
                       }}
+                      data-provider-btn
                       className="flex-1 min-w-[120px] px-3 py-2 rounded-lg border text-left hover:opacity-80"
-                      style={{ borderColor: "var(--card-border)" }}
+                      style={{
+                        borderColor: i === 0 ? "#22c55e" : "var(--card-border)",
+                        background: i === 0 ? "rgba(34,197,94,0.1)" : "transparent",
+                        color: "var(--foreground)",
+                      }}
                     >
                       <span className="text-sm font-medium block">{p.label}</span>
-                      <span className="text-[10px] text-gray-400">{p.desc}</span>
+                      <span className="text-[10px]" style={{ color: "var(--muted)" }}>{p.desc}</span>
                     </button>
                   ))}
                 </div>
@@ -546,7 +558,7 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
 
             <div className="flex justify-between">
               <Button variant="ghost" onClick={() => setStep("github")}>{t("common.back")}</Button>
-              <Button size="lg" onClick={() => setStep("concept")} disabled={aiStatus !== null && !anyAiConfigured}>
+              <Button size="lg" onClick={() => setStep("create")} disabled={aiStatus !== null && !anyAiConfigured}>
                 {isZh ? "继续" : "Continue"}
               </Button>
             </div>
@@ -575,11 +587,11 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
                 { icon: CodeIcon, title: isZh ? "5. 代码审查" : "5. Code Review", desc: isZh ? "AI 审查实现代码的质量、安全性和可维护性。" : "AI reviews code quality, security, and maintainability." },
                 { icon: CheckCircleIcon, title: isZh ? "6. 测试" : "6. Test", desc: isZh ? "AI 生成测试用例并运行，确保实现正确。" : "AI generates and runs tests to verify the implementation." },
               ].map((item) => (
-                <div key={item.title} className="flex gap-4 items-start rounded-lg border bg-white p-4">
+                <div key={item.title} className="flex gap-4 items-start rounded-lg border bg-[var(--card)] p-4">
                   <span className="shrink-0">{item.icon({ size: 24 })}</span>
                   <div>
                     <h3 className="font-semibold">{item.title}</h3>
-                    <p className="text-sm text-gray-600">{item.desc}</p>
+                    <p className="text-sm text-[var(--muted)]">{item.desc}</p>
                   </div>
                 </div>
               ))}
@@ -600,13 +612,13 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
               <h2 className="text-2xl font-bold">
                 {isZh ? "创建第一个项目" : "Create Your First Project"}
               </h2>
-              <p className="text-gray-500 mt-1">
+              <p className="text-[var(--muted)] mt-1">
                 {isZh
                   ? "项目关联一个代码仓库，所有计划和执行都基于此。"
                   : "A project is linked to a code repository. All plans and executions are based on it."}
               </p>
             </div>
-            <div className="rounded-lg border bg-white p-6 space-y-4">
+            <div className="rounded-lg border bg-[var(--card)] p-6 space-y-4">
               <div className="flex items-end gap-3">
                 <IconPicker value={icon} onChange={setIcon} />
                 <div className="flex-1">
@@ -620,13 +632,13 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-[var(--foreground)] mb-1">
                   {t("project.description")}
                 </label>
                 <MarkdownEditor value={description} onChange={setDescription} height={120} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-[var(--foreground)] mb-1">
                   {isZh ? "架构与开发规范（可选）" : "Architecture & Guidelines (optional)"}
                 </label>
                 <MarkdownEditor
@@ -639,12 +651,12 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-[var(--foreground)] mb-1">
                   {t("project.targetRepoPath")}
                 </label>
                 {targetRepoPath ? (
                   <div className="space-y-2">
-                    <div className="flex items-center gap-2 rounded-md border px-3 py-2 bg-gray-50">
+                    <div className="flex items-center gap-2 rounded-md border px-3 py-2 bg-[var(--background)]">
                       <span className="text-sm font-mono flex-1 truncate">{targetRepoPath}</span>
                       <Button variant="ghost" size="sm" onClick={() => {
                         const oldAutoName = targetRepoPath.split("/").pop() || "";
@@ -678,7 +690,7 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
               </div>
             </div>
             <div className="flex justify-between">
-              <Button variant="ghost" onClick={() => setStep("concept")}>{t("common.back")}</Button>
+              <Button variant="ghost" onClick={() => setStep("create")}>{t("common.back")}</Button>
               <Button size="lg" onClick={handleCreate} disabled={!name || !targetRepoPath}>
                 {t("common.create")}
               </Button>
@@ -731,22 +743,22 @@ function ProviderConfigCard({
 
   if (status?.configured) {
     return (
-      <div className="rounded-lg border bg-white p-4">
+      <div className="rounded-lg border bg-[var(--card)] p-4">
         <div className="flex items-center justify-between">
           <span className="font-medium text-sm">{name}</span>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-[var(--muted)]">
               {status.mode === "proxy"
                 ? isZh ? "中转站" : "Proxy"
                 : "API Key"}
             </span>
-            <span className="text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
+            <span className="text-xs text-green-600 bg-green-500/15 px-2 py-0.5 rounded-full">
               ✓ {status.masked || (status.baseURL ? status.baseURL.slice(0, 30) : "")}
             </span>
           </div>
         </div>
         {status.baseURL && (
-          <p className="text-xs text-gray-400 mt-1 font-mono truncate">
+          <p className="text-xs text-[var(--muted)] mt-1 font-mono truncate">
             {status.baseURL}
           </p>
         )}
@@ -755,14 +767,14 @@ function ProviderConfigCard({
   }
 
   return (
-    <div className="rounded-lg border bg-white p-4 space-y-3">
+    <div className="rounded-lg border bg-[var(--card)] p-4 space-y-3">
       <div className="flex items-center justify-between">
         <span className="font-medium text-sm">{name}</span>
-        <div className="flex gap-1 bg-gray-100 rounded-md p-0.5">
+        <div className="flex gap-1 bg-[var(--card-border)] rounded-md p-0.5">
           <button
             onClick={() => setMode("login")}
             className={`px-2 py-1 text-xs rounded ${
-              mode === "login" ? "bg-white shadow-sm font-medium" : "text-gray-500"
+              mode === "login" ? "bg-[var(--card)] shadow-sm font-medium" : "text-[var(--muted)]"
             }`}
           >
             {isZh ? "登录获取" : "Login"}
@@ -770,7 +782,7 @@ function ProviderConfigCard({
           <button
             onClick={() => setMode("apikey")}
             className={`px-2 py-1 text-xs rounded ${
-              mode === "apikey" ? "bg-white shadow-sm font-medium" : "text-gray-500"
+              mode === "apikey" ? "bg-[var(--card)] shadow-sm font-medium" : "text-[var(--muted)]"
             }`}
           >
             API Key
@@ -778,7 +790,7 @@ function ProviderConfigCard({
           <button
             onClick={() => setMode("proxy")}
             className={`px-2 py-1 text-xs rounded ${
-              mode === "proxy" ? "bg-white shadow-sm font-medium" : "text-gray-500"
+              mode === "proxy" ? "bg-[var(--card)] shadow-sm font-medium" : "text-[var(--muted)]"
             }`}
           >
             {isZh ? "中转站" : "Proxy"}
@@ -788,7 +800,7 @@ function ProviderConfigCard({
 
       {mode === "login" && !loginOpened && (
         <div className="text-center space-y-3 py-2">
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-[var(--muted)]">
             {isZh
               ? "点击下方按钮跳转到平台获取 API Key，复制后粘贴到输入框。"
               : "Click below to open the platform, copy your API Key, then paste it here."}

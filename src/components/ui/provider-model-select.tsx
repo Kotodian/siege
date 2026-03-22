@@ -2,32 +2,40 @@
 
 import { useState, useEffect } from "react";
 
-const PROVIDERS = [
-  { id: "acp", label: "Claude Code", badge: "ACP" },
-  { id: "codex-acp", label: "Codex", badge: "ACP" },
-  { id: "anthropic", label: "Claude", models: ["claude-opus-4-6", "claude-sonnet-4-6", "claude-haiku-4-5-20251001", "claude-sonnet-4-5-20250929", "claude-opus-4-5-20251101", "claude-sonnet-4-20250514", "claude-opus-4-20250514"] },
-  { id: "openai", label: "GPT", models: ["gpt-5.4", "gpt-5.4-mini", "gpt-5.4-nano", "gpt-5.3-codex", "o3-pro", "o3-mini", "gpt-4o", "gpt-4o-mini"] },
-  { id: "glm", label: "GLM", models: ["glm-5", "glm-4-plus", "glm-4", "glm-4-air", "glm-4-flash", "glm-4-long"] },
-] as const;
+interface ProviderConfig {
+  id: string;
+  label: string;
+  badge?: string;
+  models: string[];
+}
 
-const CLAUDE_ACP_MODELS = [
-  "claude-opus-4-6",
-  "claude-sonnet-4-6",
-  "claude-haiku-4-5-20251001",
-  "claude-sonnet-4-5-20250929",
-  "claude-opus-4-5-20251101",
+// ACP providers are always available (they use CLI auth, not API keys)
+const ACP_PROVIDERS: ProviderConfig[] = [
+  { id: "acp", label: "Claude Code", badge: "ACP", models: [
+    "claude-opus-4-6", "claude-sonnet-4-6", "claude-haiku-4-5-20251001",
+    "claude-sonnet-4-5-20250929", "claude-opus-4-5-20251101",
+  ]},
+  { id: "codex-acp", label: "Codex", badge: "ACP", models: [
+    "gpt-5.4", "gpt-5.4-mini", "gpt-5.4-nano", "gpt-5.3-codex",
+    "o3-pro", "o3-mini", "gpt-4o", "gpt-4o-mini",
+  ]},
 ];
 
-const CODEX_ACP_MODELS = [
-  "gpt-5.4",
-  "gpt-5.4-mini",
-  "gpt-5.4-nano",
-  "gpt-5.3-codex",
-  "o3-pro",
-  "o3-mini",
-  "gpt-4o",
-  "gpt-4o-mini",
-];
+// SDK providers — only shown if API key is configured
+const SDK_PROVIDERS: Record<string, { label: string; models: string[] }> = {
+  anthropic: { label: "Claude", models: [
+    "claude-opus-4-6", "claude-sonnet-4-6", "claude-haiku-4-5-20251001",
+    "claude-sonnet-4-5-20250929", "claude-opus-4-5-20251101",
+    "claude-sonnet-4-20250514", "claude-opus-4-20250514",
+  ]},
+  openai: { label: "GPT", models: [
+    "gpt-5.4", "gpt-5.4-mini", "gpt-5.4-nano", "gpt-5.3-codex",
+    "o3-pro", "o3-mini", "gpt-4o", "gpt-4o-mini",
+  ]},
+  glm: { label: "GLM", models: [
+    "glm-5", "glm-4-plus", "glm-4", "glm-4-air", "glm-4-flash", "glm-4-long",
+  ]},
+};
 
 interface ProviderModelSelectProps {
   provider: string;
@@ -35,7 +43,7 @@ interface ProviderModelSelectProps {
   onProviderChange: (provider: string) => void;
   onModelChange: (model: string) => void;
   disabled?: boolean;
-  compact?: boolean; // compact mode: single-line select instead of button group
+  compact?: boolean;
 }
 
 export function ProviderModelSelect({
@@ -46,13 +54,24 @@ export function ProviderModelSelect({
   disabled,
   compact,
 }: ProviderModelSelectProps) {
-  const isAcp = provider === "acp" || provider === "codex-acp";
-  const currentProvider = PROVIDERS.find(p => p.id === provider);
-  const models = provider === "acp"
-    ? CLAUDE_ACP_MODELS
-    : provider === "codex-acp"
-      ? CODEX_ACP_MODELS
-      : ("models" in (currentProvider || {}) ? (currentProvider as { models: readonly string[] }).models : []);
+  const [availableProviders, setAvailableProviders] = useState<ProviderConfig[]>(ACP_PROVIDERS);
+
+  useEffect(() => {
+    fetch("/api/settings").then(r => r.json()).then(settings => {
+      const providers: ProviderConfig[] = [...ACP_PROVIDERS];
+      for (const [id, config] of Object.entries(SDK_PROVIDERS)) {
+        const hasKey = !!settings[`${id}_api_key`];
+        const hasUrl = !!settings[`${id}_base_url`];
+        if (hasKey || hasUrl) {
+          providers.push({ id, label: config.label, models: config.models });
+        }
+      }
+      setAvailableProviders(providers);
+    }).catch(() => {});
+  }, []);
+
+  const currentProvider = availableProviders.find(p => p.id === provider);
+  const models = currentProvider?.models || [];
 
   if (compact) {
     return (
@@ -65,9 +84,9 @@ export function ProviderModelSelect({
           style={{ background: "var(--card)", color: "var(--foreground)", borderColor: "var(--card-border)" }}
         >
           <option value="">默认 / Default</option>
-          {PROVIDERS.map(p => (
+          {availableProviders.map(p => (
             <option key={p.id} value={p.id}>
-              {p.label}{("badge" in p) ? ` (${p.badge})` : ""}
+              {p.label}{p.badge ? ` (${p.badge})` : ""}
             </option>
           ))}
         </select>
@@ -92,7 +111,7 @@ export function ProviderModelSelect({
   return (
     <div className="space-y-2">
       <div className="flex gap-2 flex-wrap">
-        {PROVIDERS.map((p) => (
+        {availableProviders.map((p) => (
           <button
             key={p.id}
             type="button"
@@ -105,7 +124,7 @@ export function ProviderModelSelect({
             }
           >
             {p.label}
-            {("badge" in p) && (
+            {p.badge && (
               <span className="text-[10px] px-1 rounded" style={
                 provider === p.id ? { background: "rgba(0,0,0,0.2)" } : { background: "var(--card-border)", color: "var(--foreground)" }
               }>{p.badge}</span>

@@ -307,12 +307,11 @@ export class AcpClient {
     console.log(`[acp] request: ${method}`, method === "fs/write_text_file" ? (params?.uri as string)?.slice(-60) : "");
 
     if (method === "session/request_permission") {
-      // Auto-approve all permissions
-      const perm = params?.permission as Record<string, unknown> | undefined;
-      const options = perm?.options as Array<{ optionId: string }> | undefined;
-      const allowOption = options?.find(o => o.optionId.includes("allow_always")) || options?.find(o => o.optionId.includes("allow")) || options?.[0];
-      console.log(`[acp] permission request:`, JSON.stringify(params).slice(0, 500));
-      result = { outcome: { type: "selected", optionId: allowOption?.optionId || "allow_once" } };
+      // Auto-approve all permissions — options may be at params.options or params.permission.options
+      const options = (params?.options as Array<{ optionId: string }> | undefined)
+        || ((params?.permission as Record<string, unknown>)?.options as Array<{ optionId: string }> | undefined);
+      const allowOption = options?.find(o => o.optionId === "allow_always") || options?.find(o => o.optionId === "allow") || options?.[0];
+      result = { outcome: { type: "selected", optionId: allowOption?.optionId || "allow_always" } };
     } else if (method === "fs/read_text_file") {
       const uri = (params?.uri as string) || "";
       const filePath = uri.replace("file://", "");

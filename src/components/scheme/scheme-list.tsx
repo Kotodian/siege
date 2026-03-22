@@ -239,7 +239,8 @@ export function SchemeList({
       await fetchSchemes();
       onPlanStatusChange();
       const newSchemes = await fetch(`/api/schemes?planId=${planId}`).then(r => r.json());
-      if (newSchemes.length > currentCount) {
+      // Check if schemes were created OR updated (count may stay the same if updated)
+      if (newSchemes.length > 0) {
         stopLoading(isZh ? "方案生成完成" : "Scheme generated");
       } else {
         stopLoading(isZh ? "方案生成失败，请检查 AI 配置" : "Scheme generation failed, check AI config", "error");

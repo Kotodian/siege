@@ -157,6 +157,8 @@ Output the JSON array now:`;
         } catch (err) {
           controller.enqueue(encoder.encode(`\nError: ${err instanceof Error ? err.message : err}`));
           controller.close();
+        } finally {
+          await acpClient.stop();
         }
       },
     });

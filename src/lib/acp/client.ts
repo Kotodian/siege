@@ -46,6 +46,7 @@ export class AcpClient {
   private repoPath: string;
   private agentType: "claude" | "codex";
   private terminals = new Map<string, { output: string; exitCode: number | null }>();
+  private stderrBuffer: string[] = [];
 
   constructor(repoPath: string, agentType: "claude" | "codex" = "claude") {
     this.repoPath = repoPath;
@@ -61,6 +62,9 @@ export class AcpClient {
       env: { ...process.env },
     });
 
+    let earlyExit = false;
+    let earlyExitCode: number | null = null;
+
     this.proc.stdout!.on("data", (chunk: Buffer) => {
       this.buffer += chunk.toString();
       this.processBuffer();
@@ -68,19 +72,47 @@ export class AcpClient {
 
     this.proc.stderr!.on("data", (d: Buffer) => {
       const msg = d.toString().trim();
-      if (msg) console.error("[acp-agent]", msg);
+      if (msg) {
+        console.error("[acp-agent]", msg);
+        this.stderrBuffer.push(msg);
+        // Keep only last 20 stderr lines
+        if (this.stderrBuffer.length > 20) this.stderrBuffer.shift();
+      }
     });
 
-    this.proc.on("exit", () => {
+    this.proc.on("exit", (code) => {
+      earlyExit = true;
+      earlyExitCode = code;
       this.proc = null;
       for (const [, req] of this.pending) {
-        req.reject(new Error("ACP agent exited"));
+        req.reject(new Error(`ACP agent exited (code ${code})`));
       }
       this.pending.clear();
     });
 
-    // Wait for process to be ready
-    await new Promise(r => setTimeout(r, 2000));
+    // Wait for process to be ready — poll instead of hardcoded delay
+    const startTime = Date.now();
+    const maxWait = 15000; // 15s max for npx to download + start
+    while (Date.now() - startTime < maxWait) {
+      if (earlyExit) {
+        const stderr = this.stderrBuffer.join("\n");
+        throw new Error(
+          `ACP agent (${this.agentType}) failed to start (exit code ${earlyExitCode}).` +
+          (stderr ? ` Stderr: ${stderr.slice(-500)}` : "")
+        );
+      }
+      // Check if stdout has received any data (agent is alive)
+      if (this.buffer.length > 0 || this.pending.size > 0) break;
+      await new Promise(r => setTimeout(r, 300));
+    }
+
+    if (!this.proc) {
+      const stderr = this.stderrBuffer.join("\n");
+      throw new Error(
+        `ACP agent (${this.agentType}) not running after ${maxWait / 1000}s.` +
+        (stderr ? ` Stderr: ${stderr.slice(-500)}` : "")
+      );
+    }
 
     // Initialize
     await this.request("initialize", {
@@ -101,13 +133,22 @@ export class AcpClient {
 
     if (model && result.sessionId) {
       try {
+        // Try both param formats: "configId" (newer ACP) and "key" (older ACP)
         await this.request("session/set_config_option", {
           sessionId: result.sessionId,
-          key: "model",
+          configId: "model",
           value: model,
         });
-      } catch {
-        // model setting might not be supported
+      } catch (e1) {
+        try {
+          await this.request("session/set_config_option", {
+            sessionId: result.sessionId,
+            key: "model",
+            value: model,
+          });
+        } catch {
+          console.warn(`[acp] Could not set model to ${model}:`, e1 instanceof Error ? e1.message : e1);
+        }
       }
     }
 
@@ -148,6 +189,11 @@ export class AcpClient {
     if (!this.proc) return;
     this.proc.kill();
     this.proc = null;
+  }
+
+  /** Get recent stderr output for error reporting */
+  getRecentErrors(): string {
+    return this.stderrBuffer.join("\n");
   }
 
   private request(method: string, params: unknown): Promise<unknown> {

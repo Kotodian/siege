@@ -496,7 +496,6 @@ Implement the changes directly. Only read files you need to modify. Do NOT scan 
           captureFileSnapshots(itemId, cwd, beforeHash);
           resolveRelatedFindings(itemId);
 
-          // Don't kill the agent — keep alive for session reuse
           controller.close();
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
@@ -506,8 +505,9 @@ Implement the changes directly. Only read files you need to modify. Do NOT scan 
             .set({ status: "failed", progress: 0, executionLog: fullLog || "Error" })
             .where(eq(scheduleItems.id, itemId))
             .run();
-          await acpClient.stop();
           controller.close();
+        } finally {
+          await acpClient.stop();
         }
       },
     });

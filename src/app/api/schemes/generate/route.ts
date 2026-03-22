@@ -482,6 +482,13 @@ export async function POST(req: NextRequest) {
             if (!saved) {
               controller.enqueue(encoder.encode("\n\n---\n\n**Error: AI only explored the codebase but did not generate a scheme. Please try again.**\n"));
             }
+          } else {
+            // No text output — check stderr for clues
+            const errors = acpClient.getRecentErrors();
+            const hint = errors.includes("tls handshake") || errors.includes("stream disconnected")
+              ? " (network/auth error — check your API credentials)"
+              : "";
+            controller.enqueue(encoder.encode(`\nError: ACP agent returned no output${hint}\n`));
           }
           controller.close();
         } catch (err) {
@@ -489,7 +496,7 @@ export async function POST(req: NextRequest) {
           controller.enqueue(encoder.encode(`\nError: ${msg}`));
           controller.close();
         } finally {
-          // Don't stop ACP client here — keep alive for session reuse
+          await acpClient.stop();
         }
       },
     });

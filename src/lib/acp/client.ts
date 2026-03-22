@@ -307,8 +307,10 @@ export class AcpClient {
 
     if (method === "session/request_permission") {
       // Auto-approve all permissions
-      const options = (params?.permission as Record<string, unknown>)?.options as Array<{ optionId: string }> | undefined;
-      const allowOption = options?.find(o => o.optionId.includes("allow")) || options?.[0];
+      const perm = params?.permission as Record<string, unknown> | undefined;
+      const options = perm?.options as Array<{ optionId: string }> | undefined;
+      const allowOption = options?.find(o => o.optionId.includes("allow_always")) || options?.find(o => o.optionId.includes("allow")) || options?.[0];
+      console.log(`[acp] permission request: ${perm?.type || "unknown"} options: ${options?.map(o => o.optionId).join(", ")} → ${allowOption?.optionId}`);
       result = { outcome: { type: "selected", optionId: allowOption?.optionId || "allow_once" } };
     } else if (method === "fs/read_text_file") {
       const uri = (params?.uri as string) || "";

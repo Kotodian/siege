@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ProviderModelSelect, useDefaultProvider } from "@/components/ui/provider-model-select";
+import { SkillPicker } from "@/components/ui/skill-picker";
 
 interface SkillSummary {
   name: string;
@@ -44,10 +45,6 @@ export function RunTaskDialog({ open, onClose, onRun, taskTitle }: RunTaskDialog
     );
   };
 
-  const bySource = skills.reduce<Record<string, SkillSummary[]>>(
-    (acc, s) => { if (!acc[s.source]) acc[s.source] = []; acc[s.source].push(s); return acc; }, {}
-  );
-
   return (
     <Dialog open={open} onClose={onClose} title={isZh ? `执行: ${taskTitle}` : `Run: ${taskTitle}`}>
       <div className="space-y-4">
@@ -65,34 +62,7 @@ export function RunTaskDialog({ open, onClose, onRun, taskTitle }: RunTaskDialog
         </div>
 
         {/* Skills */}
-        {skills.length > 0 && (
-          <div>
-            <label className="block text-sm font-medium mb-1" style={{ color: "var(--foreground)" }}>
-              {t("generate.skills")} ({selectedSkills.length})
-            </label>
-            <div className="max-h-48 overflow-y-auto border rounded-md divide-y" style={{ borderColor: "var(--card-border)" }}>
-              {Object.entries(bySource).map(([source, items]) => (
-                <div key={source}>
-                  <div className="px-3 py-1.5 text-xs font-medium" style={{ background: "var(--background)", color: "var(--muted)" }}>{source}</div>
-                  {items.map(skill => (
-                    <label key={skill.name} className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:opacity-80">
-                      <input
-                        type="checkbox"
-                        checked={selectedSkills.includes(skill.name)}
-                        onChange={() => toggleSkill(skill.name)}
-                        className="rounded"
-                      />
-                      <div className="min-w-0">
-                        <span className="text-sm font-mono truncate block">{skill.name}</span>
-                        {skill.description && <span className="text-xs truncate block" style={{ color: "var(--muted)" }}>{skill.description}</span>}
-                      </div>
-                    </label>
-                  ))}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        <SkillPicker skills={skills} selected={selectedSkills} onToggle={toggleSkill} />
 
         <div className="flex justify-end gap-2 pt-2">
           <Button variant="secondary" onClick={onClose}>{t("common.cancel")}</Button>

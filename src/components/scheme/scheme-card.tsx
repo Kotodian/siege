@@ -198,7 +198,7 @@ export function SchemeCard({
           >
             <><FolderOpenIcon size={14} className="inline-block align-[-2px]" /> {isZh ? "版本" : "Versions"}</>
           </Button>
-          {!readonly && !scheme.structuredContent && scheme.content && (
+          {!scheme.structuredContent && scheme.content && (
             <Button variant="ghost" size="sm" onClick={handleConvert} disabled={converting}>
               {isZh ? "转为结构化" : "Structurize"}
             </Button>

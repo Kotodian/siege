@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import type { StructuredScheme } from "@/lib/scheme-types";
 import hljs from "highlight.js";
-import { MermaidDiagram } from "@/components/ui/mermaid-diagram";
+import { ExcalidrawDiagram } from "@/components/ui/excalidraw-diagram";
 
 const severityColors: Record<string, { bg: string; border: string; text: string; dot: string }> = {
   high: { bg: "#3a1a1a", border: "#7f1d1d", text: "#fca5a5", dot: "#ef4444" },
@@ -109,16 +109,14 @@ export function StructuredSchemeView({ data, schemeId, findings = [], onFindings
     });
   }
 
-  // Slide: Architecture Diagram
-  if (data.architecture?.diagram) {
+  // Slide: Architecture Diagram (auto-generated from components)
+  if (data.architecture?.components?.length) {
     slides.push({
       id: "diagram",
       title: isZh ? "架构图" : "Architecture Diagram",
       icon: "📐",
       content: (
-        <div className="flex items-center justify-center h-full">
-          <MermaidDiagram chart={data.architecture.diagram} />
-        </div>
+        <ExcalidrawDiagram components={data.architecture.components} />
       ),
     });
   }

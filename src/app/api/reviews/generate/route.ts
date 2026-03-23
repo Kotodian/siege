@@ -335,28 +335,31 @@ export async function POST(req: NextRequest) {
   const encoder = new TextEncoder();
   let fullText = "";
 
-  // ACP engine: let the agent inspect git commits directly
+  // ACP engine: provide the diff content directly in the prompt
   if (resolved.provider === "acp" || resolved.provider === "codex-acp") {
     const zh = /[\u4e00-\u9fff]/.test(plan.name || "");
 
-    // Build a lightweight prompt that tells the agent to check git itself
-    const taskSummary = type === "implementation"
-      ? itemsToReview.map(i => `- ${i.title}`).join("\n")
-      : itemsToReview.map(i => `- ${i.title}`).join("\n");
+    // Build full content with diffs already included
+    const itemsContent = itemsToReview
+      .map((item) => `### ${item.title} (id: ${item.id})\n${item.content}`)
+      .join("\n\n");
 
-    const acpPrompt = `You are a code reviewer. Review the recent commits in this repository for the following tasks:
+    // Also grab git diff if not already in items
+    let extraDiff = "";
+    if (type === "implementation" && !itemsContent.includes("```diff")) {
+      const project2 = db.select().from(projects).where(eq(projects.id, plan.projectId)).get();
+      if (project2?.targetRepoPath && fs.existsSync(project2.targetRepoPath)) {
+        extraDiff = getGitUnifiedDiff(project2.targetRepoPath);
+      }
+    }
+
+    const acpPrompt = `${system}
 
 Plan: ${plan.name}
-Tasks:
-${taskSummary}
 
-Steps:
-1. Run \`git log --oneline -10\` to see recent commits
-2. Run \`git diff <before_commit>..<latest_commit>\` to see the actual changes (or \`git show <commit>\` for each commit)
-3. Read the changed files to understand the context
-4. Output your review as a JSON object
+${itemsContent}
 
-${system}
+${extraDiff ? `## Git Diff\n\`\`\`diff\n${extraDiff}\n\`\`\`` : ""}
 
 ${zh ? "用中文输出所有内容。" : ""}`;
 

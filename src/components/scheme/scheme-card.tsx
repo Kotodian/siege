@@ -5,6 +5,8 @@ import { useTranslations } from "next-intl";
 import { MarkdownRenderer } from "@/components/markdown/markdown-renderer";
 import { extractHeadings } from "./scheme-toc";
 import { SchemeSections } from "./scheme-sections";
+import { StructuredSchemeView } from "./structured-scheme-view";
+import { parseStructuredScheme } from "@/lib/scheme-types";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { TimeAgo } from "@/components/ui/time-ago";
 import { Button } from "@/components/ui/button";
@@ -19,6 +21,7 @@ interface Scheme {
   planId: string;
   title: string;
   content: string | null;
+  structuredContent: string | null;
   sourceType: string;
   updatedAt: string;
   createdAt: string;
@@ -62,6 +65,29 @@ export function SchemeCard({
   const [chatHistory, setChatHistory] = useState<
     Array<{ role: "user" | "ai"; text: string }>
   >([]);
+  const [converting, setConverting] = useState(false);
+
+  const handleConvert = async () => {
+    setConverting(true);
+    startLoading(isZh ? "正在转换为结构化格式..." : "Converting to structured format...");
+    try {
+      const res = await fetch("/api/schemes/convert", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ schemeId: scheme.id }),
+      });
+      if (res.ok) {
+        stopLoading(isZh ? "转换完成" : "Converted");
+        onUpdate(scheme.id, { title: scheme.title, content: scheme.content || "" });
+      } else {
+        const err = await res.json().catch(() => ({ error: "Failed" }));
+        stopLoading(err.error || "Failed", "error");
+      }
+    } catch {
+      stopLoading("Error", "error");
+    }
+    setConverting(false);
+  };
 
   const pollSchemeUpdate = async (originalUpdatedAt: string) => {
     for (let i = 0; i < 60; i++) {
@@ -172,6 +198,11 @@ export function SchemeCard({
           >
             <><FolderOpenIcon size={14} className="inline-block align-[-2px]" /> {isZh ? "版本" : "Versions"}</>
           </Button>
+          {!readonly && !scheme.structuredContent && scheme.content && (
+            <Button variant="ghost" size="sm" onClick={handleConvert} disabled={converting}>
+              {isZh ? "转为结构化" : "Structurize"}
+            </Button>
+          )}
           {!readonly && (
             <>
               <Button
@@ -197,20 +228,34 @@ export function SchemeCard({
         </div>
       </div>
 
-      {extractHeadings(scheme.content || "").length > 1 ? (
-        <SchemeSections
-          content={scheme.content || ""}
-          schemeId={scheme.id}
-          readonly={readonly}
-          findings={findings}
-          onContentUpdated={(newContent) => {
-            onUpdate(scheme.id, { title: scheme.title, content: newContent });
-          }}
-          onFindingsChanged={onFindingsChanged}
-        />
-      ) : (
-        <MarkdownRenderer content={scheme.content || ""} />
-      )}
+      {(() => {
+        const structured = scheme.structuredContent ? parseStructuredScheme(scheme.structuredContent) : null;
+        if (structured) {
+          return (
+            <StructuredSchemeView
+              data={structured}
+              schemeId={scheme.id}
+              findings={findings}
+              onFindingsChanged={onFindingsChanged}
+            />
+          );
+        }
+        if (extractHeadings(scheme.content || "").length > 1) {
+          return (
+            <SchemeSections
+              content={scheme.content || ""}
+              schemeId={scheme.id}
+              readonly={readonly}
+              findings={findings}
+              onContentUpdated={(newContent) => {
+                onUpdate(scheme.id, { title: scheme.title, content: newContent });
+              }}
+              onFindingsChanged={onFindingsChanged}
+            />
+          );
+        }
+        return <MarkdownRenderer content={scheme.content || ""} />;
+      })()}
 
       {/* Chat history */}
       {chatHistory.length > 0 && (

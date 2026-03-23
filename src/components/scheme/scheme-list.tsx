@@ -17,6 +17,7 @@ interface Scheme {
   planId: string;
   title: string;
   content: string | null;
+  structuredContent: string | null;
   sourceType: string;
   updatedAt: string;
   createdAt: string;

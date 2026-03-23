@@ -80,7 +80,7 @@ export function buildSynthesisPrompt(
       "\n\nYou MUST follow these decisions in the scheme."
     : "";
 
-  return `You are a senior software architect generating a detailed technical scheme.
+  return `You are a senior software architect generating a structured technical scheme as JSON.
 
 ${lang}
 
@@ -93,28 +93,26 @@ ${decisions}
 
 ${schemeSummary ? `Existing schemes for context:\n${schemeSummary}` : ""}
 
-You MUST use EXACTLY these section headings:
-
-## Overview
-Brief summary of what this scheme achieves and why.
-
-## Architecture & Definitions
-Define key types, interfaces, data structures, modules, and their relationships. This is the MOST IMPORTANT section — describe data flow, component boundaries, and how pieces connect. ${qaHistory.length > 0 ? "Reference the user's decisions above." : ""}
-
-## Key Decisions
-Trade-offs, alternatives considered, and rationale.
-
-## Risks & Mitigations
-Potential issues and how to handle them.
-
-## Estimated Effort
-Rough time estimate.
+Output a JSON object with this structure:
+{
+  "overview": "2-3 sentence summary",
+  "architecture": {
+    "components": [{"name": "...", "responsibility": "...", "dependencies": ["..."]}],
+    "dataFlow": ["Step 1: ...", "Step 2: ..."],
+    "diagram": "optional ASCII/mermaid diagram"
+  },
+  "interfaces": [{"name": "TypeName", "language": "c|typescript|go", "definition": "code definition", "description": "what it represents"}],
+  "decisions": [{"question": "...", "options": ["A", "B"], "chosen": "A", "rationale": "why"}],
+  "risks": [{"risk": "...", "severity": "low|medium|high", "mitigation": "..."}],
+  "effort": [{"phase": "...", "tasks": ["..."], "hours": 4}]
+}
 
 RULES:
-- Focus on WHAT and WHY, not HOW
-- Do NOT write code blocks or step-by-step implementation procedures
-- The "Architecture & Definitions" section must be the longest and most detailed
-- Output the COMPLETE scheme — do not truncate or summarize`;
+- Output ONLY the JSON object
+- "interfaces" must contain real code definitions, not prose
+- "decisions" should reflect the user's answers above${qaHistory.length > 0 ? " — reference the user's decisions" : ""}
+- Keep "overview" to 2-3 sentences
+- Do NOT truncate — output the complete JSON`;
 }
 
 export function parseQuestionsFromAIOutput(text: string): GeneratedQuestion[] {

@@ -71,6 +71,7 @@ export const schemes = sqliteTable("schemes", {
     .references(() => plans.id, { onDelete: "cascade" }),
   title: text("title").notNull(),
   content: text("content").default(""),
+  structuredContent: text("structured_content"), // JSON: StructuredScheme
   sourceType: text("source_type", {
     enum: ["web_search", "local_analysis", "manual", "notion", "jira", "confluence", "mcp", "feishu", "github", "gitlab"],
   })

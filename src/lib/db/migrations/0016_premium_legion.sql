@@ -1,1 +1,1 @@
-SELECT 1;--> statement-breakpoint
+ALTER TABLE `review_items` ADD `resolution` text;

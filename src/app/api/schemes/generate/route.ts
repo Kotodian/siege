@@ -45,16 +45,50 @@ function cleanSchemeContent(raw: string): string {
   return cleaned.join("\n").trim();
 }
 
-function saveScheme(planId: string, content: string, planStatus: string, planName?: string): boolean {
-  const cleanedContent = cleanSchemeContent(content);
-  if (!cleanedContent) return false;
+function saveScheme(planId: string, rawContent: string, planStatus: string, planName?: string): boolean {
+  // Try to parse as structured JSON first
+  let structuredJson: string | null = null;
+  let markdownContent: string;
+  let title: string;
 
-  // Extract title: prefer h1, then first line before any ## heading, then plan name
-  const h1Match = cleanedContent.match(/^#\s+(.+)/m);
-  const firstLine = cleanedContent.split("\n")[0]?.trim();
-  const title = h1Match?.[1]?.replace(/[*_`~]/g, "").trim()
-    || (firstLine && !firstLine.startsWith("##") ? firstLine.slice(0, 80) : null)
-    || planName || "Generated Scheme";
+  const trimmed = rawContent.trim();
+  let parsed: Record<string, unknown> | null = null;
+
+  // Try parsing JSON directly or extract from fenced block
+  try { parsed = JSON.parse(trimmed); } catch { /* not pure JSON */ }
+  if (!parsed) {
+    const fenced = trimmed.replace(/^```(?:json)?\s*\n?/i, "").replace(/\n?```\s*$/, "");
+    try { parsed = JSON.parse(fenced); } catch { /* not fenced JSON */ }
+  }
+  if (!parsed) {
+    const start = trimmed.indexOf("{");
+    if (start >= 0) {
+      let depth = 0, end = start;
+      for (let i = start; i < trimmed.length; i++) {
+        if (trimmed[i] === "{") depth++;
+        else if (trimmed[i] === "}") { depth--; if (depth === 0) { end = i + 1; break; } }
+      }
+      try { parsed = JSON.parse(trimmed.slice(start, end)); } catch { /* no valid JSON */ }
+    }
+  }
+
+  if (parsed && parsed.overview && parsed.architecture) {
+    // Valid structured scheme
+    structuredJson = JSON.stringify(parsed);
+    title = (typeof parsed.overview === "string" ? parsed.overview.slice(0, 80) : null) || planName || "Generated Scheme";
+    // Generate markdown fallback from structured content
+    markdownContent = structuredToMarkdown(parsed);
+  } else {
+    // Fallback: treat as markdown
+    const cleaned = cleanSchemeContent(rawContent);
+    if (!cleaned) return false;
+    markdownContent = cleaned;
+    const h1Match = cleaned.match(/^#\s+(.+)/m);
+    const firstLine = cleaned.split("\n")[0]?.trim();
+    title = h1Match?.[1]?.replace(/[*_`~]/g, "").trim()
+      || (firstLine && !firstLine.startsWith("##") ? firstLine.slice(0, 80) : null)
+      || planName || "Generated Scheme";
+  }
 
   const db = getDb();
 
@@ -67,34 +101,28 @@ function saveScheme(planId: string, content: string, planStatus: string, planNam
     db.delete(reviews).where(eq(reviews.id, r.id)).run();
   }
 
-  // Update existing scheme (preserve ID for version history) or create new
+  // Update existing scheme or create new
   const existing = db.select().from(schemes).where(eq(schemes.planId, planId)).all();
   if (existing.length > 0) {
     const old = existing[0];
-    // Save old content as a version snapshot
     const maxVer = db.select().from(schemeVersions)
       .where(eq(schemeVersions.schemeId, old.id))
       .all()
       .reduce((max, v) => Math.max(max, v.version), 0);
     db.insert(schemeVersions).values({
-      id: crypto.randomUUID(),
-      schemeId: old.id,
-      version: maxVer + 1,
-      title: old.title,
-      content: old.content || "",
+      id: crypto.randomUUID(), schemeId: old.id,
+      version: maxVer + 1, title: old.title, content: old.content || "",
     }).run();
-    // Update with new content
     db.update(schemes).set({
-      title, content: cleanedContent, updatedAt: new Date().toISOString(),
+      title, content: markdownContent, structuredContent: structuredJson,
+      updatedAt: new Date().toISOString(),
     }).where(eq(schemes.id, old.id)).run();
-    // Delete extra schemes if any
-    for (const s of existing.slice(1)) {
-      db.delete(schemes).where(eq(schemes.id, s.id)).run();
-    }
+    for (const s of existing.slice(1)) db.delete(schemes).where(eq(schemes.id, s.id)).run();
   } else {
     db.insert(schemes).values({
-      id: crypto.randomUUID(), planId,
-      title, content: cleanedContent, sourceType: "local_analysis",
+      id: crypto.randomUUID(), planId, title,
+      content: markdownContent, structuredContent: structuredJson,
+      sourceType: "local_analysis",
     }).run();
   }
 
@@ -106,13 +134,87 @@ function saveScheme(planId: string, content: string, planStatus: string, planNam
   return true;
 }
 
+/** Convert structured JSON to markdown fallback */
+function structuredToMarkdown(s: Record<string, unknown>): string {
+  const lines: string[] = [];
+  const data = s as { overview?: string; architecture?: { components?: Array<{name: string; responsibility: string; dependencies: string[]}>; dataFlow?: string[]; diagram?: string }; interfaces?: Array<{name: string; language?: string; definition: string; description: string}>; decisions?: Array<{question: string; options: string[]; chosen: string; rationale: string}>; risks?: Array<{risk: string; severity: string; mitigation: string}>; effort?: Array<{phase: string; tasks: string[]; hours: number}> };
+
+  lines.push(`## Overview\n\n${data.overview || ""}\n`);
+
+  if (data.architecture) {
+    lines.push(`## Architecture\n`);
+    if (data.architecture.components?.length) {
+      lines.push(`| Component | Responsibility | Dependencies |`);
+      lines.push(`|-----------|---------------|--------------|`);
+      for (const c of data.architecture.components) {
+        lines.push(`| ${c.name} | ${c.responsibility} | ${c.dependencies.join(", ") || "-"} |`);
+      }
+      lines.push("");
+    }
+    if (data.architecture.dataFlow?.length) {
+      lines.push(`### Data Flow\n`);
+      for (const [i, step] of data.architecture.dataFlow.entries()) {
+        lines.push(`${i + 1}. ${step}`);
+      }
+      lines.push("");
+    }
+    if (data.architecture.diagram) {
+      lines.push("```\n" + data.architecture.diagram + "\n```\n");
+    }
+  }
+
+  if (data.interfaces?.length) {
+    lines.push(`## Interfaces\n`);
+    for (const iface of data.interfaces) {
+      lines.push(`### ${iface.name}\n\n${iface.description}\n`);
+      lines.push("```" + (iface.language || "") + "\n" + iface.definition + "\n```\n");
+    }
+  }
+
+  if (data.decisions?.length) {
+    lines.push(`## Decisions\n`);
+    lines.push(`| Decision | Options | Chosen | Rationale |`);
+    lines.push(`|----------|---------|--------|-----------|`);
+    for (const d of data.decisions) {
+      lines.push(`| ${d.question} | ${d.options.join("; ")} | **${d.chosen}** | ${d.rationale} |`);
+    }
+    lines.push("");
+  }
+
+  if (data.risks?.length) {
+    lines.push(`## Risks\n`);
+    for (const r of data.risks) {
+      const badge = r.severity === "high" ? "🔴" : r.severity === "medium" ? "🟡" : "🟢";
+      lines.push(`- ${badge} **${r.severity.toUpperCase()}**: ${r.risk} → ${r.mitigation}`);
+    }
+    lines.push("");
+  }
+
+  if (data.effort?.length) {
+    lines.push(`## Effort\n`);
+    lines.push(`| Phase | Tasks | Hours |`);
+    lines.push(`|-------|-------|-------|`);
+    for (const e of data.effort) {
+      lines.push(`| ${e.phase} | ${e.tasks.join(", ")} | ${e.hours}h |`);
+    }
+    lines.push("");
+  }
+
+  return lines.join("\n");
+}
+
 function buildPrompt(project: { name: string; targetRepoPath: string; description?: string | null; guidelines?: string | null }, plan: { name: string; description: string | null }, forAcp: boolean, idea?: string) {
   const projectContext = [
     project.description ? `Project description: ${project.description}` : "",
     project.guidelines ? `Project guidelines:\n${project.guidelines}` : "",
   ].filter(Boolean).join("\n\n");
 
-  return `You are a senior software architect. Generate a detailed technical scheme for this plan.
+  const hasChinese = /[\u4e00-\u9fff]/.test(plan.description || plan.name);
+  const lang = hasChinese ? "用中文输出所有内容。" : "Output all content in English.";
+
+  return `You are a senior software architect. Generate a structured technical scheme as a JSON object.
+
+${lang}
 
 Project: ${project.name}
 Plan: ${plan.name}
@@ -123,33 +225,41 @@ ${idea ? `\nUser's approach / initial ideas:\n${idea}\n` : ""}
 ${projectContext}
 
 ${forAcp
-  ? "Steps:\n1. List the project root directory to understand the structure\n2. Read ONLY the 2-3 most relevant files to the plan (not every file)\n3. Generate the scheme based on what you found\n\nIMPORTANT: Do NOT read more than 5 files total. Focus on files directly related to the plan description."
-  : "Steps:\n1. Use the provided tools to briefly explore the project structure\n2. Read only the most relevant source files (max 5 files)\n3. Generate the scheme"}
+  ? "Steps:\n1. List the project root directory to understand the structure\n2. Read ONLY the 2-3 most relevant files to the plan (not every file)\n3. Generate the scheme JSON based on what you found\n\nIMPORTANT: Do NOT read more than 5 files total."
+  : "Steps:\n1. Use the provided tools to briefly explore the project structure\n2. Read only the most relevant source files (max 5 files)\n3. Generate the scheme JSON"}
 
-You MUST use EXACTLY these section headings:
-
-## Overview
-Brief summary of what this scheme achieves and why.
-
-## Architecture & Definitions
-Define key types, interfaces, data structures, modules, and their relationships. This is the MOST IMPORTANT section — describe data flow, component boundaries, and how pieces connect.
-
-## Key Decisions
-Trade-offs, alternatives considered, and rationale for chosen approach.
-
-## Risks & Mitigations
-Potential issues and how to handle them.
-
-## Estimated Effort
-Rough time estimate.
+Output a JSON object with EXACTLY this structure:
+{
+  "overview": "2-3 sentence summary of what this scheme achieves and why",
+  "architecture": {
+    "components": [
+      {"name": "ComponentName", "responsibility": "What it does", "dependencies": ["OtherComponent"]}
+    ],
+    "dataFlow": ["Step 1: ...", "Step 2: ...", "Step 3: ..."],
+    "diagram": "optional ASCII or mermaid diagram"
+  },
+  "interfaces": [
+    {"name": "TypeName", "language": "c|typescript|go|etc", "definition": "actual code definition", "description": "what this type represents"}
+  ],
+  "decisions": [
+    {"question": "What design choice was made?", "options": ["Option A", "Option B"], "chosen": "Option A", "rationale": "Why this was chosen"}
+  ],
+  "risks": [
+    {"risk": "Description of risk", "severity": "low|medium|high", "mitigation": "How to mitigate"}
+  ],
+  "effort": [
+    {"phase": "Phase name", "tasks": ["Task 1", "Task 2"], "hours": 4}
+  ]
+}
 
 RULES:
-- Focus on WHAT and WHY, not HOW
-- Define types and interfaces in prose (no code blocks)
-- Do NOT write implementation code or step-by-step procedures
-- The "Architecture & Definitions" section must be the longest and most detailed
-
-Write in the same language as the description.`;
+- Output ONLY the JSON object, no other text before or after
+- "interfaces" should contain REAL code definitions (structs, types, function signatures) — not prose
+- "decisions" should have 2-4 concrete options each
+- "risks" severity must be "low", "medium", or "high"
+- Keep "overview" to 2-3 sentences max
+- "architecture.components" should list 3-8 key components
+- "architecture.dataFlow" should be 3-8 ordered steps`;
 }
 
 function createProjectTools(repoPath: string) {

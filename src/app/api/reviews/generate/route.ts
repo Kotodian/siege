@@ -219,9 +219,33 @@ export async function POST(req: NextRequest) {
   let itemsToReview: Array<{ id: string; title: string; content: string }> = [];
 
   if (type === "scheme") {
-    // Split scheme into sections so AI can reference specific sections by ID
     const allSchemes = db.select().from(schemes).where(eq(schemes.planId, planId)).all();
     for (const s of allSchemes) {
+      // Prefer structured content for precise review targeting
+      if (s.structuredContent) {
+        try {
+          const data = JSON.parse(s.structuredContent);
+          if (data.overview) itemsToReview.push({ id: `${s.id}:overview`, title: "Overview", content: data.overview });
+          if (data.architecture) {
+            const archContent = JSON.stringify(data.architecture, null, 2);
+            itemsToReview.push({ id: `${s.id}:architecture`, title: "Architecture", content: archContent });
+          }
+          for (let i = 0; i < (data.interfaces || []).length; i++) {
+            const iface = data.interfaces[i];
+            itemsToReview.push({ id: `${s.id}:interface-${i}`, title: `Interface: ${iface.name}`, content: `${iface.description}\n\n${iface.definition}` });
+          }
+          for (let i = 0; i < (data.decisions || []).length; i++) {
+            const d = data.decisions[i];
+            itemsToReview.push({ id: `${s.id}:decision-${i}`, title: `Decision: ${d.question}`, content: `Chosen: ${d.chosen}\nOptions: ${d.options.join(", ")}\nRationale: ${d.rationale}` });
+          }
+          for (let i = 0; i < (data.risks || []).length; i++) {
+            const r = data.risks[i];
+            itemsToReview.push({ id: `${s.id}:risk-${i}`, title: `Risk [${r.severity}]: ${r.risk}`, content: `Mitigation: ${r.mitigation}` });
+          }
+          continue;
+        } catch { /* fallback to markdown */ }
+      }
+      // Fallback: split markdown by sections
       const content = s.content || "";
       const sectionRegex = /^(#{1,3})\s+(.+)/gm;
       const sectionStarts: Array<{ level: number; title: string; start: number }> = [];
@@ -230,18 +254,12 @@ export async function POST(req: NextRequest) {
         sectionStarts.push({ level: match[1].length, title: match[2].trim(), start: match.index });
       }
       if (sectionStarts.length <= 1) {
-        // No sections or just one — use whole scheme
         itemsToReview.push({ id: `${s.id}:full`, title: s.title, content });
       } else {
         for (let idx = 0; idx < sectionStarts.length; idx++) {
           const sec = sectionStarts[idx];
           const nextStart = idx + 1 < sectionStarts.length ? sectionStarts[idx + 1].start : content.length;
-          const sectionContent = content.slice(sec.start, nextStart).trim();
-          itemsToReview.push({
-            id: `${s.id}:section-${idx}`,
-            title: sec.title,
-            content: sectionContent,
-          });
+          itemsToReview.push({ id: `${s.id}:section-${idx}`, title: sec.title, content: content.slice(sec.start, nextStart).trim() });
         }
       }
     }

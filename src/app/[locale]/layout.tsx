@@ -26,12 +26,12 @@ export default async function LocaleLayout({
       <GlobalLoadingProvider>
       <ConfirmProvider>
       <div className="min-h-screen" style={{ background: "var(--background)", color: "var(--foreground)" }}>
-        <nav className="border-b px-6 py-3 flex items-center justify-between" style={{ background: "var(--card)", borderColor: "var(--card-border)" }}>
+        <nav className="px-6 py-3 flex items-center justify-between" style={{ background: "var(--surface-container)" }}>
           <div className="flex items-center gap-6">
             <a href={`/${locale}`} className="flex items-center gap-2">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/siege-logo.svg" alt="Siege" className="w-7 h-7" />
-              <h1 className="text-xl font-bold">Siege</h1>
+              <h1 className="text-xl font-bold" style={{ fontFamily: "var(--font-heading), system-ui" }}>Siege</h1>
             </a>
             <a
               href={`/${locale}`}

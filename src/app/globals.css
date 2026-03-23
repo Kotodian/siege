@@ -3,88 +3,117 @@
 @import "highlight.js/styles/github-dark.css";
 
 :root {
-  --background: #1a1a1a;
-  --foreground: #d4d4d4;
-  --card: #252525;
-  --card-border: #3a3a3a;
-  --muted: #888888;
-  --accent: #ffffff;
+  /* ── Surface hierarchy (Monolith "The Monolith" design system) ── */
+  --background: #131313;
+  --surface-dim: #131313;
+  --surface-container-lowest: #0e0e0e;
+  --surface-container-low: #1c1b1b;
+  --surface-container: #201f1f;
+  --surface-container-high: #2a2a2a;
+  --surface-container-highest: #353534;
+  --surface-bright: #3a3939;
+
+  /* ── Legacy aliases (backward-compatible) ── */
+  --foreground: #e5e2e1;
+  --card: #2a2a2a;
+  --card-border: #464554;
+  --muted: #908fa0;
+  --accent: #c0c1ff;
+
+  /* ── Semantic colors ── */
+  --on-surface: #e5e2e1;
+  --on-surface-variant: #c7c4d7;
+  --primary: #c0c1ff;
+  --primary-container: #8083ff;
+  --secondary: #ddb7ff;
+  --tertiary: #ffb783;
+  --error: #ffb4ab;
+  --on-error: #690005;
+  --error-container: rgba(255, 180, 171, 0.12);
+  --success: #86efac;
+  --success-container: rgba(34, 197, 94, 0.15);
+  --warning: #fde047;
+  --warning-container: rgba(234, 179, 8, 0.12);
+  --outline: #908fa0;
+  --outline-variant: #464554;
+  --ghost-border: rgba(70, 69, 84, 0.2);
+  --focus-ring: rgba(192, 193, 255, 0.5);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-body);
   --font-mono: var(--font-geist-mono);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-body), Inter, system-ui, -apple-system, sans-serif;
 }
 
-/* Override prose for dark mode */
+/* ── Prose overrides (Monolith tokens) ── */
 .prose {
-  --tw-prose-body: #d4d4d4;
-  --tw-prose-headings: #e5e5e5;
-  --tw-prose-links: #60a5fa;
-  --tw-prose-bold: #e5e5e5;
-  --tw-prose-counters: #888888;
-  --tw-prose-bullets: #888888;
-  --tw-prose-hr: #3a3a3a;
-  --tw-prose-quotes: #888888;
-  --tw-prose-quote-borders: #3a3a3a;
-  --tw-prose-code: #e5e5e5;
-  --tw-prose-pre-code: #d4d4d4;
-  --tw-prose-pre-bg: #1a1a1a;
-  --tw-prose-th-borders: #3a3a3a;
-  --tw-prose-td-borders: #303030;
-  color: #d4d4d4;
+  --tw-prose-body: var(--on-surface);
+  --tw-prose-headings: var(--on-surface);
+  --tw-prose-links: var(--primary);
+  --tw-prose-bold: var(--on-surface);
+  --tw-prose-counters: var(--outline);
+  --tw-prose-bullets: var(--outline);
+  --tw-prose-hr: var(--outline-variant);
+  --tw-prose-quotes: var(--outline);
+  --tw-prose-quote-borders: var(--outline-variant);
+  --tw-prose-code: var(--on-surface);
+  --tw-prose-pre-code: var(--on-surface);
+  --tw-prose-pre-bg: var(--surface-container-lowest);
+  --tw-prose-th-borders: var(--outline-variant);
+  --tw-prose-td-borders: var(--outline-variant);
+  color: var(--on-surface);
 }
 
 .prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6 {
-  color: #e5e5e5;
+  color: var(--on-surface);
 }
 
 .prose a {
-  color: #60a5fa;
+  color: var(--primary);
 }
 
 .prose strong, .prose b {
-  color: #e5e5e5;
+  color: var(--on-surface);
 }
 
 .prose code {
-  color: #e5e5e5;
+  color: var(--on-surface);
 }
 
 .prose p, .prose li, .prose td, .prose th, .prose blockquote {
-  color: #d4d4d4;
+  color: var(--on-surface);
 }
 
-/* Gantt chart dark overrides */
+/* ── Gantt chart dark overrides ── */
 .gantt .grid-header,
 .gantt .grid-row {
-  fill: #252525 !important;
+  fill: var(--surface-container-high) !important;
 }
 .gantt .grid-row:nth-child(even) {
-  fill: #1a1a1a !important;
+  fill: var(--surface-container-low) !important;
 }
 .gantt .row-line,
 .gantt .tick {
-  stroke: #3a3a3a !important;
+  stroke: var(--outline-variant) !important;
 }
 .gantt .bar-label,
 .gantt .lower-text,
 .gantt .upper-text {
-  fill: #d4d4d4 !important;
+  fill: var(--on-surface) !important;
 }
 .gantt .bar-wrapper.subtask .bar {
-  fill: #7c3aed !important;
+  fill: var(--secondary) !important;
   opacity: 0.7;
 }
 .gantt .bar-wrapper.subtask .bar-label {
-  fill: #c4b5fd !important;
+  fill: var(--secondary) !important;
   font-style: italic;
 }

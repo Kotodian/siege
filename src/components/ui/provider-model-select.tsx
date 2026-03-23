@@ -18,6 +18,9 @@ const ACP_PROVIDERS: ProviderConfig[] = [
     "gpt-5.4", "gpt-5.4-mini", "gpt-5.4-nano", "gpt-5.3-codex",
     "o3-pro", "o3-mini", "gpt-4o", "gpt-4o-mini",
   ]},
+  { id: "copilot-acp", label: "Copilot", badge: "ACP", models: [
+    "gpt-4o", "gpt-4o-mini", "o3-mini", "claude-sonnet-4-6",
+  ]},
 ];
 
 const SDK_PROVIDERS: Record<string, { label: string; models: string[] }> = {

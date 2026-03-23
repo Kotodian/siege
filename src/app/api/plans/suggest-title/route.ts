@@ -46,10 +46,10 @@ export async function POST(req: NextRequest) {
   const prompt = TITLE_PROMPT(description);
 
   // ACP path
-  if (resolved.provider === "acp" || resolved.provider === "codex-acp") {
+  if (resolved.provider === "acp" || resolved.provider === "codex-acp" || resolved.provider === "copilot-acp") {
     try {
       const cwd = process.cwd();
-      const acpClient = new AcpClient(cwd, resolved.provider === "codex-acp" ? "codex" : "claude");
+      const acpClient = new AcpClient(cwd, resolved.provider === "codex-acp" ? "codex" : resolved.provider === "copilot-acp" ? "copilot" : "claude");
       await acpClient.start();
       const session = await acpClient.createSession(resolved.model);
       if (resolved.model) {

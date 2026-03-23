@@ -336,7 +336,7 @@ export async function POST(req: NextRequest) {
   let fullText = "";
 
   // ACP engine: provide the diff content directly in the prompt
-  if (resolved.provider === "acp" || resolved.provider === "codex-acp") {
+  if (resolved.provider === "acp" || resolved.provider === "codex-acp" || resolved.provider === "copilot-acp") {
     const zh = /[\u4e00-\u9fff]/.test(plan.name || "");
 
     // Build full content with diffs already included
@@ -365,7 +365,7 @@ ${zh ? "用中文输出所有内容。" : ""}`;
 
     const responseStream = new ReadableStream({
       async start(controller) {
-        const acpClient = new AcpClient(cwd, resolved.provider === "codex-acp" ? "codex" : "claude");
+        const acpClient = new AcpClient(cwd, resolved.provider === "codex-acp" ? "codex" : resolved.provider === "copilot-acp" ? "copilot" : "claude");
         try {
           await acpClient.start();
           const session = await acpClient.createSession(resolved.model);

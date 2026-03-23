@@ -478,20 +478,21 @@ After implementing, commit your changes with a descriptive commit message follow
   const resolved = resolveStepConfig("execute", reqProvider, reqModel);
   const engine = reqProvider === "acp" ? "acp"
     : reqProvider === "codex-acp" ? "codex-acp"
+    : reqProvider === "copilot-acp" ? "copilot-acp"
     : item.engine
-    || (resolved.provider === "acp" ? "acp" : resolved.provider === "codex-acp" ? "codex-acp" : "claude-code");
+    || (resolved.provider === "acp" ? "acp" : resolved.provider === "codex-acp" ? "codex-acp" : resolved.provider === "copilot-acp" ? "copilot-acp" : "claude-code");
   const encoder = new TextEncoder();
   let fullLog = "";
   const beforeHash = getHeadHash(cwd);
   const beforeSnapshot = snapshotWorkingTree(cwd);
 
   // ACP engine: use Agent Client Protocol with session reuse per project
-  if (engine === "acp" || engine === "codex-acp") {
+  if (engine === "acp" || engine === "codex-acp" || engine === "copilot-acp") {
     const existingSessionId = project.sessionId;
 
     const responseStream = new ReadableStream({
       async start(controller) {
-        const acpClient = new AcpClient(cwd, engine === "codex-acp" ? "codex" : "claude");
+        const acpClient = new AcpClient(cwd, engine === "codex-acp" ? "codex" : engine === "copilot-acp" ? "copilot" : "claude");
         try {
           controller.enqueue(encoder.encode("Connecting to ACP agent...\n"));
           await acpClient.start();

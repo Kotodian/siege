@@ -49,6 +49,7 @@ function saveScheduleFromJson(planId: string, jsonText: string) {
       engine: (() => {
         const { provider } = resolveStepConfig("execute");
         if (provider === "codex-acp") return "codex-acp";
+        if (provider === "copilot-acp") return "copilot-acp";
         // Default to ACP — only use SDK if explicitly set to an SDK provider
         if (provider === "anthropic" || provider === "openai" || provider === "glm") return "claude-code";
         return "acp";
@@ -125,7 +126,7 @@ Output the JSON array now:`;
   const resolved = resolveStepConfig("schedule", provider as string, model);
 
   // ACP engine
-  if (resolved.provider === "acp" || resolved.provider === "codex-acp") {
+  if (resolved.provider === "acp" || resolved.provider === "codex-acp" || resolved.provider === "copilot-acp") {
     const project = db.select().from(projects).where(eq(projects.id, plan.projectId)).get();
     const cwd = project?.targetRepoPath && fs.existsSync(project.targetRepoPath) ? project.targetRepoPath : process.cwd();
 
@@ -133,7 +134,7 @@ Output the JSON array now:`;
     let fullText = "";
     const responseStream = new ReadableStream({
       async start(controller) {
-        const acpClient = new AcpClient(cwd, resolved.provider === "codex-acp" ? "codex" : "claude");
+        const acpClient = new AcpClient(cwd, resolved.provider === "codex-acp" ? "codex" : resolved.provider === "copilot-acp" ? "copilot" : "claude");
         try {
           await acpClient.start();
           let session;

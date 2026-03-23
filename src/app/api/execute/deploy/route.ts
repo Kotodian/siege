@@ -42,10 +42,10 @@ ${instruction}
 Use the available tools to run commands, read/write files as needed. Report progress as you go.`;
 
   // ACP engine
-  if (resolved.provider === "acp" || resolved.provider === "codex-acp") {
+  if (resolved.provider === "acp" || resolved.provider === "codex-acp" || resolved.provider === "copilot-acp") {
     const responseStream = new ReadableStream({
       async start(controller) {
-        const acpClient = new AcpClient(repoPath, resolved.provider === "codex-acp" ? "codex" : "claude");
+        const acpClient = new AcpClient(repoPath, resolved.provider === "codex-acp" ? "codex" : resolved.provider === "copilot-acp" ? "copilot" : "claude");
         try {
           await acpClient.start();
           const session = await acpClient.createSession(resolved.model);

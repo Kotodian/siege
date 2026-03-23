@@ -44,24 +44,33 @@ export class AcpClient {
   private onUpdate: UpdateCallback | null = null;
   private onWrite: WriteCallback | null = null;
   private repoPath: string;
-  private agentType: "claude" | "codex";
+  private agentType: "claude" | "codex" | "copilot";
   private terminals = new Map<string, { output: string; exitCode: number | null }>();
   private stderrBuffer: string[] = [];
 
-  constructor(repoPath: string, agentType: "claude" | "codex" = "claude") {
+  constructor(repoPath: string, agentType: "claude" | "codex" | "copilot" = "claude") {
     this.repoPath = repoPath;
     this.agentType = agentType;
   }
 
   async start(): Promise<void> {
-    const agentPkg = this.agentType === "codex"
-      ? "@zed-industries/codex-acp@latest"
-      : "@zed-industries/claude-agent-acp@latest";
-    this.proc = spawn("npx", ["-y", agentPkg], {
-      stdio: ["pipe", "pipe", "pipe"],
-      cwd: this.repoPath,
-      env: { ...process.env },
-    });
+    if (this.agentType === "copilot") {
+      // GitHub Copilot CLI has native --acp flag
+      this.proc = spawn("npx", ["-y", "@github/copilot", "--acp"], {
+        stdio: ["pipe", "pipe", "pipe"],
+        cwd: this.repoPath,
+        env: { ...process.env },
+      });
+    } else {
+      const agentPkg = this.agentType === "codex"
+        ? "@zed-industries/codex-acp@latest"
+        : "@zed-industries/claude-agent-acp@latest";
+      this.proc = spawn("npx", ["-y", agentPkg], {
+        stdio: ["pipe", "pipe", "pipe"],
+        cwd: this.repoPath,
+        env: { ...process.env },
+      });
+    }
 
     let earlyExit = false;
     let earlyExitCode: number | null = null;

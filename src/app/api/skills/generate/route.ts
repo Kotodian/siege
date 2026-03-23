@@ -76,7 +76,7 @@ Output the complete file content starting with the --- frontmatter block.`;
     async start(controller) {
       try {
         const resolved = resolveStepConfig("skills");
-        if (resolved.provider === "acp" || resolved.provider === "codex-acp") {
+        if (resolved.provider === "acp" || resolved.provider === "codex-acp" || resolved.provider === "copilot-acp") {
           // Snapshot existing skill files before ACP runs
           const skillsDir = path.join(process.env.HOME || "", ".claude", "skills");
           const beforeFiles = new Set<string>();
@@ -87,7 +87,7 @@ Output the complete file content starting with the --- frontmatter block.`;
             }
           }
 
-          const acpClient = new AcpClient(process.cwd(), resolved.provider === "codex-acp" ? "codex" : "claude");
+          const acpClient = new AcpClient(process.cwd(), resolved.provider === "codex-acp" ? "codex" : resolved.provider === "copilot-acp" ? "copilot" : "claude");
           await acpClient.start();
           const session = await acpClient.createSession(resolved.model);
           await acpClient.prompt(session.sessionId, acpPrompt, (type, text) => {

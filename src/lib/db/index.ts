@@ -23,7 +23,14 @@ function createDb() {
   try {
     migrate(db, { migrationsFolder: path.join(process.cwd(), "src/lib/db/migrations") });
   } catch (err) {
-    console.error("[db] Migration failed:", err);
+    const msg = err instanceof Error ? err.message : String(err);
+    // Ignore "duplicate column" errors from migrations that add columns
+    // which were already added manually
+    if (msg.includes("duplicate column")) {
+      console.warn("[db] Migration warning (duplicate column, skipping):", msg);
+    } else {
+      console.error("[db] Migration failed:", err);
+    }
   }
 
   return db;

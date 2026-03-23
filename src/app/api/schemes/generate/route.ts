@@ -270,7 +270,7 @@ export async function POST(req: NextRequest) {
     const session = createSession(generationId, planId);
     const hasChinese = /[\u4e00-\u9fff]/.test(plan.description || plan.name);
 
-    const isAcpInteractive = resolved.provider === "acp" || resolved.provider === "codex-acp";
+    const isAcpInteractive = resolved.provider === "acp" || resolved.provider === "codex-acp" || resolved.provider === "copilot-acp";
     let sharedAcpClient: AcpClient | null = null;
 
     const responseStream = new ReadableStream({
@@ -291,7 +291,7 @@ export async function POST(req: NextRequest) {
           let sharedSessionId = "";
 
           if (isAcpInteractive) {
-            sharedAcpClient = new AcpClient(cwd, resolved.provider === "codex-acp" ? "codex" : "claude");
+            sharedAcpClient = new AcpClient(cwd, resolved.provider === "codex-acp" ? "codex" : resolved.provider === "copilot-acp" ? "copilot" : "claude");
             await sharedAcpClient.start();
             const acpSession = await sharedAcpClient.createSession(resolved.model);
             sharedSessionId = acpSession.sessionId;
@@ -442,15 +442,15 @@ export async function POST(req: NextRequest) {
 
   // --- Standard (non-interactive) mode ---
   const memCtx = loadMemoryContext(project.id);
-  const isAcp = resolved.provider === "acp" || resolved.provider === "codex-acp";
+  const isAcp = resolved.provider === "acp" || resolved.provider === "codex-acp" || resolved.provider === "copilot-acp";
 
   const prompt = buildPrompt(project, plan, isAcp, idea) + (memCtx ? `\n\n${memCtx}` : "");
 
   // ACP engine: use Claude Code / Codex via Agent Client Protocol
-  if (resolved.provider === "acp" || resolved.provider === "codex-acp") {
+  if (resolved.provider === "acp" || resolved.provider === "codex-acp" || resolved.provider === "copilot-acp") {
     const responseStream = new ReadableStream({
       async start(controller) {
-        const acpClient = new AcpClient(cwd, resolved.provider === "codex-acp" ? "codex" : "claude");
+        const acpClient = new AcpClient(cwd, resolved.provider === "codex-acp" ? "codex" : resolved.provider === "copilot-acp" ? "copilot" : "claude");
         try {
           await acpClient.start();
 

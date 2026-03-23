@@ -84,10 +84,10 @@ export async function POST(req: NextRequest) {
     const resolved = resolveStepConfig("test", provider, model);
     let generatedCases;
 
-    if (resolved.provider === "acp" || resolved.provider === "codex-acp") {
+    if (resolved.provider === "acp" || resolved.provider === "codex-acp" || resolved.provider === "copilot-acp") {
       // ACP: let agent inspect code and generate tests directly
       const cwd = fs.existsSync(project.targetRepoPath) ? project.targetRepoPath : process.cwd();
-      const acpClient = new AcpClient(cwd, resolved.provider === "codex-acp" ? "codex" : "claude");
+      const acpClient = new AcpClient(cwd, resolved.provider === "codex-acp" ? "codex" : resolved.provider === "copilot-acp" ? "copilot" : "claude");
       try {
         await acpClient.start();
         const session = await acpClient.createSession(resolved.model);

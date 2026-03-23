@@ -116,7 +116,7 @@ export function StructuredSchemeView({ data, schemeId, findings = [], onFindings
       title: isZh ? "架构图" : "Architecture Diagram",
       icon: "📐",
       content: (
-        <ArchitectureDiagram components={data.architecture.components} />
+        <ArchitectureDiagram components={data.architecture.components} dataFlow={data.architecture.dataFlow} />
       ),
     });
   }

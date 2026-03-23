@@ -345,6 +345,7 @@ export function ReviewPanel({
             const { done, value } = await reader.read();
             if (done) break;
             aiContent += decoder.decode(value, { stream: true });
+            updateContent(aiContent);
           }
 
           // Replace the section in the full scheme
@@ -373,7 +374,7 @@ export function ReviewPanel({
         let fixMessage = `Fix the following issue:\n\n**${item.title}**\n\n${item.content}`;
         if (userNote) fixMessage += `\n\nAdditional instructions from user: ${userNote}`;
 
-        await fetch("/api/schemes/chat", {
+        const chatRes2 = await fetch("/api/schemes/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -383,6 +384,18 @@ export function ReviewPanel({
             ...(reviewModel && { model: reviewModel }),
           }),
         });
+
+        if (chatRes2.ok && chatRes2.body) {
+          const reader2 = chatRes2.body.getReader();
+          const decoder2 = new TextDecoder();
+          let content2 = "";
+          while (true) {
+            const { done, value } = await reader2.read();
+            if (done) break;
+            content2 += decoder2.decode(value, { stream: true });
+            updateContent(content2);
+          }
+        }
       }
 
       // Mark as resolved

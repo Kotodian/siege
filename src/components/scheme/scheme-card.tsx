@@ -179,7 +179,7 @@ export function SchemeCard({
   }
 
   return (
-    <div className="rounded-lg border p-5" style={{ background: "var(--card)", borderColor: "var(--card-border)" }}>
+    <div className="rounded-lg border p-5" style={{ background: "var(--surface-container-high)", borderColor: "var(--outline-variant)" }}>
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2">
           <h3 className="font-semibold">{scheme.title}</h3>
@@ -259,29 +259,31 @@ export function SchemeCard({
 
       {/* Chat history */}
       {chatHistory.length > 0 && (
-        <div className="mt-3 border-t pt-3 space-y-2" style={{ borderColor: "var(--card-border)" }}>
+        <div className="mt-3 border-t pt-3 space-y-2" style={{ borderColor: "var(--outline-variant)" }}>
           {chatHistory.map((msg, i) => (
             <div
               key={i}
               className={`text-sm px-3 py-1.5 rounded-lg max-w-[80%] ${
                 msg.role === "user"
-                  ? "bg-blue-50 text-blue-800 ml-auto"
+                  ? "ml-auto"
                   : ""
               }`}
-              style={msg.role !== "user" ? { background: "var(--background)", color: "var(--foreground)" } : undefined}
+              style={msg.role === "user"
+                ? { background: "rgba(128,131,255,0.15)", color: "var(--on-surface)" }
+                : { background: "var(--background)", color: "var(--on-surface)" }}
             >
               {msg.text}
             </div>
           ))}
           {chatting && (
-            <div className="text-sm text-blue-600 bg-blue-50 rounded-lg px-3 py-2 flex items-center gap-2">
+            <div className="text-sm rounded-lg px-3 py-2 flex items-center gap-2" style={{ background: "rgba(128,131,255,0.15)", color: "var(--primary)" }}>
               <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
               </svg>
               <div>
                 <span>{isZh ? "AI 修改中，请稍候..." : "AI modifying, please wait..."}</span>
-                <span className="block text-xs text-blue-400">
+                <span className="block text-xs" style={{ color: "var(--on-surface-variant)" }}>
                   {isZh ? "通常需要 1-2 分钟" : "Usually takes 1-2 minutes"}
                 </span>
               </div>
@@ -304,9 +306,11 @@ export function SchemeCard({
             }
             disabled={chatting}
             className="flex-1 rounded-md border px-3 py-1.5 text-sm
-              focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500
+              focus:outline-none
               disabled:opacity-50"
-            style={{ background: "var(--card)", color: "var(--foreground)", borderColor: "var(--card-border)" }}
+            style={{ background: "var(--surface-container)", color: "var(--on-surface)", borderColor: "var(--ghost-border)", "--tw-ring-color": "var(--focus-ring)" } as React.CSSProperties}
+            onFocus={(e) => { e.currentTarget.style.borderColor = "var(--primary)"; e.currentTarget.style.boxShadow = "0 0 0 1px var(--primary)"; }}
+            onBlur={(e) => { e.currentTarget.style.borderColor = "var(--ghost-border)"; e.currentTarget.style.boxShadow = "none"; }}
           />
           <Button
             size="sm"

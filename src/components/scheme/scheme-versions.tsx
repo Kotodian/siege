@@ -60,13 +60,13 @@ export function SchemeVersions({
       maxWidth="max-w-4xl"
     >
       {versions.length === 0 ? (
-        <p className="text-sm text-center py-12" style={{ color: "var(--muted)" }}>
+        <p className="text-sm text-center py-12" style={{ color: "var(--outline)" }}>
           {t("noVersions")}
         </p>
       ) : (
         <div className="flex gap-0 -mx-6 -mb-6 min-h-[420px]">
           {/* Left: Timeline + Restore */}
-          <div className="w-56 shrink-0 border-r rounded-bl-lg flex flex-col" style={{ background: "var(--background)", borderColor: "var(--card-border)" }}>
+          <div className="w-56 shrink-0 border-r rounded-bl-lg flex flex-col" style={{ background: "var(--background)", borderColor: "var(--outline-variant)" }}>
             <div className="flex-1 overflow-y-auto p-3">
               <VersionTimeline
                 versions={versions}
@@ -75,7 +75,7 @@ export function SchemeVersions({
               />
             </div>
             {selected && (
-              <div className="p-3 border-t space-y-2" style={{ borderColor: "var(--card-border)" }}>
+              <div className="p-3 border-t space-y-2" style={{ borderColor: "var(--outline-variant)" }}>
                 <Button
                   className="w-full"
                   size="sm"
@@ -110,7 +110,7 @@ export function SchemeVersions({
                 newLabel={t("current")}
               />
             ) : (
-              <div className="flex items-center justify-center h-full text-sm" style={{ color: "var(--muted)" }}>
+              <div className="flex items-center justify-center h-full text-sm" style={{ color: "var(--outline)" }}>
                 {t("diffWith")}
               </div>
             )}

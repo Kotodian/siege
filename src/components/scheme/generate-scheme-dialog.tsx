@@ -59,7 +59,7 @@ export function GenerateSchemeDialog({
       <div className="space-y-4">
         {/* Provider + Model */}
         <div>
-          <label className="block text-sm font-medium mb-1" style={{ color: "var(--foreground)" }}>
+          <label className="block text-sm font-medium mb-1" style={{ color: "var(--on-surface)" }}>
             {t("generate.provider")}
           </label>
           <ProviderModelSelect
@@ -75,16 +75,16 @@ export function GenerateSchemeDialog({
         <label className="flex items-center gap-3 cursor-pointer">
           <div
             className="relative w-10 h-5 rounded-full transition-colors"
-            style={{ background: interactiveMode ? "#22c55e" : "var(--card-border)" }}
+            style={{ background: interactiveMode ? "var(--success)" : "var(--outline-variant)" }}
             onClick={() => setInteractiveMode(!interactiveMode)}
           >
             <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${interactiveMode ? "translate-x-5" : "translate-x-0.5"}`} />
           </div>
           <div>
-            <span className="text-sm font-medium" style={{ color: "var(--foreground)" }}>
+            <span className="text-sm font-medium" style={{ color: "var(--on-surface)" }}>
               {isZh ? "交互模式" : "Interactive Mode"}
             </span>
-            <p className="text-xs" style={{ color: "var(--muted)" }}>
+            <p className="text-xs" style={{ color: "var(--outline)" }}>
               {isZh ? "AI 会在生成过程中询问关键设计决策" : "AI will ask key design questions during generation"}
             </p>
           </div>
@@ -92,7 +92,7 @@ export function GenerateSchemeDialog({
 
         {/* User idea / approach */}
         <div>
-          <label className="block text-sm font-medium mb-1" style={{ color: "var(--foreground)" }}>
+          <label className="block text-sm font-medium mb-1" style={{ color: "var(--on-surface)" }}>
             {isZh ? "基本思路（可选）" : "Your Approach (optional)"}
           </label>
           <textarea
@@ -100,7 +100,7 @@ export function GenerateSchemeDialog({
             onChange={(e) => setIdea(e.target.value)}
             placeholder={isZh ? "描述你的初步想法、技术选型、约束条件等..." : "Describe your initial ideas, tech choices, constraints..."}
             className="w-full rounded-md border px-3 py-2 text-sm resize-none"
-            style={{ background: "var(--card)", color: "var(--foreground)", borderColor: "var(--card-border)", minHeight: "80px" }}
+            style={{ background: "var(--surface-container)", color: "var(--on-surface)", borderColor: "var(--ghost-border)", minHeight: "80px" }}
             rows={3}
           />
         </div>

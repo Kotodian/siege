@@ -19,12 +19,12 @@ interface GanttChartProps {
 }
 
 const STATUS_COLORS: Record<string, { bar: string; light: string }> = {
-  completed:         { bar: "#22c55e", light: "rgba(34,197,94,0.08)" },
-  failed:            { bar: "#ef4444", light: "rgba(239,68,68,0.08)" },
-  subtask:           { bar: "#7c3aed", light: "rgba(124,58,237,0.08)" },
-  "completed subtask": { bar: "#22c55e", light: "rgba(34,197,94,0.08)" },
-  "failed subtask":  { bar: "#ef4444", light: "rgba(239,68,68,0.08)" },
-  "":                { bar: "#6366f1", light: "rgba(99,102,241,0.06)" },
+  completed:         { bar: "#86efac", light: "rgba(134,239,172,0.08)" },
+  failed:            { bar: "#ffb4ab", light: "rgba(255,180,171,0.08)" },
+  subtask:           { bar: "#ffb783", light: "rgba(255,183,131,0.08)" },
+  "completed subtask": { bar: "#86efac", light: "rgba(134,239,172,0.08)" },
+  "failed subtask":  { bar: "#ffb4ab", light: "rgba(255,180,171,0.08)" },
+  "":                { bar: "#c0c1ff", light: "rgba(192,193,255,0.06)" },
 };
 
 export function GanttChart({ tasks, onDateChange, onClick }: GanttChartProps) {
@@ -102,7 +102,7 @@ export function GanttChart({ tasks, onDateChange, onClick }: GanttChartProps) {
     <div
       ref={containerRef}
       className="rounded-xl border p-5 overflow-x-auto select-none"
-      style={{ background: "var(--card)", borderColor: "var(--card-border)" }}
+      style={{ background: "var(--surface-container-high)", borderColor: "var(--outline-variant)" }}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onPointerLeave={handlePointerUp}
@@ -131,7 +131,7 @@ export function GanttChart({ tasks, onDateChange, onClick }: GanttChartProps) {
                 style={{
                   fontSize: "13px",
                   fontWeight: (task.custom_class || "").includes("subtask") ? 400 : 500,
-                  color: (task.custom_class || "").includes("subtask") ? "#c4b5fd" : "var(--foreground)",
+                  color: (task.custom_class || "").includes("subtask") ? "var(--secondary)" : "var(--on-surface)",
                   paddingLeft: (task.custom_class || "").includes("subtask") ? "12px" : undefined,
                   letterSpacing: "-0.01em",
                   fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif',
@@ -202,7 +202,7 @@ export function GanttChart({ tasks, onDateChange, onClick }: GanttChartProps) {
                 style={{
                   fontSize: "12px",
                   fontWeight: 600,
-                  color: task.progress === 100 ? colors.bar : "var(--muted)",
+                  color: task.progress === 100 ? colors.bar : "var(--outline)",
                   fontFamily: '"SF Mono", "Cascadia Code", Menlo, monospace',
                   fontVariantNumeric: "tabular-nums",
                 }}

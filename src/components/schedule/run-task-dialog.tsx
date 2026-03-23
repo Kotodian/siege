@@ -50,7 +50,7 @@ export function RunTaskDialog({ open, onClose, onRun, taskTitle }: RunTaskDialog
       <div className="space-y-4">
         {/* Provider + Model */}
         <div>
-          <label className="block text-sm font-medium mb-1" style={{ color: "var(--foreground)" }}>
+          <label className="block text-sm font-medium mb-1" style={{ color: "var(--on-surface)" }}>
             {t("generate.provider")}
           </label>
           <ProviderModelSelect

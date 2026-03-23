@@ -85,14 +85,14 @@ interface SchemeSectionsProps {
 }
 
 const severityStyles: Record<string, { bg: string; border: string; text: string }> = {
-  critical: { bg: "#3a1a1a", border: "#7f1d1d", text: "#fca5a5" },
-  warning: { bg: "#3a2a1a", border: "#78350f", text: "#fcd34d" },
-  info: { bg: "#1a2a3a", border: "#1e3a5f", text: "#93c5fd" },
+  critical: { bg: "var(--error-container)", border: "var(--error)", text: "var(--error)" },
+  warning: { bg: "var(--warning-container)", border: "var(--warning)", text: "var(--warning)" },
+  info: { bg: "rgba(192,193,255,0.12)", border: "var(--primary-container)", text: "var(--primary)" },
 };
 
 const resolutionStyles: Record<string, { label: string; labelZh: string; bg: string; color: string }> = {
-  approved: { label: "Approved", labelZh: "已认可", bg: "rgba(234,179,8,0.2)", color: "#fcd34d" },
-  rejected: { label: "Rejected", labelZh: "已驳回", bg: "rgba(107,114,128,0.2)", color: "#9ca3af" },
+  approved: { label: "Approved", labelZh: "已认可", bg: "var(--warning-container)", color: "var(--warning)" },
+  rejected: { label: "Rejected", labelZh: "已驳回", bg: "rgba(107,114,128,0.2)", color: "var(--outline)" },
 };
 
 function FindingCard({
@@ -161,7 +161,7 @@ function FindingCard({
               <button
                 onClick={(e) => { e.stopPropagation(); handleResolution("approved"); }}
                 className="px-2 py-0.5 rounded text-[10px] font-medium hover:opacity-80"
-                style={{ background: "rgba(34,197,94,0.2)", color: "#86efac" }}
+                style={{ background: "var(--success-container)", color: "var(--success)" }}
                 title={isZh ? "认可：这是一个有效问题" : "Approve: this is a valid issue"}
               >
                 {isZh ? "认可" : "Approve"}
@@ -169,7 +169,7 @@ function FindingCard({
               <button
                 onClick={(e) => { e.stopPropagation(); handleResolution("rejected"); }}
                 className="px-2 py-0.5 rounded text-[10px] font-medium hover:opacity-80"
-                style={{ background: "rgba(107,114,128,0.2)", color: "#9ca3af" }}
+                style={{ background: "rgba(107,114,128,0.2)", color: "var(--outline)" }}
                 title={isZh ? "驳回：不认为这是问题" : "Reject: not a real issue"}
               >
                 {isZh ? "驳回" : "Reject"}
@@ -201,19 +201,19 @@ function FindingCard({
             placeholder={isZh ? "补充说明（可选，直接回车修复）" : "Additional notes (optional, Enter to fix)"}
             autoFocus
             className="flex-1 rounded border px-2 py-1 text-[11px]"
-            style={{ background: "var(--card)", color: "var(--foreground)", borderColor: "var(--card-border)" }}
+            style={{ background: "var(--surface-container)", color: "var(--on-surface)", borderColor: "var(--outline-variant)" }}
           />
           <button
             onClick={onSubmitFix}
             className="shrink-0 px-2 py-1 rounded text-[10px] font-medium hover:opacity-80"
-            style={{ background: "var(--foreground)", color: "var(--background)" }}
+            style={{ background: "var(--on-surface)", color: "var(--background)" }}
           >
             {isZh ? "修复" : "Fix"}
           </button>
           <button
             onClick={onCancelFix}
             className="shrink-0 px-2 py-1 rounded text-[10px] hover:opacity-80"
-            style={{ color: "var(--muted)" }}
+            style={{ color: "var(--outline)" }}
           >
             {isZh ? "取消" : "Cancel"}
           </button>
@@ -382,7 +382,7 @@ export function SchemeSections({
       )}
       {!readonly && (
         <div className="flex items-center gap-2 mb-2">
-          <span className="text-xs shrink-0" style={{ color: "var(--muted)" }}>{isZh ? "AI 模型：" : "AI Model:"}</span>
+          <span className="text-xs shrink-0" style={{ color: "var(--outline)" }}>{isZh ? "AI 模型：" : "AI Model:"}</span>
           <ProviderModelSelect
             provider={editProvider}
             model={editModel}
@@ -392,7 +392,7 @@ export function SchemeSections({
           />
         </div>
       )}
-      <div className="border rounded-lg divide-y" style={{ borderColor: "var(--card-border)", "--tw-divide-color": "var(--card-border)" } as React.CSSProperties}>
+      <div className="border rounded-lg divide-y" style={{ borderColor: "var(--outline-variant)", "--tw-divide-color": "var(--outline-variant)" } as React.CSSProperties}>
         {sections.map((section, i) => {
           const isOpen = expandedIndex === i;
           const isEditing = editingIndex === i;
@@ -436,7 +436,7 @@ export function SchemeSections({
                   </span>
                   {unresolvedCount > 0 && (
                     <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
-                      style={{ background: "#7f1d1d", color: "#fca5a5" }}>
+                      style={{ background: "var(--error-container)", color: "var(--error)" }}>
                       {unresolvedCount}
                     </span>
                   )}
@@ -445,7 +445,7 @@ export function SchemeSections({
                   className={`w-4 h-4 shrink-0 transition-transform ${
                     isOpen ? "rotate-180" : ""
                   }`}
-                  style={{ color: "var(--muted)" }}
+                  style={{ color: "var(--outline)" }}
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -481,25 +481,25 @@ export function SchemeSections({
 
                   {/* Explanation */}
                   {explanation[i] && (
-                    <div className="mt-3 p-3 rounded-md text-xs" style={{ background: "var(--background)", color: "var(--foreground)" }}>
+                    <div className="mt-3 p-3 rounded-md text-xs" style={{ background: "var(--background)", color: "var(--on-surface)" }}>
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-[10px] font-medium" style={{ color: "var(--muted)" }}>
+                        <span className="text-[10px] font-medium" style={{ color: "var(--outline)" }}>
                           <><LightbulbIcon size={12} className="inline-block align-[-1px]" /> {isZh ? "AI 解释" : "AI Explanation"}</>
                         </span>
                         <button onClick={() => setExplanation((prev) => { const n = { ...prev }; delete n[i]; return n; })}
-                          className="text-[10px]" style={{ color: "var(--muted)" }}><XIcon size={10} /></button>
+                          className="text-[10px]" style={{ color: "var(--outline)" }}><XIcon size={10} /></button>
                       </div>
                       <MarkdownRenderer content={explanation[i]} />
                     </div>
                   )}
 
                   {/* Section actions */}
-                  <div className="mt-3 pt-3 border-t flex items-center gap-3" style={{ borderColor: "var(--card-border)" }}>
+                  <div className="mt-3 pt-3 border-t flex items-center gap-3" style={{ borderColor: "var(--outline-variant)" }}>
                     <button
                       onClick={() => explanation[i] ? setExplanation((prev) => { const n = { ...prev }; delete n[i]; return n; }) : handleExplain(i)}
                       disabled={explaining === i}
                       className="text-xs hover:underline"
-                      style={{ color: "var(--muted)" }}
+                      style={{ color: "var(--outline)" }}
                     >
                       {explaining === i
                         ? <><HourglassIcon size={12} className="inline-block align-[-1px]" /> {isZh ? "解释中..." : "Explaining..."}</>
@@ -515,8 +515,10 @@ export function SchemeSections({
                               onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSectionSuggest(i)}
                               placeholder={isZh ? `修改「${section.title}」的建议...` : `Suggestion for "${section.title}"...`}
                               autoFocus
-                              className="flex-1 rounded-md border px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                              style={{ background: "var(--card)", color: "var(--foreground)", borderColor: "var(--card-border)" }}
+                              className="flex-1 rounded-md border px-3 py-1.5 text-sm focus:outline-none"
+                              style={{ background: "var(--surface-container)", color: "var(--on-surface)", borderColor: "var(--outline-variant)" }}
+                              onFocus={(e) => { e.currentTarget.style.borderColor = "var(--primary)"; e.currentTarget.style.boxShadow = "0 0 0 1px var(--primary)"; }}
+                              onBlur={(e) => { e.currentTarget.style.borderColor = "var(--outline-variant)"; e.currentTarget.style.boxShadow = "none"; }}
                             />
                             <Button size="sm" onClick={() => handleSectionSuggest(i)} disabled={!suggestion.trim()}>
                               {isZh ? "修改" : "Apply"}
@@ -526,7 +528,7 @@ export function SchemeSections({
                             </Button>
                           </div>
                         ) : (
-                          <button onClick={() => setEditingIndex(i)} className="text-xs hover:underline" style={{ color: "var(--muted)" }}>
+                          <button onClick={() => setEditingIndex(i)} className="text-xs hover:underline" style={{ color: "var(--outline)" }}>
                             <><PencilIcon size={12} className="inline-block align-[-1px]" /> {isZh ? "AI 修改" : "AI Edit"}</>
                           </button>
                         )}
@@ -567,7 +569,7 @@ export function SchemeSections({
         if (unmatched.length === 0) return null;
         return (
           <div className="mt-3 space-y-2">
-            <h5 className="text-xs font-medium" style={{ color: "var(--muted)" }}>
+            <h5 className="text-xs font-medium" style={{ color: "var(--outline)" }}>
               {isZh ? "审查发现" : "Review Findings"}
             </h5>
             {unmatched.map((f) => (

@@ -7,9 +7,9 @@ import hljs from "highlight.js";
 import { ArchitectureDiagram } from "@/components/ui/architecture-diagram";
 
 const severityColors: Record<string, { bg: string; border: string; text: string; dot: string }> = {
-  high: { bg: "#3a1a1a", border: "#7f1d1d", text: "#fca5a5", dot: "#ef4444" },
-  medium: { bg: "#3a2a1a", border: "#78350f", text: "#fcd34d", dot: "#eab308" },
-  low: { bg: "#1a2a3a", border: "#1e3a5f", text: "#93c5fd", dot: "#3b82f6" },
+  high: { bg: "var(--error-container)", border: "var(--error)", text: "var(--error)", dot: "var(--error)" },
+  medium: { bg: "var(--warning-container)", border: "var(--warning)", text: "var(--warning)", dot: "var(--warning)" },
+  low: { bg: "rgba(192,193,255,0.12)", border: "var(--primary-container)", text: "var(--primary)", dot: "var(--primary)" },
 };
 
 interface Finding {
@@ -41,12 +41,12 @@ function FindingChip({ f, isZh, onApprove, onReject }: {
       <span className="truncate">{f.title}</span>
       {!f.resolution && !f.resolved && (
         <div className="flex gap-1 shrink-0">
-          <button onClick={onApprove} className="px-1.5 py-0.5 rounded hover:opacity-80" style={{ background: "rgba(34,197,94,0.2)", color: "#86efac" }}>✓</button>
-          <button onClick={onReject} className="px-1.5 py-0.5 rounded hover:opacity-80" style={{ background: "rgba(107,114,128,0.2)", color: "#9ca3af" }}>✗</button>
+          <button onClick={onApprove} className="px-1.5 py-0.5 rounded hover:opacity-80" style={{ background: "var(--success-container)", color: "var(--success)" }}>✓</button>
+          <button onClick={onReject} className="px-1.5 py-0.5 rounded hover:opacity-80" style={{ background: "rgba(107,114,128,0.2)", color: "var(--outline)" }}>✗</button>
         </div>
       )}
       {f.resolution === "approved" && (
-        <span className="text-[10px] px-1 rounded shrink-0" style={{ background: "rgba(234,179,8,0.2)", color: "#fcd34d" }}>{isZh ? "已认可" : "Approved"}</span>
+        <span className="text-[10px] px-1 rounded shrink-0" style={{ background: "var(--warning-container)", color: "var(--warning)" }}>{isZh ? "已认可" : "Approved"}</span>
       )}
     </div>
   );
@@ -78,7 +78,7 @@ export function StructuredSchemeView({ data, schemeId, findings = [], onFindings
     icon: "📋",
     content: (
       <div className="flex items-center justify-center h-full">
-        <p className="text-lg leading-relaxed max-w-xl text-center" style={{ color: "var(--foreground)" }}>{data.overview}</p>
+        <p className="text-lg leading-relaxed max-w-xl text-center" style={{ color: "var(--on-surface)" }}>{data.overview}</p>
       </div>
     ),
   });
@@ -92,13 +92,13 @@ export function StructuredSchemeView({ data, schemeId, findings = [], onFindings
       content: (
         <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${Math.min(data.architecture.components.length, 3)}, 1fr)` }}>
           {data.architecture.components.map((c, i) => (
-            <div key={i} className="rounded-lg border p-4" style={{ background: "var(--background)", borderColor: "var(--card-border)" }}>
-              <div className="font-mono font-bold text-sm mb-2" style={{ color: "var(--foreground)" }}>{c.name}</div>
-              <div className="text-xs mb-3" style={{ color: "var(--muted)" }}>{c.responsibility}</div>
+            <div key={i} className="rounded-lg border p-4" style={{ background: "var(--background)", borderColor: "var(--outline-variant)" }}>
+              <div className="font-mono font-bold text-sm mb-2" style={{ color: "var(--on-surface)" }}>{c.name}</div>
+              <div className="text-xs mb-3" style={{ color: "var(--outline)" }}>{c.responsibility}</div>
               {c.dependencies?.length > 0 && (
                 <div className="flex gap-1 flex-wrap">
                   {c.dependencies.map((d, j) => (
-                    <span key={j} className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: "var(--card-border)", color: "var(--foreground)" }}>{d}</span>
+                    <span key={j} className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: "var(--outline-variant)", color: "var(--on-surface)" }}>{d}</span>
                   ))}
                 </div>
               )}
@@ -136,11 +136,11 @@ export function StructuredSchemeView({ data, schemeId, findings = [], onFindings
               highlighted = hljs.highlight(iface.definition, { language: hljs.getLanguage(lang) ? lang : "plaintext" }).value;
             } catch { /* fallback */ }
             return (
-              <div key={i} className="rounded-lg border overflow-hidden" style={{ borderColor: "var(--card-border)" }}>
+              <div key={i} className="rounded-lg border overflow-hidden" style={{ borderColor: "var(--outline-variant)" }}>
                 <div className="flex items-center gap-2 px-4 py-2" style={{ background: "var(--background)" }}>
-                  <span className="font-mono font-bold text-sm" style={{ color: "var(--foreground)" }}>{iface.name}</span>
-                  {iface.language && <span className="text-[10px] px-1.5 rounded" style={{ background: "var(--card-border)", color: "var(--muted)" }}>{iface.language}</span>}
-                  <span className="text-xs" style={{ color: "var(--muted)" }}>{iface.description}</span>
+                  <span className="font-mono font-bold text-sm" style={{ color: "var(--on-surface)" }}>{iface.name}</span>
+                  {iface.language && <span className="text-[10px] px-1.5 rounded" style={{ background: "var(--outline-variant)", color: "var(--outline)" }}>{iface.language}</span>}
+                  <span className="text-xs" style={{ color: "var(--outline)" }}>{iface.description}</span>
                 </div>
                 <pre className="text-xs p-4 overflow-x-auto" style={{ background: "#0d1117", margin: 0 }}>
                   <code dangerouslySetInnerHTML={{ __html: highlighted }} />
@@ -162,20 +162,20 @@ export function StructuredSchemeView({ data, schemeId, findings = [], onFindings
       content: (
         <div className="space-y-4">
           {data.decisions.map((d, i) => (
-            <div key={i} className="rounded-lg border p-4" style={{ background: "var(--background)", borderColor: "var(--card-border)" }}>
-              <div className="text-sm font-medium mb-3" style={{ color: "var(--foreground)" }}>{d.question}</div>
+            <div key={i} className="rounded-lg border p-4" style={{ background: "var(--background)", borderColor: "var(--outline-variant)" }}>
+              <div className="text-sm font-medium mb-3" style={{ color: "var(--on-surface)" }}>{d.question}</div>
               <div className="flex gap-2 flex-wrap mb-2">
                 {d.options.map((opt, j) => (
                   <span key={j} className={`text-xs px-3 py-1.5 rounded-full border ${opt === d.chosen ? "font-bold" : ""}`}
                     style={opt === d.chosen
-                      ? { background: "rgba(34,197,94,0.15)", borderColor: "rgba(34,197,94,0.3)", color: "#86efac" }
-                      : { background: "transparent", borderColor: "var(--card-border)", color: "var(--muted)" }
+                      ? { background: "var(--success-container)", borderColor: "var(--success)", color: "var(--success)" }
+                      : { background: "transparent", borderColor: "var(--outline-variant)", color: "var(--outline)" }
                     }>
                     {opt === d.chosen && "✓ "}{opt}
                   </span>
                 ))}
               </div>
-              <div className="text-xs" style={{ color: "var(--muted)" }}>{d.rationale}</div>
+              <div className="text-xs" style={{ color: "var(--outline)" }}>{d.rationale}</div>
             </div>
           ))}
         </div>
@@ -221,8 +221,8 @@ export function StructuredSchemeView({ data, schemeId, findings = [], onFindings
           <button key={s.id} onClick={() => setCurrentSlide(i)}
             className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium transition-all"
             style={i === currentSlide
-              ? { background: "var(--foreground)", color: "var(--background)" }
-              : { background: "var(--card)", color: "var(--muted)", border: "1px solid var(--card-border)" }
+              ? { background: "var(--primary)", color: "var(--background)" }
+              : { background: "var(--surface-container)", color: "var(--outline)", border: "1px solid var(--outline-variant)" }
             }
             title={s.title}>
             <span>{s.icon}</span>
@@ -232,7 +232,7 @@ export function StructuredSchemeView({ data, schemeId, findings = [], onFindings
       </div>
 
       {/* Slide content */}
-      <div className="rounded-xl border p-6 min-h-[300px]" style={{ background: "var(--card)", borderColor: "var(--card-border)" }}>
+      <div className="rounded-xl border p-6 min-h-[300px]" style={{ background: "var(--surface-container-high)", borderColor: "var(--outline-variant)" }}>
         {slide.content}
       </div>
 
@@ -251,13 +251,13 @@ export function StructuredSchemeView({ data, schemeId, findings = [], onFindings
       <div className="flex items-center justify-between mt-3">
         <button onClick={() => setCurrentSlide(Math.max(0, currentSlide - 1))} disabled={currentSlide === 0}
           className="text-xs px-3 py-1.5 rounded-md disabled:opacity-30"
-          style={{ color: "var(--muted)", background: "var(--card)", border: "1px solid var(--card-border)" }}>
+          style={{ color: "var(--outline)", background: "var(--surface-container)", border: "1px solid var(--outline-variant)" }}>
           ← {isZh ? "上一页" : "Prev"}
         </button>
-        <span className="text-xs" style={{ color: "var(--muted)" }}>{currentSlide + 1} / {slides.length}</span>
+        <span className="text-xs" style={{ color: "var(--outline)" }}>{currentSlide + 1} / {slides.length}</span>
         <button onClick={() => setCurrentSlide(Math.min(slides.length - 1, currentSlide + 1))} disabled={currentSlide === slides.length - 1}
           className="text-xs px-3 py-1.5 rounded-md disabled:opacity-30"
-          style={{ color: "var(--muted)", background: "var(--card)", border: "1px solid var(--card-border)" }}>
+          style={{ color: "var(--outline)", background: "var(--surface-container)", border: "1px solid var(--outline-variant)" }}>
           {isZh ? "下一页" : "Next"} →
         </button>
       </div>

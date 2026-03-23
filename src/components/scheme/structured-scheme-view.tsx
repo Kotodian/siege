@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import type { StructuredScheme } from "@/lib/scheme-types";
 import hljs from "highlight.js";
-import { ExcalidrawDiagram } from "@/components/ui/excalidraw-diagram";
+import { ArchitectureDiagram } from "@/components/ui/architecture-diagram";
 
 const severityColors: Record<string, { bg: string; border: string; text: string; dot: string }> = {
   high: { bg: "#3a1a1a", border: "#7f1d1d", text: "#fca5a5", dot: "#ef4444" },
@@ -116,7 +116,7 @@ export function StructuredSchemeView({ data, schemeId, findings = [], onFindings
       title: isZh ? "架构图" : "Architecture Diagram",
       icon: "📐",
       content: (
-        <ExcalidrawDiagram components={data.architecture.components} />
+        <ArchitectureDiagram components={data.architecture.components} />
       ),
     });
   }

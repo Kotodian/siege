@@ -116,39 +116,12 @@ export function StructuredSchemeView({ data, schemeId, findings = [], onFindings
       title: isZh ? "架构图" : "Architecture Diagram",
       icon: "📐",
       content: (
-        <ArchitectureDiagram components={data.architecture.components} dataFlow={data.architecture.dataFlow} />
+        <ArchitectureDiagram components={data.architecture.components} />
       ),
     });
   }
 
-  // Slide: Data Flow
-  if (data.architecture?.dataFlow?.length) {
-    slides.push({
-      id: "dataflow",
-      title: isZh ? "数据流" : "Data Flow",
-      icon: "🔄",
-      content: (
-        <div className="flex flex-col items-center gap-0">
-          {data.architecture.dataFlow.map((step, i) => (
-            <div key={i} className="flex items-center gap-3 w-full max-w-lg">
-              <div className="flex flex-col items-center">
-                <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold"
-                  style={{ background: "var(--foreground)", color: "var(--background)" }}>{i + 1}</div>
-                {i < data.architecture.dataFlow.length - 1 && (
-                  <div className="w-px h-6" style={{ background: "var(--card-border)" }} />
-                )}
-              </div>
-              <div className="flex-1 rounded-lg border px-4 py-2.5 text-sm" style={{ background: "var(--background)", borderColor: "var(--card-border)", color: "var(--foreground)" }}>
-                {step}
-              </div>
-            </div>
-          ))}
-        </div>
-      ),
-    });
-  }
-
-  // Slide 3: Interfaces (one per slide if many, or grouped)
+  // Slide: Interfaces
   if (data.interfaces?.length) {
     slides.push({
       id: "interfaces",

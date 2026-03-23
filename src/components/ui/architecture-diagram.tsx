@@ -21,12 +21,19 @@ interface Node {
   deps: string[];
 }
 
-// Simple layered layout: group by dependency depth
+// Estimate text width (rough: CJK ~12px per char, latin ~7px per char at fontSize)
+function textWidth(text: string, fontSize: number): number {
+  let w = 0;
+  for (const ch of text) {
+    w += ch.charCodeAt(0) > 0x2e80 ? fontSize * 0.95 : fontSize * 0.6;
+  }
+  return w;
+}
+
 function layoutNodes(components: Component[]): Node[] {
   const nameSet = new Set(components.map(c => c.name));
   const depCount = new Map<string, number>();
 
-  // Calculate dependency depth for each component
   for (const c of components) depCount.set(c.name, 0);
   let changed = true;
   while (changed) {
@@ -44,7 +51,6 @@ function layoutNodes(components: Component[]): Node[] {
     }
   }
 
-  // Group into layers by depth
   const layers = new Map<number, Component[]>();
   for (const c of components) {
     const depth = depCount.get(c.name) || 0;
@@ -52,40 +58,55 @@ function layoutNodes(components: Component[]): Node[] {
     layers.get(depth)!.push(c);
   }
 
-  const W = 180;
-  const H = 56;
-  const GAP_X = 40;
-  const GAP_Y = 70;
+  const PAD_X = 24;
+  const PAD_Y = 16;
+  const NAME_SIZE = 13;
+  const DESC_SIZE = 11;
+  const GAP_X = 50;
+  const GAP_Y = 60;
   const nodes: Node[] = [];
 
+  // Calculate natural width per component
+  const sizes = components.map(c => {
+    const nameW = textWidth(c.name, NAME_SIZE);
+    const descW = textWidth(c.responsibility, DESC_SIZE);
+    const w = Math.max(nameW, descW) + PAD_X * 2;
+    return { w: Math.max(140, Math.min(w, 280)), h: 52 + PAD_Y };
+  });
+  const sizeMap = new Map(components.map((c, i) => [c.name, sizes[i]]));
+
   const sortedLayers = [...layers.entries()].sort((a, b) => a[0] - b[0]);
-  const maxCols = Math.max(...sortedLayers.map(([, items]) => items.length));
-  const totalW = maxCols * (W + GAP_X) - GAP_X;
 
-  for (const [, items] of sortedLayers) {
-    const layerW = items.length * (W + GAP_X) - GAP_X;
-    const offsetX = (totalW - layerW) / 2;
-    const row = nodes.length === 0 ? 0 : Math.max(...nodes.map(n => n.y + n.h)) + GAP_Y;
+  // Calculate total width per layer to center them
+  const layerWidths = sortedLayers.map(([, items]) =>
+    items.reduce((sum, c) => sum + (sizeMap.get(c.name)?.w || 160), 0) + (items.length - 1) * GAP_X
+  );
+  const maxLayerW = Math.max(...layerWidths);
 
-    items.forEach((comp, col) => {
+  let currentY = 0;
+  for (const [li, [, items]] of sortedLayers.entries()) {
+    const layerW = layerWidths[li];
+    let currentX = (maxLayerW - layerW) / 2;
+
+    for (const comp of items) {
+      const size = sizeMap.get(comp.name) || { w: 160, h: 68 };
       nodes.push({
         id: comp.name,
         name: comp.name,
         responsibility: comp.responsibility,
-        x: offsetX + col * (W + GAP_X),
-        y: row,
-        w: W,
-        h: H,
+        x: currentX,
+        y: currentY,
+        w: size.w,
+        h: size.h,
         deps: comp.dependencies.filter(d => nameSet.has(d)),
       });
-    });
+      currentX += size.w + GAP_X;
+    }
+    const maxH = Math.max(...items.map(c => sizeMap.get(c.name)?.h || 68));
+    currentY += maxH + GAP_Y;
   }
 
   return nodes;
-}
-
-function truncate(s: string, max: number) {
-  return s.length > max ? s.slice(0, max - 1) + "…" : s;
 }
 
 export function ArchitectureDiagram({ components }: ArchitectureDiagramProps) {
@@ -94,12 +115,10 @@ export function ArchitectureDiagram({ components }: ArchitectureDiagramProps) {
   const nodes = layoutNodes(components);
   const nodeMap = new Map(nodes.map(n => [n.id, n]));
 
-  // Calculate SVG bounds
-  const pad = 30;
-  const maxX = Math.max(...nodes.map(n => n.x + n.w)) + pad * 2;
-  const maxY = Math.max(...nodes.map(n => n.y + n.h)) + pad * 2;
+  const pad = 24;
+  const svgW = Math.max(...nodes.map(n => n.x + n.w)) + pad * 2;
+  const svgH = Math.max(...nodes.map(n => n.y + n.h)) + pad * 2;
 
-  // Build edges
   const edges: Array<{ from: Node; to: Node }> = [];
   for (const node of nodes) {
     for (const depName of node.deps) {
@@ -109,58 +128,49 @@ export function ArchitectureDiagram({ components }: ArchitectureDiagramProps) {
   }
 
   return (
-    <svg viewBox={`0 0 ${maxX} ${maxY}`} className="w-full" style={{ maxHeight: 420 }}>
+    <svg viewBox={`0 0 ${svgW} ${svgH}`} className="w-full" style={{ maxHeight: 500 }}>
       <defs>
-        <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-          <path d="M0,0 L8,3 L0,6" fill="#64748b" />
+        <marker id="ah" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+          <path d="M0,0 L10,3.5 L0,7" fill="none" stroke="#64748b" strokeWidth="1.5" />
         </marker>
-        <filter id="card-shadow" x="-4%" y="-4%" width="108%" height="116%">
-          <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#000" floodOpacity="0.3" />
-        </filter>
-        <linearGradient id="card-bg" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#1e293b" />
-          <stop offset="100%" stopColor="#0f172a" />
-        </linearGradient>
       </defs>
 
-      {/* Edges */}
+      {/* Arrows */}
       {edges.map((edge, i) => {
         const fx = edge.from.x + edge.from.w / 2 + pad;
         const fy = edge.from.y + edge.from.h + pad;
         const tx = edge.to.x + edge.to.w / 2 + pad;
         const ty = edge.to.y + pad;
-
-        // Curved path
-        const midY = (fy + ty) / 2;
-        const path = `M${fx},${fy} C${fx},${midY} ${tx},${midY} ${tx},${ty}`;
+        const dy = ty - fy;
+        const cp = Math.max(Math.abs(dy) * 0.4, 20);
 
         return (
-          <path key={i} d={path} fill="none" stroke="#475569" strokeWidth="1.5"
-            markerEnd="url(#arrowhead)" strokeDasharray={undefined} />
+          <path key={i} d={`M${fx},${fy} C${fx},${fy + cp} ${tx},${ty - cp} ${tx},${ty}`}
+            fill="none" stroke="#475569" strokeWidth="1.5" markerEnd="url(#ah)" />
         );
       })}
 
       {/* Nodes */}
-      {nodes.map((node) => (
-        <g key={node.id} transform={`translate(${node.x + pad}, ${node.y + pad})`}>
-          <rect width={node.w} height={node.h} rx="10" ry="10"
-            fill="url(#card-bg)" stroke="#334155" strokeWidth="1.5"
-            filter="url(#card-shadow)" />
-          {/* Accent line at top */}
-          <rect width={node.w - 20} height="2" x="10" y="0" rx="1"
-            fill="#818cf8" opacity="0.6" />
-          {/* Name */}
-          <text x={node.w / 2} y={22} textAnchor="middle"
-            fill="#e2e8f0" fontSize="12" fontWeight="600" fontFamily="ui-monospace, monospace">
-            {truncate(node.name, 24)}
-          </text>
-          {/* Responsibility */}
-          <text x={node.w / 2} y={40} textAnchor="middle"
-            fill="#94a3b8" fontSize="10" fontFamily="system-ui, sans-serif">
-            {truncate(node.responsibility, 30)}
-          </text>
-        </g>
-      ))}
+      {nodes.map((node) => {
+        const nx = node.x + pad;
+        const ny = node.y + pad;
+        return (
+          <g key={node.id}>
+            <rect x={nx} y={ny} width={node.w} height={node.h}
+              rx="8" ry="8" fill="none" stroke="#334155" strokeWidth="1" />
+            <text x={nx + node.w / 2} y={ny + 20} textAnchor="middle"
+              fill="#e2e8f0" fontSize="13" fontWeight="600"
+              fontFamily="ui-monospace, SFMono-Regular, monospace">
+              {node.name}
+            </text>
+            <text x={nx + node.w / 2} y={ny + 38} textAnchor="middle"
+              fill="#64748b" fontSize="11"
+              fontFamily="system-ui, -apple-system, sans-serif">
+              {node.responsibility.length > 36 ? node.responsibility.slice(0, 35) + "…" : node.responsibility}
+            </text>
+          </g>
+        );
+      })}
     </svg>
   );
 }

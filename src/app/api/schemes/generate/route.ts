@@ -226,7 +226,7 @@ Output a JSON object with EXACTLY this structure:
       {"name": "ComponentName", "responsibility": "What it does", "dependencies": ["OtherComponent"]}
     ],
     "dataFlow": ["Step 1: ...", "Step 2: ...", "Step 3: ..."],
-    "diagram": "ASCII architecture diagram showing component relationships and data flow (REQUIRED)"
+    "diagram": "mermaid diagram source code showing component relationships and data flow (REQUIRED, use graph TD or flowchart TD syntax)"
   },
   "interfaces": [
     {"name": "TypeName", "language": "c|typescript|go|etc", "definition": "actual code definition", "description": "what this type represents"}
@@ -241,7 +241,7 @@ Output a JSON object with EXACTLY this structure:
 
 RULES:
 - Output ONLY the JSON object, no other text before or after
-- "architecture.diagram" is REQUIRED — draw an ASCII diagram showing how components connect, data flows between them, and external boundaries. Use box-drawing characters (┌─┐│└─┘) or simple ASCII art (+---+, |, --->)
+- "architecture.diagram" is REQUIRED — write a mermaid.js diagram (flowchart TD or graph TD) showing how components connect and data flows between them. Example: "graph TD\\n  A[Client] -->|request| B[Server]\\n  B --> C[Database]"
 - "interfaces" should contain REAL code definitions (structs, types, function signatures) — not prose
 - "decisions" should have 2-4 concrete options each
 - "risks" severity must be "low", "medium", or "high"

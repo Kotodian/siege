@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import type { StructuredScheme } from "@/lib/scheme-types";
 import hljs from "highlight.js";
+import { MermaidDiagram } from "@/components/ui/mermaid-diagram";
 
 const severityColors: Record<string, { bg: string; border: string; text: string; dot: string }> = {
   high: { bg: "#3a1a1a", border: "#7f1d1d", text: "#fca5a5", dot: "#ef4444" },
@@ -116,10 +117,7 @@ export function StructuredSchemeView({ data, schemeId, findings = [], onFindings
       icon: "📐",
       content: (
         <div className="flex items-center justify-center h-full">
-          <pre className="text-xs leading-relaxed p-6 rounded-lg overflow-x-auto max-w-full"
-            style={{ background: "var(--background)", color: "var(--foreground)", fontFamily: "monospace", whiteSpace: "pre", letterSpacing: "0.05em" }}>
-            {data.architecture.diagram}
-          </pre>
+          <MermaidDiagram chart={data.architecture.diagram} />
         </div>
       ),
     });

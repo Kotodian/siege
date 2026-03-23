@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
+import type { ExcalidrawElement } from "@excalidraw/excalidraw/element/types";
 
 interface Component {
   name: string;
@@ -10,32 +11,32 @@ interface Component {
 
 interface ExcalidrawDiagramProps {
   components: Component[];
-  dataFlow?: string[];
 }
 
-// Generate Excalidraw elements from architecture components
-function generateScene(components: Component[]) {
-  const elements: Array<Record<string, unknown>> = [];
-  const CARD_W = 220;
-  const CARD_H = 80;
-  const GAP_X = 60;
-  const GAP_Y = 40;
-  const COLS = Math.min(components.length, 3);
+function buildElements(components: Component[]): ExcalidrawElement[] {
+  const CARD_W = 200;
+  const CARD_H = 70;
+  const GAP_X = 80;
+  const GAP_Y = 100;
+  const COLS = Math.min(components.length <= 4 ? 2 : 3, components.length);
 
-  // Position map for arrow routing
-  const positions = new Map<string, { x: number; y: number; id: string }>();
+  const elements: ExcalidrawElement[] = [];
+  const nodeMap = new Map<string, { cx: number; cy: number; id: string; x: number; y: number }>();
+  let nextId = 1;
+  const mkId = () => `el-${nextId++}`;
 
-  // Create rectangles for each component
+  // Layout components in grid
   components.forEach((comp, i) => {
     const col = i % COLS;
     const row = Math.floor(i / COLS);
-    const x = col * (CARD_W + GAP_X) + 50;
-    const y = row * (CARD_H + GAP_Y + 40) + 50;
-    const id = `rect-${i}`;
+    const x = col * (CARD_W + GAP_X);
+    const y = row * (CARD_H + GAP_Y);
+    const id = mkId();
 
-    positions.set(comp.name, { x: x + CARD_W / 2, y: y + CARD_H / 2, id });
+    nodeMap.set(comp.name, { cx: x + CARD_W / 2, cy: y + CARD_H / 2, id, x, y });
 
     // Rectangle
+    const textId = mkId();
     elements.push({
       id,
       type: "rectangle",
@@ -48,96 +49,78 @@ function generateScene(components: Component[]) {
       fillStyle: "solid",
       strokeWidth: 2,
       roundness: { type: 3 },
-      boundElements: [],
+      boundElements: [{ id: textId, type: "text" }],
+      angle: 0,
+      opacity: 100,
+      seed: i * 1000 + 1,
+      version: 1,
+      versionNonce: i * 1000 + 2,
+      isDeleted: false,
       groupIds: [],
       frameId: null,
-      isDeleted: false,
-      opacity: 100,
-      angle: 0,
-      seed: Math.floor(Math.random() * 1e9),
-      version: 1,
-      versionNonce: Math.floor(Math.random() * 1e9),
-    });
+      index: `a${i}`,
+      link: null,
+      locked: false,
+      updated: Date.now(),
+    } as unknown as ExcalidrawElement);
 
-    // Component name text
+    // Text bound inside rectangle
+    const label = comp.name + (comp.responsibility ? `\n${comp.responsibility.slice(0, 35)}` : "");
     elements.push({
-      id: `text-name-${i}`,
+      id: textId,
       type: "text",
-      x: x + 15,
-      y: y + 12,
-      width: CARD_W - 30,
-      height: 20,
-      text: comp.name,
-      fontSize: 14,
-      fontFamily: 3, // monospace
+      x: x + 10,
+      y: y + CARD_H / 2 - 14,
+      width: CARD_W - 20,
+      height: 28,
+      text: label,
+      fontSize: 13,
+      fontFamily: 3,
       textAlign: "center",
-      verticalAlign: "top",
+      verticalAlign: "middle",
       strokeColor: "#e2e8f0",
       backgroundColor: "transparent",
       fillStyle: "solid",
       strokeWidth: 1,
+      angle: 0,
+      opacity: 100,
+      containerId: id,
+      originalText: label,
+      autoResize: true,
+      lineHeight: 1.25,
+      seed: i * 1000 + 3,
+      version: 1,
+      versionNonce: i * 1000 + 4,
+      isDeleted: false,
       groupIds: [],
       frameId: null,
-      isDeleted: false,
-      opacity: 100,
-      angle: 0,
-      containerId: null,
-      originalText: comp.name,
-      autoResize: true,
-      seed: Math.floor(Math.random() * 1e9),
-      version: 1,
-      versionNonce: Math.floor(Math.random() * 1e9),
-      lineHeight: 1.25 as number,
-    });
-
-    // Responsibility text (smaller)
-    const shortResp = comp.responsibility.length > 40 ? comp.responsibility.slice(0, 38) + "..." : comp.responsibility;
-    elements.push({
-      id: `text-resp-${i}`,
-      type: "text",
-      x: x + 10,
-      y: y + 38,
-      width: CARD_W - 20,
-      height: 30,
-      text: shortResp,
-      fontSize: 11,
-      fontFamily: 1,
-      textAlign: "center",
-      verticalAlign: "top",
-      strokeColor: "#94a3b8",
-      backgroundColor: "transparent",
-      fillStyle: "solid",
-      strokeWidth: 1,
-      groupIds: [],
-      frameId: null,
-      isDeleted: false,
-      opacity: 100,
-      angle: 0,
-      containerId: null,
-      originalText: shortResp,
-      autoResize: true,
-      seed: Math.floor(Math.random() * 1e9),
-      version: 1,
-      versionNonce: Math.floor(Math.random() * 1e9),
-      lineHeight: 1.25 as number,
-    });
+      index: `a${i}b`,
+      link: null,
+      locked: false,
+      updated: Date.now(),
+    } as unknown as ExcalidrawElement);
   });
 
   // Create arrows for dependencies
   components.forEach((comp) => {
-    const from = positions.get(comp.name);
+    const from = nodeMap.get(comp.name);
     if (!from) return;
     for (const depName of comp.dependencies) {
-      const to = positions.get(depName);
+      const to = nodeMap.get(depName);
       if (!to) continue;
+
+      const dx = to.cx - from.cx;
+      const dy = to.cy - from.cy;
+      const arrowId = mkId();
+
       elements.push({
-        id: `arrow-${from.id}-${to.id}`,
+        id: arrowId,
         type: "arrow",
-        x: from.x,
-        y: from.y + CARD_H / 2,
-        width: to.x - from.x,
-        height: to.y - from.y,
-        points: [[0, 0], [to.x - from.x, to.y - from.y - CARD_H / 2]],
+        x: from.cx,
+        y: from.cy,
+        width: Math.abs(dx),
+        height: Math.abs(dy),
+        points: [[0, 0], [dx, dy]],
         strokeColor: "#64748b",
         backgroundColor: "transparent",
         fillStyle: "solid",
@@ -147,15 +130,19 @@ function generateScene(components: Component[]) {
         endBinding: { elementId: to.id, focus: 0, gap: 5, fixedPoint: null },
         startArrowhead: null,
         endArrowhead: "arrow",
+        angle: 0,
+        opacity: 100,
+        seed: nextId * 1000 + 5,
+        version: 1,
+        versionNonce: nextId * 1000 + 6,
+        isDeleted: false,
         groupIds: [],
         frameId: null,
-        isDeleted: false,
-        opacity: 100,
-        angle: 0,
-        seed: Math.floor(Math.random() * 1e9),
-        version: 1,
-        versionNonce: Math.floor(Math.random() * 1e9),
-      });
+        index: `b${nextId}`,
+        link: null,
+        locked: false,
+        updated: Date.now(),
+      } as unknown as ExcalidrawElement);
     }
   });
 
@@ -163,26 +150,34 @@ function generateScene(components: Component[]) {
 }
 
 export function ExcalidrawDiagram({ components }: ExcalidrawDiagramProps) {
-  const [Excalidraw, setExcalidraw] = useState<React.ComponentType<Record<string, unknown>> | null>(null);
-  const [elements, setElements] = useState<Array<Record<string, unknown>>>([]);
+  const [Comp, setComp] = useState<{ Excalidraw: React.ComponentType<Record<string, unknown>> } | null>(null);
+  const elements = useMemo(() => buildElements(components), [components]);
 
   useEffect(() => {
-    setElements(generateScene(components));
     import("@excalidraw/excalidraw").then((mod) => {
-      setExcalidraw(() => mod.Excalidraw);
-    }).catch(() => { /* excalidraw failed to load */ });
-  }, [components]);
+      setComp({ Excalidraw: mod.Excalidraw });
+    }).catch(() => {});
+  }, []);
 
-  if (!Excalidraw) {
+  if (!Comp) {
     return <div className="text-xs p-4 animate-pulse" style={{ color: "var(--muted)" }}>Loading diagram...</div>;
   }
 
   return (
-    <div style={{ height: 400, width: "100%" }}>
-      <Excalidraw
-        initialData={{ elements, appState: { viewBackgroundColor: "transparent", theme: "dark", viewModeEnabled: true } }}
+    <div style={{ height: 420, width: "100%" }}>
+      <Comp.Excalidraw
+        initialData={{
+          elements,
+          appState: {
+            viewBackgroundColor: "transparent",
+            theme: "dark",
+            viewModeEnabled: true,
+            zoom: { value: 0.9 },
+            scrollToContent: true,
+          },
+          scrollToContent: true,
+        }}
         viewModeEnabled={true}
-        UIOptions={{ canvasActions: { export: false, loadScene: false, saveToActiveFile: false, toggleTheme: false } }}
       />
     </div>
   );

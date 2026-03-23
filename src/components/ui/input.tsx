@@ -10,19 +10,24 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     return (
       <div className="space-y-1">
         {label && (
-          <label className="block text-sm font-medium" style={{ color: "var(--foreground)" }}>
+          <label className="block text-sm font-medium" style={{ color: "var(--on-surface)" }}>
             {label}
           </label>
         )}
         <input
           ref={ref}
           className={`w-full rounded-md border px-3 py-2 text-sm
-            focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500
-            ${error ? "border-red-500" : ""} ${className}`}
-          style={{ background: "var(--card)", color: "var(--foreground)", borderColor: error ? undefined : "var(--card-border)", ...style }}
+            focus:outline-none focus:ring-1 focus:[border-color:var(--primary)] [--tw-ring-color:var(--focus-ring)]
+            ${className}`}
+          style={{
+            background: "var(--surface-container)",
+            color: "var(--on-surface)",
+            borderColor: error ? "var(--error)" : "var(--ghost-border)",
+            ...style,
+          } as React.CSSProperties}
           {...props}
         />
-        {error && <p className="text-xs text-red-500">{error}</p>}
+        {error && <p className="text-xs" style={{ color: "var(--error)" }}>{error}</p>}
       </div>
     );
   }

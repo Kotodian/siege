@@ -30,14 +30,17 @@ export function Dialog({ open, onClose, title, children, maxWidth }: DialogProps
       ref={dialogRef}
       onClose={onClose}
       className={`fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 m-0 rounded-lg p-0 backdrop:bg-black/60 w-full max-h-[calc(100vh-2rem)] overflow-auto ${maxWidth || "max-w-lg"}`}
-      style={{ background: "var(--card)", color: "var(--foreground)", borderColor: "var(--card-border)" }}
+      style={{ background: "var(--surface-container-high)", color: "var(--on-surface)", border: "none" }}
     >
       <div className="p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold">{title}</h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600"
+            className="transition-colors"
+            style={{ color: "var(--on-surface-variant)" }}
+            onMouseEnter={(e) => e.currentTarget.style.color = "var(--on-surface)"}
+            onMouseLeave={(e) => e.currentTarget.style.color = "var(--on-surface-variant)"}
           >
             <XIcon size={16} />
           </button>

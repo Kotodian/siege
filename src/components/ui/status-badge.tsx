@@ -1,30 +1,38 @@
-const statusColors: Record<string, string> = {
-  draft: "bg-gray-100 text-gray-700",
-  reviewing: "bg-yellow-100 text-yellow-700",
-  confirmed: "bg-blue-100 text-blue-700",
-  scheduled: "bg-purple-100 text-purple-700",
-  executing: "bg-orange-100 text-orange-700",
-  code_review: "bg-indigo-100 text-indigo-700",
-  testing: "bg-cyan-100 text-cyan-700",
-  approved: "bg-green-100 text-green-700",
-  changes_requested: "bg-red-100 text-red-700",
-  critical: "bg-red-100 text-red-700",
-  warning: "bg-yellow-100 text-yellow-700",
-  info: "bg-blue-100 text-blue-700",
-  completed: "bg-green-100 text-green-700",
-  pending: "bg-gray-100 text-gray-700",
-  in_progress: "bg-orange-100 text-orange-700",
-  passed: "bg-green-100 text-green-700",
-  failed: "bg-red-100 text-red-700",
+const statusStyles: Record<string, React.CSSProperties> = {
+  // Plan statuses
+  draft: { background: "rgba(144,143,160,0.15)", color: "var(--outline)" },
+  pending: { background: "rgba(144,143,160,0.15)", color: "var(--outline)" },
+  reviewing: { background: "rgba(253,224,71,0.12)", color: "var(--warning)" },
+  confirmed: { background: "rgba(192,193,255,0.12)", color: "var(--primary)" },
+  scheduled: { background: "rgba(221,183,255,0.12)", color: "var(--secondary)" },
+  executing: { background: "rgba(255,183,131,0.12)", color: "var(--tertiary)" },
+  code_review: { background: "rgba(128,131,255,0.12)", color: "var(--primary-container)" },
+  testing: { background: "rgba(192,193,255,0.15)", color: "var(--primary)" },
+  approved: { background: "var(--success-container)", color: "var(--success)" },
+  completed: { background: "var(--success-container)", color: "var(--success)" },
+  passed: { background: "var(--success-container)", color: "var(--success)" },
+  failed: { background: "var(--error-container)", color: "var(--error)" },
+  changes_requested: { background: "var(--error-container)", color: "var(--error)" },
+  critical: { background: "var(--error-container)", color: "var(--error)" },
+  in_progress: { background: "rgba(255,183,131,0.12)", color: "var(--tertiary)" },
+  running: { background: "rgba(255,183,131,0.12)", color: "var(--tertiary)" },
+  // Severity / info
+  warning: { background: "rgba(253,224,71,0.12)", color: "var(--warning)" },
+  info: { background: "rgba(192,193,255,0.12)", color: "var(--primary)" },
   // Tags
-  feature: "bg-blue-100 text-blue-700",
-  bug: "bg-red-100 text-red-700",
-  enhance: "bg-emerald-100 text-emerald-700",
-  refactor: "bg-violet-100 text-violet-700",
-  docs: "bg-sky-100 text-sky-700",
-  test: "bg-cyan-100 text-cyan-700",
-  chore: "bg-gray-100 text-gray-700",
-  perf: "bg-amber-100 text-amber-700",
+  feature: { background: "rgba(192,193,255,0.12)", color: "var(--primary)" },
+  bug: { background: "var(--error-container)", color: "var(--error)" },
+  enhance: { background: "var(--success-container)", color: "var(--success)" },
+  refactor: { background: "rgba(221,183,255,0.12)", color: "var(--secondary)" },
+  docs: { background: "rgba(192,193,255,0.12)", color: "var(--primary)" },
+  test: { background: "rgba(192,193,255,0.15)", color: "var(--primary)" },
+  chore: { background: "rgba(144,143,160,0.15)", color: "var(--outline)" },
+  perf: { background: "rgba(253,224,71,0.12)", color: "var(--warning)" },
+};
+
+const defaultStyle: React.CSSProperties = {
+  background: "rgba(144,143,160,0.15)",
+  color: "var(--outline)",
 };
 
 interface StatusBadgeProps {
@@ -33,10 +41,11 @@ interface StatusBadgeProps {
 }
 
 export function StatusBadge({ status, label }: StatusBadgeProps) {
-  const color = statusColors[status] || "bg-gray-100 text-gray-700";
+  const style = statusStyles[status] || defaultStyle;
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${color}`}
+      className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
+      style={style}
     >
       {label}
     </span>

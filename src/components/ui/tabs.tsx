@@ -21,19 +21,18 @@ export function Tabs({ tabs, defaultTab }: TabsProps) {
 
   return (
     <div>
-      <div style={{ borderBottom: "1px solid var(--card-border)" }}>
-        <nav className="flex gap-4">
+      <div>
+        <nav className="flex gap-1">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => !tab.disabled && setActiveTab(tab.id)}
               disabled={tab.disabled}
-              className={`py-2 px-1 text-sm font-medium border-b-2 transition-colors
-                ${activeTab === tab.id ? "" : "border-transparent"}
+              className={`py-1.5 px-3 text-sm font-medium rounded-md transition-colors
                 ${tab.disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
               style={activeTab === tab.id
-                ? { borderColor: "var(--foreground)", color: "var(--foreground)" }
-                : { color: "var(--muted)" }
+                ? { background: "var(--surface-container-high)", color: "var(--primary)" }
+                : { color: "var(--on-surface-variant)" }
               }
             >
               {tab.label}

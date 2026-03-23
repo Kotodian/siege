@@ -3,7 +3,7 @@ import { ButtonHTMLAttributes, forwardRef } from "react";
 const variants = {
   primary: "hover:opacity-90",
   secondary: "border hover:opacity-80",
-  danger: "bg-red-600 text-white hover:bg-red-700",
+  danger: "hover:opacity-90",
   ghost: "hover:opacity-80",
 } as const;
 
@@ -25,12 +25,14 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   ) => {
     const variantStyle: React.CSSProperties | undefined =
       variant === "primary"
-        ? { background: "var(--foreground)", color: "var(--background)", ...style }
+        ? { background: "var(--primary)", color: "var(--background)", ...style }
         : variant === "secondary"
-          ? { background: "var(--card)", color: "var(--foreground)", borderColor: "var(--card-border)", ...style }
-          : variant === "ghost"
-            ? { color: "var(--muted)", ...style }
-            : style;
+          ? { background: "var(--surface-container-high)", color: "var(--on-surface)", borderColor: "var(--ghost-border)", ...style }
+          : variant === "danger"
+            ? { background: "var(--error)", color: "var(--on-error)", ...style }
+            : variant === "ghost"
+              ? { color: "var(--on-surface-variant)", ...style }
+              : style;
 
     return (
       <button

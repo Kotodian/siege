@@ -44,10 +44,10 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
       {children}
       <Dialog open={state.open} onClose={handleClose} title={state.title}>
         <div className="space-y-4">
-          <p className="text-sm" style={{ color: "var(--foreground)" }}>{state.message}</p>
+          <p className="text-sm" style={{ color: "var(--on-surface)" }}>{state.message}</p>
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={handleClose}>取消 / Cancel</Button>
-            <Button onClick={state.onConfirm} style={{ background: "#dc2626" }}>确认 / Confirm</Button>
+            <Button onClick={state.onConfirm} style={{ background: "var(--error)", color: "var(--on-error)" }}>确认 / Confirm</Button>
           </div>
         </div>
       </Dialog>

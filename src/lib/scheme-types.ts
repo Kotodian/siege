@@ -27,11 +27,6 @@ export interface StructuredScheme {
     severity: "low" | "medium" | "high";
     mitigation: string;
   }>;
-  effort: Array<{
-    phase: string;
-    tasks: string[];
-    hours: number;
-  }>;
 }
 
 export function parseStructuredScheme(json: string): StructuredScheme | null {

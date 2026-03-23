@@ -103,8 +103,7 @@ Output a JSON object with this structure:
   },
   "interfaces": [{"name": "TypeName", "language": "c|typescript|go", "definition": "code definition", "description": "what it represents"}],
   "decisions": [{"question": "...", "options": ["A", "B"], "chosen": "A", "rationale": "why"}],
-  "risks": [{"risk": "...", "severity": "low|medium|high", "mitigation": "..."}],
-  "effort": [{"phase": "...", "tasks": ["..."], "hours": 4}]
+  "risks": [{"risk": "...", "severity": "low|medium|high", "mitigation": "..."}]
 }
 
 RULES:

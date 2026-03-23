@@ -190,16 +190,6 @@ function structuredToMarkdown(s: Record<string, unknown>): string {
     lines.push("");
   }
 
-  if (data.effort?.length) {
-    lines.push(`## Effort\n`);
-    lines.push(`| Phase | Tasks | Hours |`);
-    lines.push(`|-------|-------|-------|`);
-    for (const e of data.effort) {
-      lines.push(`| ${e.phase} | ${e.tasks.join(", ")} | ${e.hours}h |`);
-    }
-    lines.push("");
-  }
-
   return lines.join("\n");
 }
 
@@ -236,7 +226,7 @@ Output a JSON object with EXACTLY this structure:
       {"name": "ComponentName", "responsibility": "What it does", "dependencies": ["OtherComponent"]}
     ],
     "dataFlow": ["Step 1: ...", "Step 2: ...", "Step 3: ..."],
-    "diagram": "optional ASCII or mermaid diagram"
+    "diagram": "ASCII architecture diagram showing component relationships and data flow (REQUIRED)"
   },
   "interfaces": [
     {"name": "TypeName", "language": "c|typescript|go|etc", "definition": "actual code definition", "description": "what this type represents"}
@@ -246,20 +236,19 @@ Output a JSON object with EXACTLY this structure:
   ],
   "risks": [
     {"risk": "Description of risk", "severity": "low|medium|high", "mitigation": "How to mitigate"}
-  ],
-  "effort": [
-    {"phase": "Phase name", "tasks": ["Task 1", "Task 2"], "hours": 4}
   ]
 }
 
 RULES:
 - Output ONLY the JSON object, no other text before or after
+- "architecture.diagram" is REQUIRED — draw an ASCII diagram showing how components connect, data flows between them, and external boundaries. Use box-drawing characters (┌─┐│└─┘) or simple ASCII art (+---+, |, --->)
 - "interfaces" should contain REAL code definitions (structs, types, function signatures) — not prose
 - "decisions" should have 2-4 concrete options each
 - "risks" severity must be "low", "medium", or "high"
 - Keep "overview" to 2-3 sentences max
 - "architecture.components" should list 3-8 key components
-- "architecture.dataFlow" should be 3-8 ordered steps`;
+- "architecture.dataFlow" should be 3-8 ordered steps
+- Do NOT include "effort" or time estimates`;
 }
 
 function createProjectTools(repoPath: string) {

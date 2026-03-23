@@ -27,8 +27,10 @@ export function ProjectCard({ project, locale, onDelete }: ProjectCardProps) {
 
   return (
     <div
-      className="rounded-lg border p-5 hover:shadow-md transition-shadow cursor-pointer"
-      style={{ background: "var(--card)", borderColor: "var(--card-border)" }}
+      className="rounded-lg p-5 transition-colors cursor-pointer"
+      style={{ background: "var(--surface-container-high)" }}
+      onMouseEnter={(e) => e.currentTarget.style.background = "var(--surface-bright)"}
+      onMouseLeave={(e) => e.currentTarget.style.background = "var(--surface-container-high)"}
       onClick={() => {
         addRecentProject(project.id);
         router.push(`/${locale}/projects/${project.id}`);
@@ -46,19 +48,21 @@ export function ProjectCard({ project, locale, onDelete }: ProjectCardProps) {
               onDelete(project.id);
             }
           }}
-          className="hover:text-red-500 text-sm"
-          style={{ color: "var(--muted)" }}
+          className="text-sm transition-colors"
+          style={{ color: "var(--outline)" }}
+          onMouseEnter={(e) => e.currentTarget.style.color = "var(--error)"}
+          onMouseLeave={(e) => e.currentTarget.style.color = "var(--outline)"}
         >
           {t("common.delete")}
         </button>
       </div>
       {project.description && (
-        <p className="text-sm mt-1 line-clamp-2" style={{ color: "var(--muted)" }}>
+        <p className="text-sm mt-1 line-clamp-2" style={{ color: "var(--on-surface-variant)" }}>
           {project.description}
         </p>
       )}
       <div className="flex items-center justify-between mt-3">
-        <p className="text-xs font-mono truncate" style={{ color: "var(--muted)" }}>
+        <p className="text-xs font-mono truncate" style={{ color: "var(--outline)" }}>
           {project.targetRepoPath}
         </p>
         <TimeAgo date={project.updatedAt} locale={locale} />

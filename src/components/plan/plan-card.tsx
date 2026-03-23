@@ -34,8 +34,10 @@ export function PlanCard({ plan, locale, onDelete }: PlanCardProps) {
 
   return (
     <div
-      className="rounded-lg border p-5 hover:shadow-md transition-shadow cursor-pointer"
-      style={{ background: "var(--card)", borderColor: "var(--card-border)" }}
+      className="rounded-lg p-5 transition-colors cursor-pointer"
+      style={{ background: "var(--surface-container-high)" }}
+      onMouseEnter={(e) => e.currentTarget.style.background = "var(--surface-bright)"}
+      onMouseLeave={(e) => e.currentTarget.style.background = "var(--surface-container-high)"}
       onClick={() =>
         router.push(`/${locale}/projects/${plan.projectId}/plans/${plan.id}`)
       }
@@ -63,15 +65,17 @@ export function PlanCard({ plan, locale, onDelete }: PlanCardProps) {
                 onDelete(plan.id);
               }
             }}
-            className="hover:text-red-500 text-sm"
-            style={{ color: "var(--muted)" }}
+            className="text-sm transition-colors"
+            style={{ color: "var(--outline)" }}
+            onMouseEnter={(e) => e.currentTarget.style.color = "var(--error)"}
+            onMouseLeave={(e) => e.currentTarget.style.color = "var(--outline)"}
           >
             <TrashIcon size={14} className="inline-block align-[-2px]" /> {t("common.delete")}
           </button>
         </div>
       </div>
       {plan.description && (
-        <p className="text-sm mt-1 line-clamp-2" style={{ color: "var(--muted)" }}>
+        <p className="text-sm mt-1 line-clamp-2" style={{ color: "var(--on-surface-variant)" }}>
           {plan.description}
         </p>
       )}

@@ -71,7 +71,7 @@ export function CreateProjectDialog({
           </div>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium mb-1" style={{ color: "var(--on-surface-variant)" }}>
             {t("project.description")}
           </label>
           <MarkdownEditor
@@ -81,7 +81,7 @@ export function CreateProjectDialog({
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium mb-1" style={{ color: "var(--on-surface-variant)" }}>
             {locale === "zh" ? "架构与开发规范（可选）" : "Architecture & Guidelines (optional)"}
           </label>
           <MarkdownEditor
@@ -94,12 +94,12 @@ export function CreateProjectDialog({
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium mb-1" style={{ color: "var(--on-surface-variant)" }}>
             {t("project.targetRepoPath")}
           </label>
           {targetRepoPath ? (
             <div className="space-y-2">
-              <div className="flex items-center gap-2 rounded-md border px-3 py-2 bg-gray-50">
+              <div className="flex items-center gap-2 rounded-md border px-3 py-2" style={{ background: "var(--surface-container)", borderColor: "var(--outline-variant)" }}>
                 <span className="text-sm font-mono flex-1 truncate">
                   {targetRepoPath}
                 </span>

@@ -65,17 +65,17 @@ function WorkflowSteps({ status, isZh }: { status: string; isZh: boolean }) {
             {i > 0 && (
               <div
                 className="w-6 h-px mx-1"
-                style={{ background: isDone ? "rgba(34,197,94,0.5)" : "var(--card-border)" }}
+                style={{ background: isDone ? "var(--success)" : "var(--outline-variant)" }}
               />
             )}
             <div
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap"
               style={
                 isActive
-                  ? { background: "var(--foreground)", color: "var(--background)" }
+                  ? { background: "var(--primary)", color: "var(--background)" }
                   : isDone
-                    ? { background: "rgba(34,197,94,0.15)", color: "#86efac" }
-                    : { background: "var(--card)", color: "var(--muted)", borderColor: "var(--card-border)", borderWidth: 1, borderStyle: "solid" }
+                    ? { background: "var(--success-container)", color: "var(--success)" }
+                    : { background: "var(--surface-container)", color: "var(--outline)", borderColor: "var(--outline-variant)", borderWidth: 1, borderStyle: "solid" }
               }
               title={isZh ? label.hint_zh : label.hint_en}
             >
@@ -88,9 +88,9 @@ function WorkflowSteps({ status, isZh }: { status: string; isZh: boolean }) {
       })}
       {status === "completed" && (
         <div className="flex items-center">
-          <div className="w-6 h-px mx-1" style={{ background: "rgba(34,197,94,0.5)" }} />
+          <div className="w-6 h-px mx-1" style={{ background: "var(--success)" }} />
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium"
-            style={{ background: "rgba(34,197,94,0.15)", color: "#86efac" }}>
+            style={{ background: "var(--success-container)", color: "var(--success)" }}>
             ✓ <span>{isZh ? "完成" : "Done"}</span>
           </div>
         </div>
@@ -153,7 +153,8 @@ export default function PlanDetailPage({
       <div className="mb-6">
         <a
           href={`/${locale}/projects/${projectId}`}
-          className="text-sm text-blue-600 hover:underline"
+          className="text-sm hover:underline"
+          style={{ color: "var(--primary)" }}
         >
           &larr; {t("common.back")}
         </a>
@@ -166,11 +167,12 @@ export default function PlanDetailPage({
               onChange={(e) => setEditName(e.target.value)}
             />
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium mb-1" style={{ color: "var(--on-surface-variant)" }}>
                 {t("plan.description")}
               </label>
               <textarea
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 min-h-[80px]"
+                className="w-full rounded-md border px-3 py-2 text-sm focus:outline-none min-h-[80px]"
+                style={{ borderColor: "var(--outline-variant)", background: "var(--surface-container)", color: "var(--on-surface)" }}
                 value={editDesc}
                 onChange={(e) => setEditDesc(e.target.value)}
               />
@@ -193,7 +195,7 @@ export default function PlanDetailPage({
               <button
                 onClick={startEdit}
                 className="text-xs px-2 py-1 rounded hover:opacity-80"
-                style={{ color: "var(--muted)" }}
+                style={{ color: "var(--outline)" }}
               >
                 {t("common.edit")}
               </button>
@@ -204,7 +206,7 @@ export default function PlanDetailPage({
                 </Button>
               )}
               {plan.status === "completed" && (
-                <span className="text-xs px-2 py-1 rounded" style={{ background: "rgba(34,197,94,0.15)", color: "#86efac" }}>
+                <span className="text-xs px-2 py-1 rounded" style={{ background: "var(--success-container)", color: "var(--success)" }}>
                   {isZh ? "已归档" : "Archived"}
                 </span>
               )}
@@ -237,8 +239,8 @@ export default function PlanDetailPage({
       >
         {completed ? (
           <div className="text-center space-y-4 py-4">
-            <CheckCircleIcon size={48} className="mx-auto text-green-500" />
-            <p className="text-sm" style={{ color: "var(--foreground)" }}>
+            <span className="mx-auto block w-fit" style={{ color: "var(--success)" }}><CheckCircleIcon size={48} /></span>
+            <p className="text-sm" style={{ color: "var(--on-surface)" }}>
               {isZh
                 ? "计划已标记为完成并进入归档状态。你可以在项目页面查看归档计划。"
                 : "Plan has been marked as completed and archived. You can view archived plans on the project page."}
@@ -254,12 +256,12 @@ export default function PlanDetailPage({
           </div>
         ) : (
           <div className="space-y-4">
-            <p className="text-sm" style={{ color: "var(--foreground)" }}>
+            <p className="text-sm" style={{ color: "var(--on-surface)" }}>
               {isZh
                 ? "确定将此计划标记为完成？完成后计划将进入归档状态。"
                 : "Mark this plan as completed? It will be archived after completion."}
             </p>
-            <ul className="text-xs space-y-1" style={{ color: "var(--muted)" }}>
+            <ul className="text-xs space-y-1" style={{ color: "var(--on-surface-variant)" }}>
               <li>{isZh ? "• 所有排期任务将保持当前状态" : "• All scheduled tasks will keep their current status"}</li>
               <li>{isZh ? "• 审查和测试结果将被保留" : "• Review and test results will be preserved"}</li>
               <li>{isZh ? "• 归档后仍可查看，但不能修改" : "• You can still view but not edit after archiving"}</li>

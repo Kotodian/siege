@@ -27,7 +27,8 @@ export default async function ProjectDetailPage({
       <div className="mb-6">
         <a
           href={`/${locale}`}
-          className="text-sm text-blue-600 hover:underline"
+          className="text-sm hover:underline"
+          style={{ color: "var(--primary)" }}
         >
           &larr; {locale === "zh" ? "返回" : "Back"}
         </a>
@@ -35,7 +36,7 @@ export default async function ProjectDetailPage({
         {project.description && (
           <ProjectDescription content={project.description} />
         )}
-        <p className="text-xs text-gray-400 font-mono mt-1">
+        <p className="text-xs font-mono mt-1" style={{ color: "var(--outline)" }}>
           {project.targetRepoPath}
         </p>
       </div>

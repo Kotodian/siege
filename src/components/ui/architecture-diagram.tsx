@@ -8,169 +8,49 @@ interface Component {
 
 interface ArchitectureDiagramProps {
   components: Component[];
-  dataFlow?: string[];
 }
 
-// Estimate text width
 function measureText(text: string, fontSize: number): number {
   let w = 0;
-  for (const ch of text) {
-    w += ch.charCodeAt(0) > 0x2e80 ? fontSize * 0.95 : fontSize * 0.58;
-  }
+  for (const ch of text) w += ch.charCodeAt(0) > 0x2e80 ? fontSize * 0.95 : fontSize * 0.58;
   return w;
 }
 
-// Word-wrap text to fit maxWidth, returns lines
-function wrapText(text: string, fontSize: number, maxWidth: number): string[] {
-  const words = text.split(/(?<=[\s，、。；])|(?=[\s])/);
-  const lines: string[] = [];
-  let current = "";
-  for (const word of words) {
-    const test = current + word;
-    if (measureText(test.trim(), fontSize) > maxWidth && current) {
-      lines.push(current.trim());
-      current = word;
-    } else {
-      current = test;
-    }
-  }
-  if (current.trim()) lines.push(current.trim());
-  return lines.length ? lines : [text];
-}
-
-interface FlowNode {
-  label: string;
+interface GNode {
+  id: string;
+  name: string;
+  desc: string;
   x: number;
   y: number;
   w: number;
   h: number;
-  lines: string[];
+  layer: number;
+  deps: string[];
 }
 
-export function ArchitectureDiagram({ components, dataFlow }: ArchitectureDiagramProps) {
-  // If we have dataFlow, render as flow diagram; otherwise render component dependency graph
-  if (dataFlow && dataFlow.length > 0) {
-    return <FlowDiagram steps={dataFlow} />;
-  }
-  if (components.length > 0) {
-    return <DependencyGraph components={components} />;
-  }
-  return null;
-}
+export function ArchitectureDiagram({ components }: ArchitectureDiagramProps) {
+  if (components.length === 0) return null;
 
-/** Flow diagram: sequential steps with arrows */
-function FlowDiagram({ steps }: { steps: string[] }) {
-  const FONT_SIZE = 11;
-  const MAX_TEXT_W = 260;
-  const PAD_X = 16;
-  const PAD_Y = 10;
-  const GAP = 16;
-  const ARROW_LEN = 28;
-  const MARGIN = 20;
-
-  // Build nodes
-  const nodes: FlowNode[] = [];
-  let currentY = MARGIN;
-
-  for (const step of steps) {
-    const lines = wrapText(step, FONT_SIZE, MAX_TEXT_W);
-    const textH = lines.length * (FONT_SIZE + 4);
-    const w = Math.min(
-      Math.max(...lines.map(l => measureText(l, FONT_SIZE))) + PAD_X * 2,
-      MAX_TEXT_W + PAD_X * 2
-    );
-    const h = textH + PAD_Y * 2;
-
-    nodes.push({ label: step, x: 0, y: currentY, w, h, lines });
-    currentY += h + ARROW_LEN + GAP;
-  }
-
-  // Center horizontally
-  const maxW = Math.max(...nodes.map(n => n.w));
-  for (const n of nodes) n.x = MARGIN + (maxW - n.w) / 2;
-
-  const svgW = maxW + MARGIN * 2;
-  const svgH = currentY - ARROW_LEN - GAP + MARGIN;
-
-  return (
-    <svg viewBox={`0 0 ${svgW} ${svgH}`} className="w-full" style={{ maxHeight: 600 }}>
-      <defs>
-        <marker id="flow-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
-          <path d="M0,0.5 L7,3 L0,5.5" fill="none" stroke="#6366f1" strokeWidth="1.2" />
-        </marker>
-      </defs>
-
-      {nodes.map((node, i) => {
-        const isFirst = i === 0;
-        const isLast = i === nodes.length - 1;
-        const rx = 10;
-
-        return (
-          <g key={i}>
-            {/* Box */}
-            <rect
-              x={node.x} y={node.y} width={node.w} height={node.h}
-              rx={rx} ry={rx}
-              fill="none"
-              stroke={isFirst ? "#6366f1" : isLast ? "#ef4444" : "#334155"}
-              strokeWidth={isFirst || isLast ? 1.5 : 1}
-              strokeDasharray={undefined}
-            />
-
-            {/* Step number badge */}
-            <circle cx={node.x + 14} cy={node.y} r={9}
-              fill="#18181b" stroke="#334155" strokeWidth="1" />
-            <text x={node.x + 14} y={node.y + 3.5} textAnchor="middle"
-              fill="#a1a1aa" fontSize="9" fontWeight="600" fontFamily="system-ui">{i + 1}</text>
-
-            {/* Text lines */}
-            {node.lines.map((line, li) => (
-              <text key={li}
-                x={node.x + PAD_X} y={node.y + PAD_Y + (li + 1) * (FONT_SIZE + 4) - 3}
-                fill="#d4d4d8" fontSize={FONT_SIZE}
-                fontFamily="system-ui, -apple-system, sans-serif">
-                {line}
-              </text>
-            ))}
-
-            {/* Arrow to next */}
-            {!isLast && (
-              <line
-                x1={node.x + node.w / 2} y1={node.y + node.h}
-                x2={node.x + node.w / 2} y2={node.y + node.h + ARROW_LEN + GAP}
-                stroke="#6366f1" strokeWidth="1.5" markerEnd="url(#flow-arrow)"
-                opacity="0.6"
-              />
-            )}
-          </g>
-        );
-      })}
-    </svg>
-  );
-}
-
-/** Dependency graph: components with arrows showing relationships */
-function DependencyGraph({ components }: { components: Component[] }) {
   const nameSet = new Set(components.map(c => c.name));
-  const FONT_SIZE = 12;
-  const DESC_FONT = 10;
-  const PAD_X = 16;
-  const PAD_Y = 12;
-  const GAP_X = 50;
-  const GAP_Y = 50;
-  const MARGIN = 24;
+  const NAME_SIZE = 12;
+  const DESC_SIZE = 10;
+  const PAD_X = 20;
+  const NODE_H = 52;
+  const GAP_X = 60;
+  const GAP_Y = 80;
+  const MARGIN = 30;
 
-  // Calculate depth
-  const depCount = new Map<string, number>();
-  for (const c of components) depCount.set(c.name, 0);
+  // Calculate dependency depth (0 = root, no deps)
+  const depth = new Map<string, number>();
+  for (const c of components) depth.set(c.name, 0);
   let changed = true;
   while (changed) {
     changed = false;
     for (const c of components) {
       for (const d of c.dependencies) {
         if (nameSet.has(d)) {
-          const nd = (depCount.get(d) || 0) + 1;
-          if (nd > (depCount.get(c.name) || 0)) { depCount.set(c.name, nd); changed = true; }
+          const nd = (depth.get(d) || 0) + 1;
+          if (nd > (depth.get(c.name) || 0)) { depth.set(c.name, nd); changed = true; }
         }
       }
     }
@@ -179,90 +59,134 @@ function DependencyGraph({ components }: { components: Component[] }) {
   // Group into layers
   const layers = new Map<number, Component[]>();
   for (const c of components) {
-    const d = depCount.get(c.name) || 0;
+    const d = depth.get(c.name) || 0;
     if (!layers.has(d)) layers.set(d, []);
     layers.get(d)!.push(c);
   }
 
-  interface GNode { id: string; name: string; desc: string; x: number; y: number; w: number; h: number; deps: string[] }
-  const nodes: GNode[] = [];
-
   const sorted = [...layers.entries()].sort((a, b) => a[0] - b[0]);
-  // Measure each node
-  const sizeOf = (c: Component) => {
-    const nameW = measureText(c.name, FONT_SIZE);
-    const descW = measureText(c.responsibility, DESC_FONT);
-    const w = Math.max(nameW, descW) + PAD_X * 2;
-    return { w: Math.max(120, Math.min(w, 240)), h: 48 };
+
+  // Size each node
+  const nodeWidth = (c: Component) => {
+    const nw = measureText(c.name, NAME_SIZE);
+    const dw = measureText(c.responsibility, DESC_SIZE);
+    return Math.max(130, Math.min(Math.max(nw, dw) + PAD_X * 2, 260));
   };
 
+  // Layout
+  const nodes: GNode[] = [];
   const layerWidths = sorted.map(([, items]) =>
-    items.reduce((s, c) => s + sizeOf(c).w, 0) + (items.length - 1) * GAP_X
+    items.reduce((s, c) => s + nodeWidth(c), 0) + (items.length - 1) * GAP_X
   );
   const maxLW = Math.max(...layerWidths);
 
   let curY = MARGIN;
-  for (const [li, [, items]] of sorted.entries()) {
+  for (const [li, [layerNum, items]] of sorted.entries()) {
     const lw = layerWidths[li];
     let curX = MARGIN + (maxLW - lw) / 2;
-    let maxH = 0;
     for (const comp of items) {
-      const sz = sizeOf(comp);
+      const w = nodeWidth(comp);
       nodes.push({
         id: comp.name, name: comp.name,
-        desc: comp.responsibility.length > 32 ? comp.responsibility.slice(0, 31) + "…" : comp.responsibility,
-        x: curX, y: curY, w: sz.w, h: sz.h,
+        desc: comp.responsibility,
+        x: curX, y: curY, w, h: NODE_H,
+        layer: layerNum,
         deps: comp.dependencies.filter(d => nameSet.has(d)),
       });
-      curX += sz.w + GAP_X;
-      maxH = Math.max(maxH, sz.h);
+      curX += w + GAP_X;
     }
-    curY += maxH + GAP_Y;
+    curY += NODE_H + GAP_Y;
   }
 
   const nodeMap = new Map(nodes.map(n => [n.id, n]));
   const svgW = maxLW + MARGIN * 2;
   const svgH = curY - GAP_Y + MARGIN;
 
+  // Build edges with label
+  const edges: Array<{ from: GNode; to: GNode; label: string }> = [];
+  for (const node of nodes) {
+    for (const depName of node.deps) {
+      const dep = nodeMap.get(depName);
+      if (dep) {
+        // Label: "uses" / "depends on" based on direction
+        edges.push({ from: node, to: dep, label: "" });
+      }
+    }
+  }
+
+  // Offset overlapping arrows between same pair
+  const edgeOffsets = new Map<string, number>();
+  for (const e of edges) {
+    const key = [e.from.id, e.to.id].sort().join("|");
+    const count = edgeOffsets.get(key) || 0;
+    edgeOffsets.set(key, count + 1);
+  }
+
   return (
-    <svg viewBox={`0 0 ${svgW} ${svgH}`} className="w-full" style={{ maxHeight: 500 }}>
+    <svg viewBox={`0 0 ${svgW} ${svgH}`} className="w-full" style={{ maxHeight: 520 }}>
       <defs>
-        <marker id="dep-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
-          <path d="M0,0.5 L7,3 L0,5.5" fill="none" stroke="#475569" strokeWidth="1.2" />
+        <marker id="arr" markerWidth="12" markerHeight="8" refX="11" refY="4" orient="auto">
+          <path d="M0,1 L10,4 L0,7" fill="#6366f1" stroke="none" />
         </marker>
       </defs>
 
-      {/* Dependency arrows */}
-      {nodes.flatMap(node =>
-        node.deps.map(depName => {
-          const dep = nodeMap.get(depName);
-          if (!dep) return null;
-          const fx = node.x + node.w / 2;
-          const fy = node.y;
-          const tx = dep.x + dep.w / 2;
-          const ty = dep.y + dep.h;
-          const cp = Math.max(Math.abs(fy - ty) * 0.35, 15);
-          return (
-            <path key={`${node.id}-${depName}`}
-              d={`M${fx},${fy} C${fx},${fy - cp} ${tx},${ty + cp} ${tx},${ty}`}
-              fill="none" stroke="#334155" strokeWidth="1" markerEnd="url(#dep-arrow)" />
-          );
-        })
-      )}
+      {/* Edges — thick, colored, with filled arrowheads */}
+      {edges.map((edge, i) => {
+        const from = edge.from;
+        const to = edge.to;
+
+        // From bottom of 'from' to top of 'to'
+        const fromBelow = from.y > to.y;
+        const fx = from.x + from.w / 2;
+        const fy = fromBelow ? from.y : from.y + from.h;
+        const tx = to.x + to.w / 2;
+        const ty = fromBelow ? to.y + to.h : to.y;
+
+        const dx = tx - fx;
+        const dy = ty - fy;
+        const cpOffset = Math.max(Math.abs(dy) * 0.4, 30);
+
+        // Slight horizontal offset if multiple edges to same target
+        const offset = i % 2 === 0 ? 0 : 6;
+
+        return (
+          <path key={i}
+            d={`M${fx + offset},${fy} C${fx + offset},${fy + (fromBelow ? -cpOffset : cpOffset)} ${tx + offset},${ty + (fromBelow ? cpOffset : -cpOffset)} ${tx + offset},${ty}`}
+            fill="none" stroke="#6366f1" strokeWidth="2" strokeOpacity="0.7"
+            markerEnd="url(#arr)" />
+        );
+      })}
 
       {/* Nodes */}
-      {nodes.map(n => (
-        <g key={n.id}>
-          <rect x={n.x} y={n.y} width={n.w} height={n.h} rx="8" ry="8"
-            fill="none" stroke="#334155" strokeWidth="1" />
-          <text x={n.x + n.w / 2} y={n.y + 20} textAnchor="middle"
-            fill="#e2e8f0" fontSize={FONT_SIZE} fontWeight="600"
-            fontFamily="ui-monospace, monospace">{n.name}</text>
-          <text x={n.x + n.w / 2} y={n.y + 36} textAnchor="middle"
-            fill="#64748b" fontSize={DESC_FONT}
-            fontFamily="system-ui, sans-serif">{n.desc}</text>
-        </g>
-      ))}
+      {nodes.map((n) => {
+        const isRoot = n.layer === 0;
+        const desc = n.desc.length > 34 ? n.desc.slice(0, 33) + "…" : n.desc;
+
+        return (
+          <g key={n.id}>
+            {/* Card */}
+            <rect x={n.x} y={n.y} width={n.w} height={n.h}
+              rx="8" ry="8"
+              fill={isRoot ? "rgba(99,102,241,0.08)" : "rgba(255,255,255,0.03)"}
+              stroke={isRoot ? "#6366f1" : "#3f3f46"}
+              strokeWidth={isRoot ? 1.5 : 1} />
+
+            {/* Name */}
+            <text x={n.x + n.w / 2} y={n.y + 22} textAnchor="middle"
+              fill="#e4e4e7" fontSize={NAME_SIZE} fontWeight="600"
+              fontFamily="ui-monospace, SFMono-Regular, monospace">
+              {n.name}
+            </text>
+
+            {/* Description */}
+            <text x={n.x + n.w / 2} y={n.y + 39} textAnchor="middle"
+              fill="#71717a" fontSize={DESC_SIZE}
+              fontFamily="system-ui, -apple-system, sans-serif">
+              {desc}
+            </text>
+          </g>
+        );
+      })}
     </svg>
   );
 }

@@ -129,6 +129,11 @@ export async function POST(
 
   db.update(testCases).set({ status: "running" }).where(eq(testCases.id, caseId)).run();
 
+  const hasChinese = /[\u4e00-\u9fff]/.test(
+    (testCase.description || "") + (testCase.name || "") + (plan.description || plan.name)
+  );
+  const langHint = hasChinese ? "\n\n请用中文回复。" : "";
+
   const prompt = `Run the following test and report the results.
 
 Test file: ${testCase.filePath || "auto-detect"}
@@ -139,7 +144,7 @@ Test code:
 ${testCase.generatedCode || ""}
 \`\`\`
 
-If the test file doesn't exist, create it first, then run it. Report pass/fail status.`;
+If the test file doesn't exist, create it first, then run it. Report pass/fail status.${langHint}`;
 
   const startTime = Date.now();
   const repoPath = fs.existsSync(project.targetRepoPath) ? project.targetRepoPath : process.cwd();

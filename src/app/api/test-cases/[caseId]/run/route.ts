@@ -98,10 +98,29 @@ function saveTestResult(
 }
 
 function detectPassFail(output: string): "passed" | "failed" {
-  const hasTestFailure = /(\d+)\s*fail/i.test(output) && !/0\s*fail/i.test(output);
-  const hasError = /error\[E/i.test(output) || /FAILED/i.test(output) || /panicked/i.test(output);
-  const hasPass = /pass/i.test(output) || /\bok\b/i.test(output) || /succeeded/i.test(output);
-  return (hasPass && !hasTestFailure && !hasError) ? "passed" : "failed";
+  // Only check the AI's final text output (last ~500 chars), not tool call dumps
+  // This avoids false positives from filenames like "test_user_pass.c"
+  const tail = output.slice(-500);
+
+  // Strong pass signals: explicit test result phrases
+  const strongPass = /\btest(s)?\s+(passed|succeeded|completed successfully)\b/i.test(tail)
+    || /\ball\s+tests?\s+pass/i.test(tail)
+    || /\bPASSED\b/.test(tail)  // uppercase only — intentional test output
+    || /\b(\d+)\s+passed,\s+0\s+failed\b/i.test(tail)
+    || /\bresult:\s*pass/i.test(tail);
+
+  // Strong fail signals
+  const strongFail = /\btest(s)?\s+(failed|did not pass)\b/i.test(tail)
+    || /\bFAILED\b/.test(tail)
+    || /\berror\[E/i.test(tail)
+    || /\bpanicked\b/i.test(tail)
+    || /\bresult:\s*fail/i.test(tail)
+    || /\bcould not compile\b/i.test(tail)
+    || /\bbuild\s+failed\b/i.test(tail);
+
+  if (strongPass && !strongFail) return "passed";
+  // Default to failed — tests must explicitly pass
+  return "failed";
 }
 
 export async function POST(

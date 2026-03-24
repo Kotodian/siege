@@ -13,6 +13,7 @@ const ACP_PROVIDERS: ProviderConfig[] = [
   { id: "acp", label: "Claude Code", badge: "ACP", models: [
     "claude-opus-4-6", "claude-sonnet-4-6", "claude-haiku-4-5-20251001",
     "claude-sonnet-4-5-20250929", "claude-opus-4-5-20251101",
+    "glm-5", "glm-5-turbo", "glm-4.7", "glm-4.7-flash", "glm-4.6", "glm-4.5",
   ]},
   { id: "codex-acp", label: "Codex", badge: "ACP", models: [
     "gpt-5.4", "gpt-5.4-mini", "gpt-5.4-nano", "gpt-5.3-codex",

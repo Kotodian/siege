@@ -55,6 +55,31 @@ interface TestViewProps {
   onPlanStatusChange: () => void;
 }
 
+const COLLAPSE_THRESHOLD = 300; // characters
+
+function ResultBlock({ content, isZh, isError }: { content: string; isZh: boolean; isError?: boolean }) {
+  const [expanded, setExpanded] = useState(false);
+  const long = content.length > COLLAPSE_THRESHOLD;
+  const display = long && !expanded ? content.slice(0, COLLAPSE_THRESHOLD) + "..." : content;
+
+  return (
+    <div className="mt-1">
+      <pre className={`whitespace-pre-wrap text-xs ${isError ? "text-[var(--error)]" : ""}`}
+        style={{ maxHeight: expanded ? "none" : "120px", overflow: "hidden" }}
+      >{display}</pre>
+      {long && (
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="text-[11px] mt-1"
+          style={{ color: "var(--primary)" }}
+        >
+          {expanded ? (isZh ? "收起" : "Collapse") : (isZh ? "展开全部" : "Show all")}
+        </button>
+      )}
+    </div>
+  );
+}
+
 export function TestView({ planId, planStatus, onPlanStatusChange }: TestViewProps) {
   const t = useTranslations();
   const isZh = t("common.back") === "返回";
@@ -556,8 +581,12 @@ export function TestView({ planId, planStatus, onPlanStatusChange }: TestViewPro
                                     {new Date(r.runAt + "Z").toLocaleString()}
                                   </span>
                                 </div>
-                                {r.output && <pre className="whitespace-pre-wrap mt-1">{r.output}</pre>}
-                                {r.errorMessage && <pre className="whitespace-pre-wrap text-[var(--error)] mt-1">{r.errorMessage}</pre>}
+                                {r.output && r.output !== "No output" && (
+                                  <ResultBlock content={r.output} isZh={isZh} />
+                                )}
+                                {r.errorMessage && (
+                                  <ResultBlock content={r.errorMessage} isZh={isZh} isError />
+                                )}
                               </div>
                             ))}
                           </div>

@@ -8,10 +8,10 @@ import {
   projects,
 } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { execSync } from "child_process";
-import { generateText, tool, stepCountIs } from "ai";
+import { execSync, spawn } from "child_process";
+import { streamText, tool, stepCountIs } from "ai";
 import { z } from "zod";
-import { getStepModel } from "@/lib/ai/config";
+import { getStepModel, resolveStepConfig } from "@/lib/ai/config";
 import fs from "fs";
 import path from "path";
 
@@ -74,12 +74,194 @@ function createTestTools(repoPath: string) {
   };
 }
 
+function saveTestResult(
+  caseId: string,
+  status: "passed" | "failed" | "error",
+  output: string,
+  durationMs: number,
+) {
+  const db = getDb();
+  const passed = status === "passed";
+  const resultId = crypto.randomUUID();
+  db.insert(testResults).values({
+    id: resultId,
+    testCaseId: caseId,
+    status,
+    output: output || "No output",
+    errorMessage: !passed ? (output || "Test failed") : null,
+    durationMs,
+  }).run();
+  const caseStatus = status === "error" ? "failed" : status;
+  db.update(testCases).set({ status: caseStatus }).where(eq(testCases.id, caseId)).run();
+  return db.select().from(testResults).where(eq(testResults.id, resultId)).get();
+}
+
+function detectPassFail(output: string): "passed" | "failed" {
+  const hasTestFailure = /(\d+)\s*fail/i.test(output) && !/0\s*fail/i.test(output);
+  const hasError = /error\[E/i.test(output) || /FAILED/i.test(output) || /panicked/i.test(output);
+  const hasPass = /pass/i.test(output) || /\bok\b/i.test(output) || /succeeded/i.test(output);
+  return (hasPass && !hasTestFailure && !hasError) ? "passed" : "failed";
+}
+
+/**
+ * Run test via ACP (Claude Code CLI) with streaming output.
+ */
+function runViaAcp(
+  prompt: string,
+  cwd: string,
+  model: string | undefined,
+): { stream: ReadableStream; } {
+  const encoder = new TextEncoder();
+  let fullLog = "";
+
+  const stream = new ReadableStream({
+    async start(controller) {
+      try {
+        const args = ["-p", prompt, "--output-format", "stream-json", "--verbose"];
+        if (model) args.push("--model", model);
+
+        const proc = spawn("claude", args, {
+          cwd,
+          stdio: ["pipe", "pipe", "pipe"],
+        });
+
+        let buffer = "";
+        proc.stdout?.on("data", (chunk: Buffer) => {
+          buffer += chunk.toString();
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || "";
+
+          for (const line of lines) {
+            if (!line.trim()) continue;
+            try {
+              const event = JSON.parse(line);
+              if (event.type === "assistant" && event.message?.content) {
+                for (const block of event.message.content) {
+                  if (block.type === "text" && block.text) {
+                    fullLog += block.text;
+                    controller.enqueue(encoder.encode(block.text));
+                  } else if (block.type === "tool_use") {
+                    const msg = `\n> **Tool: ${block.name}**\n`;
+                    fullLog += msg;
+                    controller.enqueue(encoder.encode(msg));
+                  }
+                }
+              }
+              if (event.type === "result" && event.result) {
+                fullLog += event.result;
+                controller.enqueue(encoder.encode(event.result));
+              }
+            } catch {
+              // non-JSON line, ignore
+            }
+          }
+        });
+
+        proc.stderr?.on("data", () => {});
+
+        await new Promise<void>((resolve) => {
+          proc.on("close", () => resolve());
+          proc.on("error", () => resolve());
+        });
+
+        // Flush remaining buffer
+        if (buffer.trim()) {
+          try {
+            const event = JSON.parse(buffer);
+            if (event.type === "assistant" && event.message?.content) {
+              for (const block of event.message.content) {
+                if (block.type === "text" && block.text) {
+                  fullLog += block.text;
+                  controller.enqueue(encoder.encode(block.text));
+                }
+              }
+            }
+          } catch { /* ignore */ }
+        }
+
+        // Send final JSON result marker
+        controller.enqueue(encoder.encode(`\n<!--RESULT:${JSON.stringify(fullLog)}-->`));
+        controller.close();
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        fullLog += `\nError: ${msg}`;
+        controller.enqueue(encoder.encode(`\nError: ${msg}`));
+        controller.enqueue(encoder.encode(`\n<!--RESULT:${JSON.stringify(fullLog)}-->`));
+        controller.close();
+      }
+    },
+  });
+
+  return { stream };
+}
+
+/**
+ * Run test via SDK (streamText) with streaming output.
+ */
+function runViaSdk(
+  prompt: string,
+  repoPath: string,
+  configuredModel: ReturnType<typeof getStepModel>,
+): { stream: ReadableStream } {
+  const encoder = new TextEncoder();
+  let fullLog = "";
+  const tools = createTestTools(repoPath);
+
+  const stream = new ReadableStream({
+    async start(controller) {
+      try {
+        const result = streamText({
+          model: configuredModel,
+          prompt,
+          tools,
+          stopWhen: stepCountIs(10),
+        });
+
+        for await (const part of result.fullStream) {
+          if (part.type === "text-delta") {
+            fullLog += part.text;
+            controller.enqueue(encoder.encode(part.text));
+          } else if (part.type === "tool-call") {
+            const input = "input" in part ? JSON.stringify(part.input).slice(0, 200) : "";
+            const msg = `\n> **Tool: ${part.toolName}**(${input})\n`;
+            fullLog += msg;
+            controller.enqueue(encoder.encode(msg));
+          } else if (part.type === "tool-result") {
+            const raw = "output" in part ? part.output : "result" in part ? (part as Record<string, unknown>).result : "";
+            const output = typeof raw === "string" ? raw : JSON.stringify(raw);
+            const truncated = output.length > 500 ? output.slice(0, 500) + "..." : output;
+            const msg = `\`\`\`\n${truncated}\n\`\`\`\n`;
+            fullLog += msg;
+            controller.enqueue(encoder.encode(msg));
+          }
+        }
+
+        controller.enqueue(encoder.encode(`\n<!--RESULT:${JSON.stringify(fullLog)}-->`));
+        controller.close();
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        fullLog += `\nError: ${msg}`;
+        controller.enqueue(encoder.encode(`\nError: ${msg}`));
+        controller.enqueue(encoder.encode(`\n<!--RESULT:${JSON.stringify(fullLog)}-->`));
+        controller.close();
+      }
+    },
+  });
+
+  return { stream };
+}
+
 export async function POST(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ caseId: string }> }
 ) {
   const { caseId } = await params;
   const db = getDb();
+
+  // Optional provider/model override from query params
+  const url = new URL(req.url);
+  const overrideProvider = url.searchParams.get("provider") || undefined;
+  const overrideModel = url.searchParams.get("model") || undefined;
 
   const testCase = db.select().from(testCases).where(eq(testCases.id, caseId)).get();
   if (!testCase) return NextResponse.json({ error: "Test case not found" }, { status: 404 });
@@ -109,70 +291,86 @@ If the test file doesn't exist, create it first, then run it. Report pass/fail s
 
   const startTime = Date.now();
   const repoPath = fs.existsSync(project.targetRepoPath) ? project.targetRepoPath : process.cwd();
+  const { provider, model } = resolveStepConfig("test", overrideProvider, overrideModel);
+  const isAcp = provider === "acp" || provider === "codex-acp" || provider === "copilot-acp";
 
+  if (isAcp) {
+    // ACP path: stream via Claude Code CLI
+    const { stream } = runViaAcp(prompt, repoPath, model);
+
+    // Wrap stream to save result on completion
+    const encoder = new TextEncoder();
+    let fullOutput = "";
+    const wrappedStream = new ReadableStream({
+      async start(controller) {
+        const reader = stream.getReader();
+        const decoder = new TextDecoder();
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const text = decoder.decode(value, { stream: true });
+          // Extract result marker
+          const markerMatch = text.match(/<!--RESULT:([\s\S]*)-->/);
+          if (markerMatch) {
+            fullOutput = JSON.parse(markerMatch[1]);
+            const beforeMarker = text.replace(/\n<!--RESULT:[\s\S]*-->/, "");
+            if (beforeMarker) controller.enqueue(encoder.encode(beforeMarker));
+          } else {
+            controller.enqueue(value);
+          }
+        }
+        // Save to DB
+        const durationMs = Date.now() - startTime;
+        const status = detectPassFail(fullOutput);
+        saveTestResult(caseId, status, fullOutput, durationMs);
+        controller.close();
+      },
+    });
+
+    return new Response(wrappedStream, {
+      headers: { "Content-Type": "text/plain; charset=utf-8" },
+    });
+  }
+
+  // SDK path: stream via Vercel AI SDK
   let configuredModel;
   try {
-    configuredModel = getStepModel("test");
+    configuredModel = getStepModel("test", overrideProvider, overrideModel);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     db.update(testCases).set({ status: "failed" }).where(eq(testCases.id, caseId)).run();
     return NextResponse.json({ error: msg }, { status: 503 });
   }
 
-  try {
-    const tools = createTestTools(repoPath);
+  const { stream } = runViaSdk(prompt, repoPath, configuredModel);
 
-    const result = await generateText({
-      model: configuredModel,
-      prompt,
-      tools,
-      stopWhen: stepCountIs(10),
-    });
-
-    const durationMs = Date.now() - startTime;
-    // Collect both text output and tool call results (bash/readFile/writeFile)
-    let output = result.text || "";
-    for (const step of result.steps || []) {
-      for (const tr of step.toolResults || []) {
-        const val = (tr as { output?: unknown }).output;
-        if (val && typeof val === "string" && val.length > 0) {
-          output += (output ? "\n\n" : "") + `[${tr.toolName}] ${val}`;
+  const encoder = new TextEncoder();
+  let fullOutput = "";
+  const wrappedStream = new ReadableStream({
+    async start(controller) {
+      const reader = stream.getReader();
+      const decoder = new TextDecoder();
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const text = decoder.decode(value, { stream: true });
+        const markerMatch = text.match(/<!--RESULT:([\s\S]*)-->/);
+        if (markerMatch) {
+          fullOutput = JSON.parse(markerMatch[1]);
+          const beforeMarker = text.replace(/\n<!--RESULT:[\s\S]*-->/, "");
+          if (beforeMarker) controller.enqueue(encoder.encode(beforeMarker));
+        } else {
+          controller.enqueue(value);
         }
       }
-    }
-    if (!output) output = "No output";
-    // Detect pass/fail: look for definitive signals, not just word presence
-    const hasTestFailure = /(\d+)\s*fail/i.test(output) && !/0\s*fail/i.test(output);
-    const hasError = /error\[E/i.test(output) || /FAILED/i.test(output) || /panicked/i.test(output);
-    const hasPass = /pass/i.test(output) || /\bok\b/i.test(output) || /succeeded/i.test(output);
-    const passed = hasPass && !hasTestFailure && !hasError;
-    const status = passed ? "passed" : "failed";
+      const durationMs = Date.now() - startTime;
+      const status = detectPassFail(fullOutput);
+      saveTestResult(caseId, status, fullOutput, durationMs);
+      controller.close();
+    },
+  });
 
-    const resultId = crypto.randomUUID();
-    db.insert(testResults).values({
-      id: resultId, testCaseId: caseId, status,
-      output: output || "No output",
-      errorMessage: !passed ? (output || "Test failed — no output from AI") : null,
-      durationMs,
-    }).run();
-
-    db.update(testCases).set({ status }).where(eq(testCases.id, caseId)).run();
-
-    return NextResponse.json(
-      db.select().from(testResults).where(eq(testResults.id, resultId)).get()
-    );
-  } catch (err) {
-    const durationMs = Date.now() - startTime;
-    const resultId = crypto.randomUUID();
-    db.insert(testResults).values({
-      id: resultId, testCaseId: caseId, status: "error",
-      output: "", errorMessage: `Error: ${err instanceof Error ? err.message : err}`, durationMs,
-    }).run();
-
-    db.update(testCases).set({ status: "failed" }).where(eq(testCases.id, caseId)).run();
-
-    return NextResponse.json(
-      db.select().from(testResults).where(eq(testResults.id, resultId)).get()
-    );
-  }
+  return new Response(wrappedStream, {
+    headers: { "Content-Type": "text/plain; charset=utf-8" },
+  });
 }

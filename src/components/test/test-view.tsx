@@ -168,20 +168,24 @@ export function TestView({ planId, planStatus, onPlanStatusChange }: TestViewPro
     const label = tc?.description || tc?.name || "";
     startLoading(isZh ? `运行测试` : `Running test`);
     setLoadingTasks([{ id: caseId, order: 1, title: label, status: "running" }]);
-    // Show elapsed time while waiting
-    const startTime = Date.now();
-    const timer = setInterval(() => {
-      const elapsed = Math.floor((Date.now() - startTime) / 1000);
-      updateContent(isZh ? `AI 正在执行测试... ${elapsed}s` : `AI executing test... ${elapsed}s`);
-    }, 1000);
     try {
-      const res = await fetch(`/api/test-cases/${caseId}/run`, { method: "POST" });
-      clearInterval(timer);
-      const result = await res.json();
-      // Show the output immediately in loading dialog
-      if (result?.output && result.output !== "No output") {
-        updateContent(result.output.slice(0, 2000));
+      const runParams = new URLSearchParams();
+      if (provider) runParams.set("provider", provider);
+      if (model) runParams.set("model", model);
+      const res = await fetch(`/api/test-cases/${caseId}/run?${runParams}`, { method: "POST" });
+      // Stream the response
+      const reader = res.body?.getReader();
+      const decoder = new TextDecoder();
+      let content = "";
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          content += decoder.decode(value, { stream: true });
+          updateContent(content.slice(-3000));
+        }
       }
+      // Refresh suite to get updated status
       const freshRes = await fetch(`/api/test-suites?planId=${planId}`);
       const freshSuite = await freshRes.json() as TestSuite | null;
       setSuite(freshSuite);
@@ -197,7 +201,6 @@ export function TestView({ planId, planStatus, onPlanStatusChange }: TestViewPro
         stopLoading();
       }
     } catch {
-      clearInterval(timer);
       updateTaskStatus(caseId, "failed");
       stopLoading(isZh ? "运行失败" : "Run failed", "error");
     } finally {
@@ -222,21 +225,25 @@ export function TestView({ planId, planStatus, onPlanStatusChange }: TestViewPro
     for (const tc of toRun) {
       setRunningCase(tc.id);
       updateTaskStatus(tc.id, "running");
-      const taskStart = Date.now();
-      const timer = setInterval(() => {
-        const elapsed = Math.floor((Date.now() - taskStart) / 1000);
-        updateContent(isZh
-          ? `[${done + 1}/${toRun.length}] ${tc.name} — ${elapsed}s`
-          : `[${done + 1}/${toRun.length}] ${tc.name} — ${elapsed}s`);
-      }, 1000);
-      updateContent(isZh
-        ? `[${done + 1}/${toRun.length}] ${tc.name}`
-        : `[${done + 1}/${toRun.length}] ${tc.name}`);
-      await fetch(`/api/test-cases/${tc.id}/run`, { method: "POST" });
-      clearInterval(timer);
+      // Stream this test run
+      const runParams = new URLSearchParams();
+      if (provider) runParams.set("provider", provider);
+      if (model) runParams.set("model", model);
+      const res = await fetch(`/api/test-cases/${tc.id}/run?${runParams}`, { method: "POST" });
+      const reader = res.body?.getReader();
+      const decoder = new TextDecoder();
+      let content = "";
+      if (reader) {
+        while (true) {
+          const { done: streamDone, value } = await reader.read();
+          if (streamDone) break;
+          content += decoder.decode(value, { stream: true });
+          updateContent(`**[${done + 1}/${toRun.length}] ${tc.name}**\n\n${content.slice(-2000)}`);
+        }
+      }
       done++;
-      const res = await fetch(`/api/test-suites?planId=${planId}`);
-      const freshSuite = await res.json() as TestSuite | null;
+      const suiteRes = await fetch(`/api/test-suites?planId=${planId}`);
+      const freshSuite = await suiteRes.json() as TestSuite | null;
       const freshCase = freshSuite?.cases.find(c => c.id === tc.id);
       if (freshCase?.status === "passed") {
         passed++;

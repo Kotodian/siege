@@ -171,7 +171,7 @@ export default function SettingsPage({
         <div className="rounded-lg border p-4 mb-3" style={{ background: "var(--surface-container-high)", borderColor: "var(--outline-variant)" }}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="font-medium text-sm"><ClaudeCodeLogo size={14} className="inline-block align-[-2px]" /> Claude Code</span>
+              <span className="font-medium text-sm"><AnthropicLogo size={14} className="inline-block align-[-2px]" /> Claude Code</span>
               <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-50 text-purple-600 font-medium">ACP</span>
             </div>
             <div className="flex items-center gap-2">

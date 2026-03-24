@@ -190,6 +190,8 @@ export function TestView({ planId, planStatus, onPlanStatusChange }: TestViewPro
       const freshSuite = await freshRes.json() as TestSuite | null;
       setSuite(freshSuite);
       const freshCase = freshSuite?.cases.find(c => c.id === caseId);
+      // Auto-expand the test case so user sees the result
+      setExpandedCase(caseId);
       if (freshCase?.status === "passed") {
         updateTaskStatus(caseId, "completed");
         stopLoading(isZh ? "测试通过" : "Test passed");
@@ -258,9 +260,16 @@ export function TestView({ planId, planStatus, onPlanStatusChange }: TestViewPro
     setSuite(finalSuite);
     onPlanStatusChange();
     const failedCases = finalSuite?.cases.filter(c => c.status === "failed") || [];
+    // Auto-expand first failed case, or last run case
+    if (failedCases.length > 0) {
+      setExpandedCase(failedCases[0].id);
+    } else if (toRun.length > 0) {
+      setExpandedCase(toRun[toRun.length - 1].id);
+    }
     stopLoading(isZh
       ? `测试完成: ${passed}/${done} 通过`
-      : `Done: ${passed}/${done} passed`);
+      : `Done: ${passed}/${done} passed`,
+      failedCases.length > 0 ? "error" : undefined);
     if (failedCases.length > 0) {
       setFailedPrompt({ cases: failedCases });
     }
@@ -598,11 +607,16 @@ export function TestView({ planId, planStatus, onPlanStatusChange }: TestViewPro
                                     {new Date(r.runAt + "Z").toLocaleString()}
                                   </span>
                                 </div>
-                                {r.output && r.output !== "No output" && (
-                                  <ResultBlock content={r.output} isZh={isZh} />
-                                )}
-                                {r.errorMessage && (
-                                  <ResultBlock content={r.errorMessage} isZh={isZh} isError />
+                                {r.status === "passed" || r.status === "skipped" ? (
+                                  r.output && r.output !== "No output" && (
+                                    <ResultBlock content={r.output} isZh={isZh} />
+                                  )
+                                ) : (
+                                  r.errorMessage ? (
+                                    <ResultBlock content={r.errorMessage} isZh={isZh} isError />
+                                  ) : r.output && r.output !== "No output" ? (
+                                    <ResultBlock content={r.output} isZh={isZh} isError />
+                                  ) : null
                                 )}
                               </div>
                             ))}

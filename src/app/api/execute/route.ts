@@ -522,19 +522,22 @@ After implementing, commit your changes with a descriptive commit message follow
           controller.enqueue(encoder.encode(`Session: ${session.sessionId}\n\n`));
           fullLog += `[ACP] Session: ${session.sessionId}\n`;
 
+          let sawContent = false;
+          const isZhLocale = locale === "zh";
           const result = await acpClient.prompt(session.sessionId, withLocale(prompt, locale), (type, text) => {
-            if (type === "text") {
-              fullLog += text;
-              controller.enqueue(encoder.encode(text));
-            } else if (type === "tool") {
-              fullLog += text;
-              controller.enqueue(encoder.encode(text));
+            fullLog += text;
+            if (type === "tool" || type === "plan") {
+              sawContent = true;
+              const msg = type === "plan" ? `\nPlan:\n${text}\n\n` : text;
+              controller.enqueue(encoder.encode(msg));
+            } else if (type === "text") {
+              // For zh locale, skip English-only thinking before first tool/Chinese text
+              if (!isZhLocale || sawContent || /[\u4e00-\u9fff]/.test(text)) {
+                sawContent = true;
+                controller.enqueue(encoder.encode(text));
+              }
             } else if (type === "thought") {
               fullLog += `[thought] ${text}`;
-            } else if (type === "plan") {
-              const msg = `\nPlan:\n${text}\n\n`;
-              fullLog += msg;
-              controller.enqueue(encoder.encode(msg));
             }
           });
 

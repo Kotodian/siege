@@ -187,9 +187,19 @@ IMPORTANT: After running the test, you MUST end your response with exactly one o
           await acp.start();
           const session = await acp.createSession(model);
 
+          let sawTool = false;
           await acp.prompt(session.sessionId, withLocale(prompt, locale), (type, text) => {
             fullLog += text;
-            controller.enqueue(encoder.encode(text));
+            if (type === "tool" || type === "plan") {
+              sawTool = true;
+              controller.enqueue(encoder.encode(text));
+            } else if (type === "text") {
+              // Skip English-only thinking before first tool call
+              if (sawTool || /[\u4e00-\u9fff]/.test(text)) {
+                sawTool = true;
+                controller.enqueue(encoder.encode(text));
+              }
+            }
           });
 
           await acp.stop();

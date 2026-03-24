@@ -613,7 +613,7 @@ export function ReviewPanel({
               label={t(`review.status.${latestReview.status}`)}
             />
             <span className="text-xs" style={{ color: "var(--outline)" }} suppressHydrationWarning>
-              {new Date(latestReview.createdAt).toLocaleString()}
+              {new Date(latestReview.createdAt + "Z").toLocaleString()}
             </span>
           </div>
           {latestReview.content && (

@@ -9,7 +9,7 @@ interface TimeAgoProps {
 
 function formatTimeAgo(date: string, isZh: boolean): string {
   const now = Date.now();
-  const then = new Date(date).getTime();
+  const then = new Date(date.endsWith("Z") ? date : date + "Z").getTime();
   const diffMs = now - then;
   const diffMin = Math.floor(diffMs / 60000);
   const diffHr = Math.floor(diffMin / 60);

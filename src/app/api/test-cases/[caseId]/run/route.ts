@@ -8,10 +8,11 @@ import {
   projects,
 } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { execSync, spawn } from "child_process";
+import { execSync } from "child_process";
 import { streamText, tool, stepCountIs } from "ai";
 import { z } from "zod";
 import { getStepModel, resolveStepConfig } from "@/lib/ai/config";
+import { AcpClient } from "@/lib/acp/client";
 import fs from "fs";
 import path from "path";
 
@@ -103,154 +104,6 @@ function detectPassFail(output: string): "passed" | "failed" {
   return (hasPass && !hasTestFailure && !hasError) ? "passed" : "failed";
 }
 
-/**
- * Run test via ACP (Claude Code CLI) with streaming output.
- */
-function runViaAcp(
-  prompt: string,
-  cwd: string,
-  model: string | undefined,
-): { stream: ReadableStream; } {
-  const encoder = new TextEncoder();
-  let fullLog = "";
-
-  const stream = new ReadableStream({
-    async start(controller) {
-      try {
-        const args = ["-p", prompt, "--output-format", "stream-json", "--verbose"];
-        if (model) args.push("--model", model);
-
-        const proc = spawn("claude", args, {
-          cwd,
-          stdio: ["pipe", "pipe", "pipe"],
-        });
-
-        let buffer = "";
-        proc.stdout?.on("data", (chunk: Buffer) => {
-          buffer += chunk.toString();
-          const lines = buffer.split("\n");
-          buffer = lines.pop() || "";
-
-          for (const line of lines) {
-            if (!line.trim()) continue;
-            try {
-              const event = JSON.parse(line);
-              if (event.type === "assistant" && event.message?.content) {
-                for (const block of event.message.content) {
-                  if (block.type === "text" && block.text) {
-                    fullLog += block.text;
-                    controller.enqueue(encoder.encode(block.text));
-                  } else if (block.type === "tool_use") {
-                    const msg = `\n> **Tool: ${block.name}**\n`;
-                    fullLog += msg;
-                    controller.enqueue(encoder.encode(msg));
-                  }
-                }
-              }
-              if (event.type === "result" && event.result) {
-                fullLog += event.result;
-                controller.enqueue(encoder.encode(event.result));
-              }
-            } catch {
-              // non-JSON line, ignore
-            }
-          }
-        });
-
-        proc.stderr?.on("data", () => {});
-
-        await new Promise<void>((resolve) => {
-          proc.on("close", () => resolve());
-          proc.on("error", () => resolve());
-        });
-
-        // Flush remaining buffer
-        if (buffer.trim()) {
-          try {
-            const event = JSON.parse(buffer);
-            if (event.type === "assistant" && event.message?.content) {
-              for (const block of event.message.content) {
-                if (block.type === "text" && block.text) {
-                  fullLog += block.text;
-                  controller.enqueue(encoder.encode(block.text));
-                }
-              }
-            }
-          } catch { /* ignore */ }
-        }
-
-        // Send final JSON result marker
-        controller.enqueue(encoder.encode(`\n<!--RESULT:${JSON.stringify(fullLog)}-->`));
-        controller.close();
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        fullLog += `\nError: ${msg}`;
-        controller.enqueue(encoder.encode(`\nError: ${msg}`));
-        controller.enqueue(encoder.encode(`\n<!--RESULT:${JSON.stringify(fullLog)}-->`));
-        controller.close();
-      }
-    },
-  });
-
-  return { stream };
-}
-
-/**
- * Run test via SDK (streamText) with streaming output.
- */
-function runViaSdk(
-  prompt: string,
-  repoPath: string,
-  configuredModel: ReturnType<typeof getStepModel>,
-): { stream: ReadableStream } {
-  const encoder = new TextEncoder();
-  let fullLog = "";
-  const tools = createTestTools(repoPath);
-
-  const stream = new ReadableStream({
-    async start(controller) {
-      try {
-        const result = streamText({
-          model: configuredModel,
-          prompt,
-          tools,
-          stopWhen: stepCountIs(10),
-        });
-
-        for await (const part of result.fullStream) {
-          if (part.type === "text-delta") {
-            fullLog += part.text;
-            controller.enqueue(encoder.encode(part.text));
-          } else if (part.type === "tool-call") {
-            const input = "input" in part ? JSON.stringify(part.input).slice(0, 200) : "";
-            const msg = `\n> **Tool: ${part.toolName}**(${input})\n`;
-            fullLog += msg;
-            controller.enqueue(encoder.encode(msg));
-          } else if (part.type === "tool-result") {
-            const raw = "output" in part ? part.output : "result" in part ? (part as Record<string, unknown>).result : "";
-            const output = typeof raw === "string" ? raw : JSON.stringify(raw);
-            const truncated = output.length > 500 ? output.slice(0, 500) + "..." : output;
-            const msg = `\`\`\`\n${truncated}\n\`\`\`\n`;
-            fullLog += msg;
-            controller.enqueue(encoder.encode(msg));
-          }
-        }
-
-        controller.enqueue(encoder.encode(`\n<!--RESULT:${JSON.stringify(fullLog)}-->`));
-        controller.close();
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        fullLog += `\nError: ${msg}`;
-        controller.enqueue(encoder.encode(`\nError: ${msg}`));
-        controller.enqueue(encoder.encode(`\n<!--RESULT:${JSON.stringify(fullLog)}-->`));
-        controller.close();
-      }
-    },
-  });
-
-  return { stream };
-}
-
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ caseId: string }> }
@@ -258,7 +111,6 @@ export async function POST(
   const { caseId } = await params;
   const db = getDb();
 
-  // Optional provider/model override from query params
   const url = new URL(req.url);
   const overrideProvider = url.searchParams.get("provider") || undefined;
   const overrideModel = url.searchParams.get("model") || undefined;
@@ -294,45 +146,45 @@ If the test file doesn't exist, create it first, then run it. Report pass/fail s
   const { provider, model } = resolveStepConfig("test", overrideProvider, overrideModel);
   const isAcp = provider === "acp" || provider === "codex-acp" || provider === "copilot-acp";
 
-  if (isAcp) {
-    // ACP path: stream via Claude Code CLI
-    const { stream } = runViaAcp(prompt, repoPath, model);
+  const encoder = new TextEncoder();
 
-    // Wrap stream to save result on completion
-    const encoder = new TextEncoder();
-    let fullOutput = "";
-    const wrappedStream = new ReadableStream({
+  if (isAcp) {
+    // ACP path: use AcpClient
+    const agentType = provider === "codex-acp" ? "codex" : provider === "copilot-acp" ? "copilot" : "claude";
+    const stream = new ReadableStream({
       async start(controller) {
-        const reader = stream.getReader();
-        const decoder = new TextDecoder();
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          const text = decoder.decode(value, { stream: true });
-          // Extract result marker
-          const markerMatch = text.match(/<!--RESULT:([\s\S]*)-->/);
-          if (markerMatch) {
-            fullOutput = JSON.parse(markerMatch[1]);
-            const beforeMarker = text.replace(/\n<!--RESULT:[\s\S]*-->/, "");
-            if (beforeMarker) controller.enqueue(encoder.encode(beforeMarker));
-          } else {
-            controller.enqueue(value);
-          }
+        let fullLog = "";
+        const acp = new AcpClient(repoPath, agentType);
+        try {
+          await acp.start();
+          const session = await acp.createSession(model);
+
+          await acp.prompt(session.sessionId, prompt, (type, text) => {
+            fullLog += text;
+            controller.enqueue(encoder.encode(text));
+          });
+
+          await acp.stop();
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          fullLog += `\nError: ${msg}`;
+          controller.enqueue(encoder.encode(`\nError: ${msg}`));
+          try { await acp.stop(); } catch { /* ignore */ }
         }
-        // Save to DB
+
         const durationMs = Date.now() - startTime;
-        const status = detectPassFail(fullOutput);
-        saveTestResult(caseId, status, fullOutput, durationMs);
+        const status = detectPassFail(fullLog);
+        saveTestResult(caseId, status, fullLog, durationMs);
         controller.close();
       },
     });
 
-    return new Response(wrappedStream, {
+    return new Response(stream, {
       headers: { "Content-Type": "text/plain; charset=utf-8" },
     });
   }
 
-  // SDK path: stream via Vercel AI SDK
+  // SDK path: streamText
   let configuredModel;
   try {
     configuredModel = getStepModel("test", overrideProvider, overrideModel);
@@ -342,35 +194,50 @@ If the test file doesn't exist, create it first, then run it. Report pass/fail s
     return NextResponse.json({ error: msg }, { status: 503 });
   }
 
-  const { stream } = runViaSdk(prompt, repoPath, configuredModel);
-
-  const encoder = new TextEncoder();
-  let fullOutput = "";
-  const wrappedStream = new ReadableStream({
+  const tools = createTestTools(repoPath);
+  const stream = new ReadableStream({
     async start(controller) {
-      const reader = stream.getReader();
-      const decoder = new TextDecoder();
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        const text = decoder.decode(value, { stream: true });
-        const markerMatch = text.match(/<!--RESULT:([\s\S]*)-->/);
-        if (markerMatch) {
-          fullOutput = JSON.parse(markerMatch[1]);
-          const beforeMarker = text.replace(/\n<!--RESULT:[\s\S]*-->/, "");
-          if (beforeMarker) controller.enqueue(encoder.encode(beforeMarker));
-        } else {
-          controller.enqueue(value);
+      let fullLog = "";
+      try {
+        const result = streamText({
+          model: configuredModel,
+          prompt,
+          tools,
+          stopWhen: stepCountIs(10),
+        });
+
+        for await (const part of result.fullStream) {
+          if (part.type === "text-delta") {
+            fullLog += part.text;
+            controller.enqueue(encoder.encode(part.text));
+          } else if (part.type === "tool-call") {
+            const input = "input" in part ? JSON.stringify(part.input).slice(0, 200) : "";
+            const msg = `\n> **Tool: ${part.toolName}**(${input})\n`;
+            fullLog += msg;
+            controller.enqueue(encoder.encode(msg));
+          } else if (part.type === "tool-result") {
+            const raw = "output" in part ? part.output : "result" in part ? (part as Record<string, unknown>).result : "";
+            const output = typeof raw === "string" ? raw : JSON.stringify(raw);
+            const truncated = output.length > 500 ? output.slice(0, 500) + "..." : output;
+            const msg = `\`\`\`\n${truncated}\n\`\`\`\n`;
+            fullLog += msg;
+            controller.enqueue(encoder.encode(msg));
+          }
         }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        fullLog += `\nError: ${msg}`;
+        controller.enqueue(encoder.encode(`\nError: ${msg}`));
       }
+
       const durationMs = Date.now() - startTime;
-      const status = detectPassFail(fullOutput);
-      saveTestResult(caseId, status, fullOutput, durationMs);
+      const status = detectPassFail(fullLog);
+      saveTestResult(caseId, status, fullLog, durationMs);
       controller.close();
     },
   });
 
-  return new Response(wrappedStream, {
+  return new Response(stream, {
     headers: { "Content-Type": "text/plain; charset=utf-8" },
   });
 }

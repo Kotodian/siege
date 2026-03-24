@@ -572,7 +572,7 @@ export function TestView({ planId, planStatus, onPlanStatusChange }: TestViewPro
                             <h5 className="text-sm font-medium mb-1" style={{ color: "var(--on-surface)" }}>
                               {isZh ? `运行记录 (${tc.results.length})` : `Results (${tc.results.length})`}
                             </h5>
-                            {tc.results.slice().reverse().map((r) => (
+                            {tc.results.slice().reverse().slice(0, 2).map((r) => (
                               <div key={r.id} className="text-xs p-3 rounded mb-2" style={{ background: "var(--background)", color: "var(--on-surface)" }}>
                                 <div className="flex items-center gap-2 mb-1">
                                   <StatusBadge status={r.status} label={r.status} />

@@ -194,8 +194,10 @@ export function PlanList({ projectId, locale }: PlanListProps) {
           {folders.map((folder) => (
             <div
               key={folder.id}
-              className="rounded-lg border p-3 flex items-center justify-between hover:shadow-sm cursor-pointer"
-              style={{ background: "var(--surface-container-high)", borderColor: "var(--outline-variant)" }}
+              className="rounded-lg p-3 flex items-center justify-between cursor-pointer transition-colors"
+              style={{ background: "var(--surface-container-low)" }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "var(--surface-container-high)")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "var(--surface-container-low)")}
               onClick={() => navigateToFolder(folder)}
             >
               <div className="flex items-center gap-2">

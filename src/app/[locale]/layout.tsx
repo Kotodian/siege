@@ -4,7 +4,6 @@ import { notFound } from "next/navigation";
 import { routing } from "@/i18n/routing";
 import { GlobalLoadingProvider } from "@/components/ui/global-loading";
 import { ConfirmProvider } from "@/components/ui/confirm-dialog";
-import { FolderIcon, SettingsIcon } from "@/components/ui/icons";
 
 export default async function LocaleLayout({
   children,
@@ -25,48 +24,70 @@ export default async function LocaleLayout({
     <NextIntlClientProvider messages={messages}>
       <GlobalLoadingProvider>
       <ConfirmProvider>
-      <div className="min-h-screen" style={{ background: "var(--background)", color: "var(--on-surface)" }}>
-        <nav className="px-6 py-3 flex items-center justify-between" style={{ background: "var(--surface-container)" }}>
-          <div className="flex items-center gap-6">
-            <a href={`/${locale}`} className="flex items-center gap-2">
+      <div className="min-h-screen flex flex-col" style={{ background: "var(--background)", color: "var(--on-surface)" }}>
+        {/* ── Top Navbar (Monolith Studio style) ── */}
+        <nav
+          className="siege-topbar h-12 flex items-center justify-between px-5 shrink-0"
+          style={{ background: "var(--surface-container-lowest)" }}
+        >
+          {/* Left: Logo + App Name + Nav Tabs */}
+          <div className="flex items-center gap-0">
+            <a href={`/${locale}`} className="flex items-center gap-2.5 pr-6">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/siege-logo.svg" alt="Siege" className="w-7 h-7" />
-              <h1 className="text-xl font-bold" style={{ fontFamily: "var(--font-heading), system-ui" }}>Siege</h1>
+              <img src="/siege-logo.svg" alt="Siege" className="w-6 h-6" />
+              <span
+                className="text-sm font-semibold tracking-wide"
+                style={{ fontFamily: "var(--font-heading), system-ui", color: "var(--on-surface)" }}
+              >
+                Siege
+              </span>
             </a>
-            <a
-              href={`/${locale}`}
-              className="text-sm hover:text-[var(--accent)]"
-              style={{ color: "var(--outline)" }}
-            >
-              <><FolderIcon size={14} className="inline-block align-[-2px]" /> {locale === "zh" ? "项目" : "Projects"}</>
-            </a>
-            <a
-              href={`/${locale}/settings`}
-              className="text-sm hover:text-[var(--accent)]"
-              style={{ color: "var(--outline)" }}
-            >
-              <><SettingsIcon size={14} className="inline-block align-[-2px]" /> {locale === "zh" ? "设置" : "Settings"}</>
-            </a>
+
+            <div className="flex items-center">
+              <a
+                href={`/${locale}`}
+                className="siege-nav-tab px-3.5 py-1.5 text-[13px] font-medium rounded transition-colors"
+                style={{ color: "var(--on-surface-variant)" }}
+              >
+                {locale === "zh" ? "项目" : "Projects"}
+              </a>
+              <a
+                href={`/${locale}/settings`}
+                className="siege-nav-tab px-3.5 py-1.5 text-[13px] font-medium rounded transition-colors"
+                style={{ color: "var(--on-surface-variant)" }}
+              >
+                {locale === "zh" ? "设置" : "Settings"}
+              </a>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
+
+          {/* Right: Language Toggle */}
+          <div className="flex items-center gap-1.5">
             <a
               href="/en"
-              className={`text-xs ${locale === "en" ? "font-medium" : ""} hover:text-[var(--accent)]`}
-              style={{ color: locale === "en" ? "var(--on-surface)" : "var(--outline)" }}
+              className="px-2 py-1 text-xs rounded transition-colors"
+              style={{
+                color: locale === "en" ? "var(--on-surface)" : "var(--outline)",
+                background: locale === "en" ? "var(--surface-container)" : "transparent",
+              }}
             >
               EN
             </a>
-            <span style={{ color: "var(--outline-variant)" }}>|</span>
             <a
               href="/zh"
-              className={`text-xs ${locale === "zh" ? "font-medium" : ""} hover:text-[var(--accent)]`}
-              style={{ color: locale === "zh" ? "var(--on-surface)" : "var(--outline)" }}
+              className="px-2 py-1 text-xs rounded transition-colors"
+              style={{
+                color: locale === "zh" ? "var(--on-surface)" : "var(--outline)",
+                background: locale === "zh" ? "var(--surface-container)" : "transparent",
+              }}
             >
               中文
             </a>
           </div>
         </nav>
-        <main className="mx-auto max-w-7xl px-6 py-8">{children}</main>
+
+        {/* ── Main Content ── */}
+        <main className="flex-1">{children}</main>
       </div>
       </ConfirmProvider>
       </GlobalLoadingProvider>

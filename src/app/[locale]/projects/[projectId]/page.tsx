@@ -23,16 +23,21 @@ export default async function ProjectDetailPage({
   }
 
   return (
-    <div>
+    <div className="mx-auto max-w-7xl px-6 py-8">
       <div className="mb-6">
         <a
           href={`/${locale}`}
-          className="text-sm hover:underline"
-          style={{ color: "var(--primary)" }}
+          className="text-sm hover:underline inline-flex items-center gap-1"
+          style={{ color: "var(--outline)" }}
         >
-          &larr; {locale === "zh" ? "返回" : "Back"}
+          <span>&larr;</span> {locale === "zh" ? "项目" : "Projects"}
         </a>
-        <h1 className="text-3xl font-bold mt-2">{project.name}</h1>
+        <h1
+          className="text-3xl font-bold mt-3"
+          style={{ fontFamily: "var(--font-heading), system-ui" }}
+        >
+          {project.name}
+        </h1>
         {project.description && (
           <ProjectDescription content={project.description} />
         )}

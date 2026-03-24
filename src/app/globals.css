@@ -92,6 +92,20 @@ body {
   color: var(--on-surface);
 }
 
+/* ── Navbar & Sidebar (Monolith Studio layout) ── */
+.siege-nav-tab:hover {
+  background: var(--surface-container);
+  color: var(--on-surface);
+}
+
+.siege-sidebar-item {
+  transition: background 150ms ease, color 150ms ease;
+}
+
+.siege-sidebar-item:hover:not(:disabled):not(.siege-sidebar-active) {
+  background: var(--surface-container);
+}
+
 /* ── Gantt chart dark overrides ── */
 .gantt .grid-header,
 .gantt .grid-row {

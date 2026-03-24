@@ -153,11 +153,11 @@ export default function SettingsPage({
   );
 
   return (
-    <div>
-      <a href={`/${locale}`} className="text-sm text-[var(--primary)] hover:underline">
-        &larr; {t("common.back")}
+    <div className="mx-auto max-w-7xl px-6 py-8">
+      <a href={`/${locale}`} className="text-sm hover:underline inline-flex items-center gap-1" style={{ color: "var(--outline)" }}>
+        <span>&larr;</span> {t("common.back")}
       </a>
-      <h1 className="text-3xl font-bold mt-2 mb-8">{t("nav.settings")}</h1>
+      <h1 className="text-3xl font-bold mt-3 mb-8" style={{ fontFamily: "var(--font-heading), system-ui" }}>{t("nav.settings")}</h1>
 
       {/* AI Providers */}
       <CollapsibleSection

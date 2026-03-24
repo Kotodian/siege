@@ -27,10 +27,10 @@ export function ProjectCard({ project, locale, onDelete }: ProjectCardProps) {
 
   return (
     <div
-      className="rounded-lg p-5 transition-colors cursor-pointer"
-      style={{ background: "var(--surface-container-high)" }}
-      onMouseEnter={(e) => e.currentTarget.style.background = "var(--surface-bright)"}
-      onMouseLeave={(e) => e.currentTarget.style.background = "var(--surface-container-high)"}
+      className="rounded-lg p-5 transition-all cursor-pointer"
+      style={{ background: "var(--surface-container-low)" }}
+      onMouseEnter={(e) => (e.currentTarget.style.background = "var(--surface-container-high)")}
+      onMouseLeave={(e) => (e.currentTarget.style.background = "var(--surface-container-low)")}
       onClick={() => {
         addRecentProject(project.id);
         router.push(`/${locale}/projects/${project.id}`);

@@ -4,12 +4,26 @@ import { useState, useEffect, use } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { PlanTabs } from "@/components/plan/plan-tabs";
 import { MarkdownRenderer } from "@/components/markdown/markdown-renderer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog } from "@/components/ui/dialog";
-import { CheckCircleIcon } from "@/components/ui/icons";
+import {
+  CheckCircleIcon,
+  FileTextIcon,
+  CalendarIcon,
+  GlassesIcon,
+  FlaskIcon,
+  PackageIcon,
+} from "@/components/ui/icons";
+import type { IconProps } from "@/components/ui/icons";
+
+// Tab content components
+import { SchemeList } from "@/components/scheme/scheme-list";
+import { ScheduleView } from "@/components/schedule/schedule-view";
+import { TestView } from "@/components/test/test-view";
+import { ReviewPanel } from "@/components/review/review-panel";
+import { PublishView } from "@/components/plan/publish-view";
 
 interface Plan {
   id: string;
@@ -20,83 +34,82 @@ interface Plan {
   tag: string | null;
 }
 
-const WORKFLOW_STEPS = [
-  { key: "scheme", statusBefore: ["draft", "reviewing"], statusDone: ["confirmed", "scheduled", "executing", "code_review", "testing", "completed"] },
-  { key: "schedule", statusBefore: ["draft", "reviewing", "confirmed"], statusDone: ["scheduled", "executing", "code_review", "testing", "completed"] },
-  { key: "execute", statusBefore: ["draft", "reviewing", "confirmed", "scheduled"], statusDone: ["code_review", "testing", "completed"] },
-  { key: "review", statusBefore: ["draft", "reviewing", "confirmed", "scheduled", "executing"], statusDone: ["testing", "completed"] },
-  { key: "test", statusBefore: ["draft", "reviewing", "confirmed", "scheduled", "executing", "code_review"], statusDone: ["completed"] },
-];
+// ── Sidebar navigation items ──
 
-const STEP_LABELS: Record<string, { zh: string; en: string; hint_zh: string; hint_en: string }> = {
-  scheme: { zh: "方案", en: "Scheme", hint_zh: "生成并确认技术方案", hint_en: "Generate & confirm scheme" },
-  schedule: { zh: "排期", en: "Schedule", hint_zh: "生成任务排期", hint_en: "Generate task schedule" },
-  execute: { zh: "执行", en: "Execute", hint_zh: "执行开发任务", hint_en: "Execute dev tasks" },
-  review: { zh: "审查", en: "Review", hint_zh: "代码审查", hint_en: "Code review" },
-  test: { zh: "测试", en: "Test", hint_zh: "运行测试", hint_en: "Run tests" },
-};
-
-// Maps plan status to the active workflow step key
-function getActiveStep(status: string): string {
-  switch (status) {
-    case "draft": case "reviewing": return "scheme";
-    case "confirmed": return "schedule";
-    case "scheduled": case "executing": return "execute";
-    case "code_review": return "review";
-    case "testing": return "test";
-    case "completed": return "done";
-    default: return "scheme";
-  }
+interface NavItem {
+  id: string;
+  labelZh: string;
+  labelEn: string;
+  icon: (props: IconProps) => React.ReactNode;
+  enabledStatuses: string[];
 }
 
-function WorkflowSteps({ status, isZh }: { status: string; isZh: boolean }) {
-  const activeStep = getActiveStep(status);
+const NAV_ITEMS: NavItem[] = [
+  {
+    id: "schemes",
+    labelZh: "方案",
+    labelEn: "Scheme",
+    icon: FileTextIcon,
+    enabledStatuses: ["draft", "reviewing", "confirmed", "scheduled", "executing", "code_review", "testing", "completed"],
+  },
+  {
+    id: "schedule",
+    labelZh: "排期",
+    labelEn: "Schedule",
+    icon: CalendarIcon,
+    enabledStatuses: ["confirmed", "scheduled", "executing", "code_review", "testing", "completed"],
+  },
+  {
+    id: "code_review",
+    labelZh: "审查",
+    labelEn: "Review",
+    icon: GlassesIcon,
+    enabledStatuses: ["executing", "code_review", "testing", "completed"],
+  },
+  {
+    id: "tests",
+    labelZh: "测试",
+    labelEn: "Tests",
+    icon: FlaskIcon,
+    enabledStatuses: ["executing", "code_review", "testing", "completed"],
+  },
+  {
+    id: "publish",
+    labelZh: "发布",
+    labelEn: "Publish",
+    icon: PackageIcon,
+    enabledStatuses: ["executing", "code_review", "testing", "completed"],
+  },
+];
 
-  return (
-    <div className="mb-5 flex items-center gap-1 overflow-x-auto py-2">
-      {WORKFLOW_STEPS.map((step, i) => {
-        const label = STEP_LABELS[step.key];
-        const isDone = step.statusDone.includes(status);
-        const isActive = activeStep === step.key;
-        const isPending = !isDone && !isActive;
+// Maps plan status to the "done" threshold for each nav item
+const DONE_STATUSES: Record<string, string[]> = {
+  schemes: ["confirmed", "scheduled", "executing", "code_review", "testing", "completed"],
+  schedule: ["scheduled", "executing", "code_review", "testing", "completed"],
+  code_review: ["testing", "completed"],
+  tests: ["completed"],
+  publish: ["completed"],
+};
 
-        return (
-          <div key={step.key} className="flex items-center">
-            {i > 0 && (
-              <div
-                className="w-6 h-px mx-1"
-                style={{ background: isDone ? "var(--success)" : "var(--outline-variant)" }}
-              />
-            )}
-            <div
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap"
-              style={
-                isActive
-                  ? { background: "var(--primary)", color: "var(--background)" }
-                  : isDone
-                    ? { background: "var(--success-container)", color: "var(--success)" }
-                    : { background: "var(--surface-container)", color: "var(--outline)", borderColor: "var(--outline-variant)", borderWidth: 1, borderStyle: "solid" }
-              }
-              title={isZh ? label.hint_zh : label.hint_en}
-            >
-              {isDone && <span>✓</span>}
-              {isActive && <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />}
-              <span>{isZh ? label.zh : label.en}</span>
-            </div>
-          </div>
-        );
-      })}
-      {status === "completed" && (
-        <div className="flex items-center">
-          <div className="w-6 h-px mx-1" style={{ background: "var(--success)" }} />
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium"
-            style={{ background: "var(--success-container)", color: "var(--success)" }}>
-            ✓ <span>{isZh ? "完成" : "Done"}</span>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+function getActiveNavId(status: string): string {
+  switch (status) {
+    case "draft":
+    case "reviewing":
+      return "schemes";
+    case "confirmed":
+      return "schedule";
+    case "scheduled":
+    case "executing":
+      return "schedule";
+    case "code_review":
+      return "code_review";
+    case "testing":
+      return "tests";
+    case "completed":
+      return "schemes";
+    default:
+      return "schemes";
+  }
 }
 
 export default function PlanDetailPage({
@@ -108,12 +121,15 @@ export default function PlanDetailPage({
   const t = useTranslations();
   const router = useRouter();
   const [plan, setPlan] = useState<Plan | null>(null);
+  const [activeNav, setActiveNav] = useState<string>("schemes");
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState("");
   const [editDesc, setEditDesc] = useState("");
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
   const [completing, setCompleting] = useState(false);
   const [completed, setCompleted] = useState(false);
+
+  const isZh = t("common.back") === "返回";
 
   const fetchPlan = async () => {
     const res = await fetch(`/api/plans/${planId}`);
@@ -124,6 +140,13 @@ export default function PlanDetailPage({
   useEffect(() => {
     fetchPlan();
   }, [planId]);
+
+  // Set active nav based on plan status when plan loads
+  useEffect(() => {
+    if (plan) {
+      setActiveNav(getActiveNavId(plan.status));
+    }
+  }, [plan?.status]);
 
   const startEdit = () => {
     if (!plan) return;
@@ -142,94 +165,234 @@ export default function PlanDetailPage({
     await fetchPlan();
   };
 
-  const isZh = t("common.back") === "返回";
-
   if (!plan) {
-    return <p>{t("common.loading")}</p>;
+    return (
+      <div className="flex items-center justify-center h-[calc(100vh-48px)]">
+        <p style={{ color: "var(--outline)" }}>{t("common.loading")}</p>
+      </div>
+    );
   }
 
-  return (
-    <div>
-      <div className="mb-6">
-        <a
-          href={`/${locale}/projects/${projectId}`}
-          className="text-sm hover:underline"
-          style={{ color: "var(--primary)" }}
-        >
-          &larr; {t("common.back")}
-        </a>
+  // Render tab content based on active nav
+  const renderContent = () => {
+    switch (activeNav) {
+      case "schemes":
+        return (
+          <SchemeList
+            planId={plan.id}
+            planStatus={plan.status}
+            onPlanStatusChange={fetchPlan}
+          />
+        );
+      case "schedule":
+        return (
+          <ScheduleView
+            planId={plan.id}
+            planStatus={plan.status}
+            projectId={projectId}
+            onPlanStatusChange={fetchPlan}
+          />
+        );
+      case "code_review":
+        return (
+          <ReviewPanel
+            planId={plan.id}
+            type="implementation"
+            planStatus={plan.status}
+            onPlanStatusChange={fetchPlan}
+          />
+        );
+      case "tests":
+        return (
+          <TestView
+            planId={plan.id}
+            planStatus={plan.status}
+            onPlanStatusChange={fetchPlan}
+          />
+        );
+      case "publish":
+        return <PublishView planId={plan.id} projectId={projectId} />;
+      default:
+        return null;
+    }
+  };
 
-        {editing ? (
-          <div className="mt-2 space-y-3">
-            <Input
-              label={t("plan.name")}
-              value={editName}
-              onChange={(e) => setEditName(e.target.value)}
-            />
-            <div>
-              <label className="block text-sm font-medium mb-1" style={{ color: "var(--on-surface-variant)" }}>
-                {t("plan.description")}
-              </label>
+  return (
+    <div className="flex h-[calc(100vh-48px)]">
+      {/* ── Left Sidebar ── */}
+      <aside
+        className="w-[220px] shrink-0 flex flex-col overflow-y-auto"
+        style={{ background: "var(--surface-container-low)" }}
+      >
+        {/* Plan Info Card */}
+        <div className="p-4 pb-2">
+          <a
+            href={`/${locale}/projects/${projectId}`}
+            className="text-xs inline-flex items-center gap-1 mb-3 transition-colors"
+            style={{ color: "var(--outline)" }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = "var(--primary)")}
+            onMouseLeave={(e) => (e.currentTarget.style.color = "var(--outline)")}
+          >
+            <span>&larr;</span> {isZh ? "返回项目" : "Back to project"}
+          </a>
+
+          {editing ? (
+            <div className="space-y-2">
+              <Input
+                label={t("plan.name")}
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+              />
               <textarea
-                className="w-full rounded-md border px-3 py-2 text-sm focus:outline-none min-h-[80px]"
-                style={{ borderColor: "var(--outline-variant)", background: "var(--surface-container)", color: "var(--on-surface)" }}
+                className="w-full rounded-md px-2.5 py-1.5 text-xs focus:outline-none min-h-[60px] resize-none"
+                style={{ background: "var(--surface-container)", color: "var(--on-surface)" }}
+                placeholder={isZh ? "描述" : "Description"}
                 value={editDesc}
                 onChange={(e) => setEditDesc(e.target.value)}
               />
+              <div className="flex gap-1.5">
+                <Button size="sm" variant="secondary" onClick={() => setEditing(false)}>
+                  {t("common.cancel")}
+                </Button>
+                <Button size="sm" onClick={saveEdit}>{t("common.save")}</Button>
+              </div>
             </div>
-            <div className="flex gap-2">
-              <Button variant="secondary" onClick={() => setEditing(false)}>
-                {t("common.cancel")}
-              </Button>
-              <Button onClick={saveEdit}>{t("common.save")}</Button>
-            </div>
-          </div>
-        ) : (
-          <>
-            <div className="flex items-center gap-3 mt-2">
-              <h1 className="text-3xl font-bold">{plan.name}</h1>
-              <StatusBadge
-                status={plan.status}
-                label={t(`plan.status.${plan.status}`)}
-              />
+          ) : (
+            <div>
+              <div className="flex items-start gap-2">
+                <div
+                  className="w-8 h-8 rounded-md flex items-center justify-center shrink-0 mt-0.5"
+                  style={{ background: "var(--primary-container)" }}
+                >
+                  <FileTextIcon size={14} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h2
+                    className="text-sm font-semibold leading-tight truncate"
+                    style={{ fontFamily: "var(--font-heading), system-ui" }}
+                    title={plan.name}
+                  >
+                    {plan.name}
+                  </h2>
+                  <div className="mt-1">
+                    <StatusBadge
+                      status={plan.status}
+                      label={t(`plan.status.${plan.status}`)}
+                    />
+                  </div>
+                </div>
+              </div>
+              {plan.description && (
+                <div className="mt-2 text-xs line-clamp-3" style={{ color: "var(--on-surface-variant)" }}>
+                  <MarkdownRenderer content={plan.description} />
+                </div>
+              )}
               <button
                 onClick={startEdit}
-                className="text-xs px-2 py-1 rounded hover:opacity-80"
+                className="text-[11px] mt-2 transition-colors"
                 style={{ color: "var(--outline)" }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = "var(--primary)")}
+                onMouseLeave={(e) => (e.currentTarget.style.color = "var(--outline)")}
               >
                 {t("common.edit")}
               </button>
-              <div className="flex-1" />
-              {plan.status !== "completed" && plan.status !== "draft" && (
-                <Button size="sm" variant="secondary" onClick={() => setCompleteDialogOpen(true)}>
-                  {isZh ? "完成" : "Complete"}
-                </Button>
-              )}
-              {plan.status === "completed" && (
-                <span className="text-xs px-2 py-1 rounded" style={{ background: "var(--success-container)", color: "var(--success)" }}>
-                  {isZh ? "已归档" : "Archived"}
-                </span>
-              )}
             </div>
-            {plan.description && (
-              <div className="mt-2">
-                <MarkdownRenderer content={plan.description} />
-              </div>
-            )}
-          </>
-        )}
+          )}
+        </div>
+
+        {/* Divider via background shift */}
+        <div className="mx-4 my-2 h-px" style={{ background: "var(--outline-variant)", opacity: 0.2 }} />
+
+        {/* Navigation Items */}
+        <nav className="flex-1 px-2 py-1">
+          {NAV_ITEMS.map((item) => {
+            const isEnabled = item.enabledStatuses.includes(plan.status);
+            const isActive = activeNav === item.id;
+            const isDone = DONE_STATUSES[item.id]?.includes(plan.status) ?? false;
+            const ItemIcon = item.icon;
+
+            return (
+              <button
+                key={item.id}
+                onClick={() => isEnabled && setActiveNav(item.id)}
+                disabled={!isEnabled}
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] font-medium transition-all mb-0.5
+                  ${!isEnabled ? "opacity-30 cursor-not-allowed" : "cursor-pointer"}`}
+                style={
+                  isActive
+                    ? { background: "var(--surface-container-high)", color: "var(--primary)" }
+                    : isDone
+                      ? { color: "var(--success)" }
+                      : { color: "var(--on-surface-variant)" }
+                }
+                onMouseEnter={(e) => {
+                  if (isEnabled && !isActive) {
+                    e.currentTarget.style.background = "var(--surface-container)";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isActive) {
+                    e.currentTarget.style.background = "transparent";
+                  }
+                }}
+              >
+                <ItemIcon size={16} />
+                <span>{isZh ? item.labelZh : item.labelEn}</span>
+                {isDone && <span className="ml-auto text-[10px]">✓</span>}
+                {isActive && !isDone && (
+                  <span
+                    className="ml-auto w-1.5 h-1.5 rounded-full animate-pulse"
+                    style={{ background: "var(--primary)" }}
+                  />
+                )}
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* Bottom Actions */}
+        <div className="p-3 mt-auto space-y-2">
+          {plan.status !== "completed" && plan.status !== "draft" && (
+            <button
+              onClick={() => setCompleteDialogOpen(true)}
+              className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium transition-colors"
+              style={{
+                background: "var(--surface-container-high)",
+                color: "var(--on-surface-variant)",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "var(--success-container)";
+                e.currentTarget.style.color = "var(--success)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "var(--surface-container-high)";
+                e.currentTarget.style.color = "var(--on-surface-variant)";
+              }}
+            >
+              <CheckCircleIcon size={14} />
+              {isZh ? "完成计划" : "Complete Plan"}
+            </button>
+          )}
+          {plan.status === "completed" && (
+            <div
+              className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium"
+              style={{ background: "var(--success-container)", color: "var(--success)" }}
+            >
+              <CheckCircleIcon size={14} />
+              {isZh ? "已归档" : "Archived"}
+            </div>
+          )}
+        </div>
+      </aside>
+
+      {/* ── Main Content ── */}
+      <div className="flex-1 overflow-y-auto" style={{ background: "var(--background)" }}>
+        <div className="max-w-6xl mx-auto px-8 py-6">
+          {renderContent()}
+        </div>
       </div>
 
-      <WorkflowSteps status={plan.status} isZh={isZh} />
-
-      <PlanTabs
-        planId={plan.id}
-        planStatus={plan.status}
-        projectId={projectId}
-        onPlanStatusChange={fetchPlan}
-      />
-
-      {/* Complete confirmation dialog */}
+      {/* ── Complete Confirmation Dialog ── */}
       <Dialog
         open={completeDialogOpen}
         onClose={() => { if (!completing) setCompleteDialogOpen(false); }}
@@ -239,7 +402,9 @@ export default function PlanDetailPage({
       >
         {completed ? (
           <div className="text-center space-y-4 py-4">
-            <span className="mx-auto block w-fit" style={{ color: "var(--success)" }}><CheckCircleIcon size={48} /></span>
+            <span className="mx-auto block w-fit" style={{ color: "var(--success)" }}>
+              <CheckCircleIcon size={48} />
+            </span>
             <p className="text-sm" style={{ color: "var(--on-surface)" }}>
               {isZh
                 ? "计划已标记为完成并进入归档状态。你可以在项目页面查看归档计划。"

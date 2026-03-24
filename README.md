@@ -21,22 +21,6 @@
 
 ## Why Siege?
 
-### The Pain Points of Using Claude Code / Codex Directly
-
-If you've been using Claude Code or Codex CLI for real-world projects, you've probably run into these frustrations:
-
-| Pain Point | Description |
-|------------|-------------|
-| **No project continuity** | Every conversation starts from scratch. You lose context between sessions — no memory of what was planned, what was built, what was reviewed. |
-| **No structured workflow** | You go from "idea" to "write code" with nothing in between. No technical design, no task breakdown, no review process. Just raw prompting. |
-| **Invisible progress** | There's no dashboard, no timeline, no way to see what's done vs. what's pending. You're managing everything in your head. |
-| **No code review** | AI writes code, you merge it. There's no diff viewer, no inline findings, no structured quality gate before code hits your repo. |
-| **One-shot execution** | Large tasks fail or produce incomplete results because there's no way to break them into smaller, sequential steps with context passing. |
-| **No test generation** | After implementation, testing is manual. There's no AI-driven test case generation tied to what was actually built. |
-| **Terminal-only UX** | Everything happens in a terminal. No visual schedule, no Gantt chart, no clickable UI to manage the development lifecycle. |
-
-### How Siege Solves This
-
 Siege wraps Claude Code / Codex into a **full development lifecycle manager** with a visual UI:
 
 ```
@@ -47,11 +31,11 @@ Describe   AI Gen    Gantt       Claude      Diff View   AI Gen
 ```
 
 - **Persistent context** — Projects, plans, schemes, and execution logs are all stored in SQLite. Pick up where you left off.
-- **Structured design** — AI generates technical schemes before writing any code. Review and refine via chat before committing to implementation.
-- **Visual task scheduling** — AI breaks work into ordered tasks displayed on a Gantt chart. Each task executes with context from previous tasks.
-- **GitHub PR-style code review** — See actual `git diff` with syntax highlighting, file tree navigation, inline AI findings, and one-click AI fix.
-- **AI-powered testing** — Auto-generate and run test cases based on what was implemented.
-- **Multi-provider AI** — Use Anthropic (Claude), OpenAI (GPT), or GLM (ZhiPu). Works with API keys, proxy relays, or Claude subscription login.
+- **Structured design** — AI generates technical schemes before writing any code. Review and refine via chat.
+- **Visual task scheduling** — AI breaks work into ordered tasks displayed on a Gantt chart.
+- **GitHub PR-style code review** — `git diff` with syntax highlighting, file tree, inline AI findings, one-click fix.
+- **AI-powered testing** — Auto-generate and run test cases based on actual code changes.
+- **Multi-provider AI** — Anthropic (Claude), OpenAI (GPT), GLM (ZhiPu). Works with API keys, proxy relays, or Claude subscription login.
 
 ---
 
@@ -59,179 +43,114 @@ Describe   AI Gen    Gantt       Claude      Diff View   AI Gen
 
 <table>
   <tr>
+    <td><img src="docs/screenshots/zh/03-project-list.png" alt="Projects" /><br /><em>Project List — Monolith Dark Theme</em></td>
+    <td><img src="docs/screenshots/zh/10-plan-sidebar.png" alt="Plan" /><br /><em>Plan Detail — Sidebar Workflow Navigation</em></td>
+  </tr>
+  <tr>
     <td><img src="docs/screenshots/zh/05-scheme-detail.png" alt="Scheme" /><br /><em>AI-Generated Technical Scheme</em></td>
     <td><img src="docs/screenshots/zh/09-schedule-gantt.png" alt="Schedule" /><br /><em>Gantt Chart + Auto-Execute Timeline</em></td>
   </tr>
   <tr>
-    <td><img src="docs/screenshots/zh/07-code-review-diff.png" alt="Review" /><br /><em>Code Review — Accept/Dismiss Findings</em></td>
-    <td><img src="docs/screenshots/zh/14-test-view.png" alt="Test" /><br /><em>Task-Based Test Generation & Run</em></td>
-  </tr>
-  <tr>
-    <td><img src="docs/screenshots/zh/15-publish.png" alt="Publish" /><br /><em>Push, PR & AI Deploy</em></td>
-    <td><img src="docs/screenshots/zh/06-settings.png" alt="Settings" /><br /><em>AI Provider + Model per Step</em></td>
+    <td><img src="docs/screenshots/zh/07-code-review-diff.png" alt="Review" /><br /><em>Code Review — Diff Viewer + Findings</em></td>
+    <td><img src="docs/screenshots/zh/06-settings.png" alt="Settings" /><br /><em>AI Provider Configuration</em></td>
   </tr>
 </table>
 
 ## Core Workflow
 
-**1. Create Project** — Select a local repo or clone from GitHub. AI auto-detects `CLAUDE.md` for project context.
+**1. Create Project** — Select a local repo. AI auto-detects `CLAUDE.md` for project context.
 
-**2. Create Plan** — Describe what you want to build. AI generates a title. Organize in folders, tag as feature/bug/refactor.
+**2. Create Plan** — Describe what you want to build. Organize in folders, tag as feature/bug/refactor.
 
-**3. Generate Scheme** — AI searches the web and analyzes local code to produce technical proposals. Edit, review, or modify via chat.
+**3. Generate Scheme** — AI analyzes code and produces technical proposals. Edit, review, or refine via chat.
 
 **4. Generate Schedule** — AI breaks confirmed schemes into executable tasks with a Gantt chart timeline.
 
-**5. Execute** — Auto-execute runs tasks sequentially with a vertical task timeline showing progress. Cancel anytime. Each task uses focused prompts to minimize token usage.
+**5. Execute** — Auto-execute runs tasks sequentially. Each task uses focused prompts with context from previous tasks.
 
-**6. Code Review** — View `git diff` filtered by task with syntax highlighting. AI reviews for quality, security, and correctness. Findings grouped by task with collapsible panels. One-click "Fix All" for bulk AI remediation.
+**6. Code Review** — View `git diff` with syntax highlighting, file tree navigation, and inline AI findings.
 
-**7. Test** — Select completed tasks, AI generates test cases from actual code changes (not just proposals). Tests grouped by task with pass/fail tracking.
+**7. Test** — Select completed tasks, AI generates test cases from actual code changes.
 
 ## Features
 
 ### AI Integration
-- **Multi-provider**: Anthropic (Claude), OpenAI (GPT), GLM (ZhiPu) — latest models (Claude 4.6, GPT-5.4, GLM-5)
-- **Model selection**: Dropdown model picker on every AI action (generate, review, execute, test)
+- **Multi-provider**: Anthropic (Claude), OpenAI (GPT), GLM (ZhiPu)
+- **Model selection**: Dropdown model picker on every AI action
 - **Proxy support**: Custom base URL for API relays
-- **Claude Code / Codex ACP**: Works via Agent Client Protocol, no API key needed
-- **Session reuse**: Subsequent AI calls in the same plan resume the session
-- **Token-efficient**: Focused prompts, no redundant codebase scanning
+- **Claude Code / Codex ACP**: Agent Client Protocol, no API key needed
+- **Session reuse**: Subsequent AI calls resume the session for context continuity
 
 ### Execution
-- **Auto-execute**: One click to run all tasks sequentially with vertical task timeline
-- **Cancel anytime**: Abort button in the loading dialog stops immediately
-- **Skills injection**: Select from 70+ skills (custom + plugins) per task
+- **Auto-execute**: One click to run all tasks sequentially
+- **Skills injection**: Select from custom + plugin skills per task
 - **File snapshot capture**: Per-task incremental diffs for accurate code review
 
 ### Code Review
-- **Git diff viewer** with syntax highlighting (highlight.js)
-- **Task filter**: Dropdown to view diffs from a specific task
-- **File tree sidebar** grouped by task with +/- stats and finding count
-- **Findings grouped by task**: Collapsible panels with unresolved count badges
-- **"Fix All" button**: Bulk AI fix for all unresolved findings in one click
-- **Inline findings** pinned to specific lines with dark-theme-safe severity colors
-- **One-click "AI Fix"** — apply AI suggestions directly to files
+- **Git diff viewer** with syntax highlighting
+- **Task filter**: View diffs from a specific task
+- **File tree sidebar** grouped by task with +/- stats
+- **Findings grouped by task**: Collapsible panels with unresolved count
+- **"Fix All" button**: Bulk AI fix for all unresolved findings
+- **One-click "AI Fix"** — apply suggestions directly to files
 
 ### Testing
-- **Task-based generation**: Select completed tasks, AI generates tests from actual code changes
+- **Task-based generation**: AI generates tests from actual code changes
 - **Tests grouped by task**: Visual pass/fail per task group
-- **Provider/model selection**: Choose AI provider for test generation
-- **Run all with progress**: Loading dialog shows `[2/5] test_forward_tcp...`
-
-### Project Management
-- **Folder hierarchy** for organizing plans
-- **Tags**: feature, bug, enhancement, refactor, docs, test, chore, perf
-- **Recently opened** projects on homepage
-- **Custom icons** per project
-
-### Scheme Management
-- **Interactive generation**: AI asks 2-4 key design questions via dialog before generating
-- **One-shot mode**: Toggle off interactive for fast generation
-- **Conversational modification** — chat to refine schemes
-- **Version history** with line-by-line diff
-- **Scheme review** with severity-tagged findings
+- **Run all with progress**: Shows execution status per test
 
 ### Multi-Source Import
-- **Markdown** — import plans from local `.md` files
-- **Notion** — search pages/databases, import with blocks-to-markdown conversion
-- **Jira** — search Epics/Stories via JQL, sub-tasks become schemes
-- **Confluence** — search pages via CQL, H2 sections become schemes
-- **Feishu** — search wiki docs, import with block-level conversion
-- **GitHub Issues** — search issues by repo or globally, labels auto-map to plan tags
-- **GitLab Issues** — works with self-hosted instances, search by project or globally
+- **Markdown** — import plans from `.md` files
+- **Notion** — search pages/databases, import with blocks-to-markdown
+- **Jira** — search Epics/Stories via JQL
+- **Confluence** — search pages via CQL
+- **Feishu** — search wiki docs with block-level conversion
+- **GitHub Issues / GitLab Issues** — search and import issues
 - **MCP Server** — connect any MCP server, import resources as plans
-- **Inline setup** — configure new import sources directly in the import dialog, no need to leave
 
-### Data Management
-- **Auto-archive** completed plans after configurable days
-- **Backup** to Local filesystem, Obsidian vault, or Notion
-- **SQLite** — zero-ops, single file database
-
-### i18n
-- Full Chinese and English support
-- All UI labels, status badges, and messages translated
+### Design System
+- **Monolith** — deep obsidian dark theme with tonal surface layering
+- **No-border rule** — boundaries defined through background color shifts, not lines
+- **Space Grotesk + Inter** typography for editorial precision
+- **Sidebar workflow navigation** on plan detail pages
 
 ## Quick Start
 
 ```bash
-# Clone
 git clone https://github.com/Kotodian/siege.git
 cd siege
-
-# Install
 npm install
-
-# Development
 npm run dev
-
-# Production
-npm run build
-npm start
 ```
 
-Open [http://localhost:3000](http://localhost:3000) — the onboarding guide will walk you through GitHub connection, AI configuration, and creating your first project.
+Open [http://localhost:3000](http://localhost:3000) — the onboarding guide walks you through setup.
 
 ### Prerequisites
 
 - **Node.js** 20+
 - **Claude Code** (`claude` CLI) — for ACP engine (recommended)
-- **GitHub CLI** (`gh`) — optional, for GitHub repo / PR integration
+- **GitHub CLI** (`gh`) — optional, for PR integration
 
 ## Deploy
 
-### Option 1: Direct
+### Direct
 
 ```bash
-git clone https://github.com/Kotodian/siege.git
-cd siege
-npm install
 npm run build
 PORT=3000 npm start
 ```
 
-### Option 2: Docker
-
-```dockerfile
-FROM node:20-alpine
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci
-COPY . .
-RUN npm run build
-EXPOSE 3000
-CMD ["npm", "start"]
-```
+### Docker
 
 ```bash
 docker build -t siege .
 docker run -d -p 3000:3000 -v siege-data:/app/data siege
 ```
 
-### Option 3: PM2
-
-```bash
-npm run build
-pm2 start npm --name siege -- start
-```
-
 ### Data
 
-- Database: `./data/siege.db` (SQLite, auto-created on first run)
-- Backup this file to preserve all projects, plans, and execution history
+- Database: `./data/siege.db` (SQLite, auto-created)
 - Set `DATA_DIR` environment variable to change the data directory
-
-### AI Configuration
-
-Siege supports three modes for AI access:
-
-| Mode | Speed | Setup |
-|------|-------|-------|
-| **API Key** | Fast (streaming) | Get key from provider console |
-| **Proxy/Relay** | Fast | Custom base URL + key |
-| **Claude Login** | ~1-2 min/call | Just `claude login`, no key needed |
-
-Configure in **Settings** or during onboarding.
 
 ## Tech Stack
 
@@ -241,62 +160,19 @@ Configure in **Settings** or during onboarding.
 | Language | TypeScript |
 | Database | SQLite (Drizzle ORM + better-sqlite3) |
 | Styling | Tailwind CSS 4 |
+| Design | Monolith dark theme |
 | AI SDK | Vercel AI SDK + Claude/Codex CLI fallback |
 | i18n | next-intl |
-| Syntax Highlighting | highlight.js |
-| Markdown | react-markdown + rehype-highlight |
 | Charts | frappe-gantt |
 | Testing | Vitest |
-
-## Project Structure
-
-```
-src/
-├── app/
-│   ├── [locale]/          # i18n pages
-│   │   ├── page.tsx       # Project list / Onboarding
-│   │   ├── projects/      # Project detail, Plan detail
-│   │   └── settings/      # AI config, Skills, Archive
-│   └── api/               # REST API routes
-│       ├── projects/      # CRUD + analyze
-│       ├── plans/         # CRUD + confirm + suggest-title
-│       ├── schemes/       # CRUD + generate + chat + versions
-│       ├── schedules/     # CRUD + generate
-│       ├── reviews/       # CRUD + generate
-│       ├── review-comments/  # Inline comments + AI fix
-│       ├── snapshots/     # Git diff data
-│       ├── test-suites/   # CRUD + generate + run
-│       └── execute/       # Task execution via AI SDK
-├── lib/
-│   ├── ai/                # Provider, generators, CLI fallback, session, queue
-│   ├── db/                # Drizzle schema + migrations
-│   ├── diff.ts            # Shared diff computation with line numbers
-│   ├── backup/            # Local, Obsidian, Notion backends
-│   └── ...
-├── components/
-│   ├── scheme/            # Scheme cards, editor, versions, generate dialog
-│   ├── review/            # Diff viewer, file tree, inline comments, review panel
-│   ├── schedule/          # Schedule view + Gantt
-│   ├── gantt/             # Gantt chart wrapper
-│   ├── onboarding/        # First-time setup guide
-│   └── ui/                # Button, Dialog, Input, Tabs, StatusBadge, ...
-└── messages/              # en.json, zh.json
-```
 
 ## Development
 
 ```bash
-# Run tests
-npm test
-
-# Watch mode
-npm run test:watch
-
-# Build
-npm run build
-
-# Generate DB migration after schema change
-npx drizzle-kit generate
+npm test              # Run all tests
+npm run test:watch    # Watch mode
+npm run build         # Production build
+npx drizzle-kit generate  # DB migration after schema change
 ```
 
 ## License

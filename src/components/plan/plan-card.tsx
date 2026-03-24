@@ -34,10 +34,10 @@ export function PlanCard({ plan, locale, onDelete }: PlanCardProps) {
 
   return (
     <div
-      className="rounded-lg p-5 transition-colors cursor-pointer"
-      style={{ background: "var(--surface-container-high)" }}
-      onMouseEnter={(e) => e.currentTarget.style.background = "var(--surface-bright)"}
-      onMouseLeave={(e) => e.currentTarget.style.background = "var(--surface-container-high)"}
+      className="rounded-lg p-5 transition-all cursor-pointer"
+      style={{ background: "var(--surface-container-low)" }}
+      onMouseEnter={(e) => (e.currentTarget.style.background = "var(--surface-container-high)")}
+      onMouseLeave={(e) => (e.currentTarget.style.background = "var(--surface-container-low)")}
       onClick={() =>
         router.push(`/${locale}/projects/${plan.projectId}/plans/${plan.id}`)
       }

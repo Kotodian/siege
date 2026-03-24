@@ -67,7 +67,7 @@ export function TestView({ planId, planStatus, onPlanStatusChange }: TestViewPro
   const [provider, setProvider] = useState("");
   const [model, setModel] = useState("");
   const defaultProvider = useDefaultProvider();
-  const { startLoading, updateContent, stopLoading } = useGlobalLoading();
+  const { startLoading, updateContent, setTasks: setLoadingTasks, updateTaskStatus, stopLoading } = useGlobalLoading();
   const { confirm } = useConfirm();
 
   useEffect(() => {
@@ -166,21 +166,33 @@ export function TestView({ planId, planStatus, onPlanStatusChange }: TestViewPro
     if (!suite) return;
     const toRun = suite.cases.filter(tc => tc.status !== "passed");
     if (toRun.length === 0) return;
-    startLoading(isZh ? `运行测试 (0/${toRun.length})` : `Running tests (0/${toRun.length})`);
-    let done = 0;
+    startLoading(isZh ? `运行测试 (${toRun.length} 个)` : `Running tests (${toRun.length})`);
+    // Set up task timeline
+    setLoadingTasks(toRun.map((tc, i) => ({
+      id: tc.id,
+      order: i + 1,
+      title: tc.description || tc.name,
+      status: "pending" as const,
+    })));
     let passed = 0;
+    let done = 0;
     for (const tc of toRun) {
       setRunningCase(tc.id);
+      updateTaskStatus(tc.id, "running");
       updateContent(isZh
-        ? `[${done + 1}/${toRun.length}] ${tc.name}...`
-        : `[${done + 1}/${toRun.length}] ${tc.name}...`);
+        ? `[${done + 1}/${toRun.length}] ${tc.name}`
+        : `[${done + 1}/${toRun.length}] ${tc.name}`);
       await fetch(`/api/test-cases/${tc.id}/run`, { method: "POST" });
       done++;
-      // Quick check result
       const res = await fetch(`/api/test-suites?planId=${planId}`);
       const freshSuite = await res.json() as TestSuite | null;
       const freshCase = freshSuite?.cases.find(c => c.id === tc.id);
-      if (freshCase?.status === "passed") passed++;
+      if (freshCase?.status === "passed") {
+        passed++;
+        updateTaskStatus(tc.id, "completed");
+      } else {
+        updateTaskStatus(tc.id, "failed");
+      }
     }
     setRunningCase(null);
     const finalRes = await fetch(`/api/test-suites?planId=${planId}`);

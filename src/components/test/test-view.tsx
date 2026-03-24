@@ -172,6 +172,7 @@ export function TestView({ planId, planStatus, onPlanStatusChange }: TestViewPro
       const runParams = new URLSearchParams();
       if (provider) runParams.set("provider", provider);
       if (model) runParams.set("model", model);
+      runParams.set("locale", isZh ? "zh" : "en");
       const res = await fetch(`/api/test-cases/${caseId}/run?${runParams}`, { method: "POST" });
       // Stream the response
       const reader = res.body?.getReader();
@@ -231,6 +232,7 @@ export function TestView({ planId, planStatus, onPlanStatusChange }: TestViewPro
       const runParams = new URLSearchParams();
       if (provider) runParams.set("provider", provider);
       if (model) runParams.set("model", model);
+      runParams.set("locale", isZh ? "zh" : "en");
       const res = await fetch(`/api/test-cases/${tc.id}/run?${runParams}`, { method: "POST" });
       const reader = res.body?.getReader();
       const decoder = new TextDecoder();

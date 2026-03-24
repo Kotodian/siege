@@ -115,6 +115,7 @@ export async function POST(
   const url = new URL(req.url);
   const overrideProvider = url.searchParams.get("provider") || undefined;
   const overrideModel = url.searchParams.get("model") || undefined;
+  const locale = url.searchParams.get("locale") || "en";
 
   const testCase = db.select().from(testCases).where(eq(testCases.id, caseId)).get();
   if (!testCase) return NextResponse.json({ error: "Test case not found" }, { status: 404 });
@@ -130,11 +131,9 @@ export async function POST(
 
   db.update(testCases).set({ status: "running" }).where(eq(testCases.id, caseId)).run();
 
-  const hasChinese = /[\u4e00-\u9fff]/.test(
-    (testCase.description || "") + (testCase.name || "") + (plan.description || plan.name)
-  );
+  const isZh = locale === "zh";
 
-  const prompt = hasChinese
+  const prompt = isZh
     ? `你是一个测试工程师。请用中文回复，不要使用英文或日文。
 
 运行以下测试并报告结果。

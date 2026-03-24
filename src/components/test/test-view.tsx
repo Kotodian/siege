@@ -385,6 +385,16 @@ export function TestView({ planId, planStatus, onPlanStatusChange }: TestViewPro
           )}
         </div>
         <div className="flex items-center gap-2">
+          {suite && suite.cases.length > 0 && (
+            <ProviderModelSelect
+              provider={provider}
+              model={model}
+              onProviderChange={setProvider}
+              onModelChange={setModel}
+              disabled={runningCase !== null}
+              compact
+            />
+          )}
           <Button size="sm" variant="secondary" onClick={() => setAddDialogOpen(true)}>
             {isZh ? "手动添加" : "Add Test"}
           </Button>

@@ -130,7 +130,16 @@ If the test file doesn't exist, create it first, then run it. Report pass/fail s
     });
 
     const durationMs = Date.now() - startTime;
-    const output = result.text;
+    // Collect both text output and tool call results (bash/readFile/writeFile)
+    let output = result.text || "";
+    for (const step of result.steps || []) {
+      for (const tc of step.toolResults || []) {
+        if (tc.result && typeof tc.result === "string" && tc.result.length > 0) {
+          output += (output ? "\n\n" : "") + `[${tc.toolName}] ${tc.result}`;
+        }
+      }
+    }
+    if (!output) output = "No output";
     // Detect pass/fail: look for definitive signals, not just word presence
     const hasTestFailure = /(\d+)\s*fail/i.test(output) && !/0\s*fail/i.test(output);
     const hasError = /error\[E/i.test(output) || /FAILED/i.test(output) || /panicked/i.test(output);

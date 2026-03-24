@@ -34,7 +34,8 @@ const SDK_PROVIDERS: Record<string, { label: string; models: string[] }> = {
     "o3-pro", "o3-mini", "gpt-4o", "gpt-4o-mini",
   ]},
   glm: { label: "GLM", models: [
-    "glm-5", "glm-4-plus", "glm-4", "glm-4-air", "glm-4-flash", "glm-4-long",
+    "glm-5", "glm-5-turbo", "glm-4.7", "glm-4.7-flash", "glm-4.6", "glm-4.5",
+    "glm-4-plus", "glm-4-flash",
   ]},
 };
 

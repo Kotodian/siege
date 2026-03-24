@@ -8,7 +8,7 @@ export type Provider = (typeof SUPPORTED_PROVIDERS)[number];
 const DEFAULT_MODELS: Record<Provider, string> = {
   anthropic: "claude-sonnet-4-20250514",
   openai: "gpt-4o",
-  glm: "glm-4-plus",
+  glm: "glm-5",
 };
 
 const DEFAULT_BASE_URLS: Partial<Record<Provider, string>> = {

@@ -133,9 +133,10 @@ If the test file doesn't exist, create it first, then run it. Report pass/fail s
     // Collect both text output and tool call results (bash/readFile/writeFile)
     let output = result.text || "";
     for (const step of result.steps || []) {
-      for (const tc of step.toolResults || []) {
-        if (tc.result && typeof tc.result === "string" && tc.result.length > 0) {
-          output += (output ? "\n\n" : "") + `[${tc.toolName}] ${tc.result}`;
+      for (const tr of step.toolResults || []) {
+        const val = (tr as { output?: unknown }).output;
+        if (val && typeof val === "string" && val.length > 0) {
+          output += (output ? "\n\n" : "") + `[${tr.toolName}] ${val}`;
         }
       }
     }

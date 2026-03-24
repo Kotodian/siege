@@ -23,6 +23,9 @@ const ACP_PROVIDERS: ProviderConfig[] = [
   ]},
 ];
 
+// Providers that always appear (have default base URL, only need API key)
+const ALWAYS_VISIBLE_PROVIDERS = ["glm"];
+
 const SDK_PROVIDERS: Record<string, { label: string; models: string[] }> = {
   anthropic: { label: "Claude", models: [
     "claude-opus-4-6", "claude-sonnet-4-6", "claude-haiku-4-5-20251001",
@@ -141,7 +144,9 @@ export function ProviderModelSelect({
     fetch("/api/settings").then(r => r.json()).then(settings => {
       const providers: ProviderConfig[] = [...ACP_PROVIDERS];
       for (const [id, config] of Object.entries(SDK_PROVIDERS)) {
-        if (settings[`${id}_api_key`] || settings[`${id}_base_url`]) {
+        const hasKey = settings[`${id}_api_key`] || settings[`${id}_base_url`];
+        const alwaysShow = ALWAYS_VISIBLE_PROVIDERS.includes(id);
+        if (hasKey || alwaysShow) {
           providers.push({ id, label: config.label, models: config.models });
         }
       }

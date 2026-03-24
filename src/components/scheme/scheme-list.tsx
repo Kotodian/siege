@@ -156,7 +156,7 @@ export function SchemeList({
       const res = await fetch("/api/schemes/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ planId, provider, skills, model, interactive, idea }),
+        body: JSON.stringify({ planId, provider, skills, model, interactive, idea, locale: isZh ? "zh" : "en" }),
       });
 
       if (!res.ok || !res.body) {

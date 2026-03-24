@@ -147,6 +147,7 @@ export function TestView({ planId, planStatus, onPlanStatusChange }: TestViewPro
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           planId,
+          locale: isZh ? "zh" : "en",
           provider: provider || undefined,
           model: model || undefined,
           scheduleItemIds: Array.from(selectedTasks),

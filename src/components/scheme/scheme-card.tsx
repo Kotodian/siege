@@ -74,7 +74,7 @@ export function SchemeCard({
       const res = await fetch("/api/schemes/convert", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ schemeId: scheme.id }),
+        body: JSON.stringify({ schemeId: scheme.id, locale: isZh ? "zh" : "en" }),
       });
       if (res.ok) {
         stopLoading(isZh ? "转换完成" : "Converted");

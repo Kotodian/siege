@@ -193,13 +193,13 @@ function structuredToMarkdown(s: Record<string, unknown>): string {
   return lines.join("\n");
 }
 
-function buildPrompt(project: { name: string; targetRepoPath: string; description?: string | null; guidelines?: string | null }, plan: { name: string; description: string | null }, forAcp: boolean, idea?: string) {
+function buildPrompt(project: { name: string; targetRepoPath: string; description?: string | null; guidelines?: string | null }, plan: { name: string; description: string | null }, forAcp: boolean, idea?: string, isZh?: boolean) {
   const projectContext = [
     project.description ? `Project description: ${project.description}` : "",
     project.guidelines ? `Project guidelines:\n${project.guidelines}` : "",
   ].filter(Boolean).join("\n\n");
 
-  const hasChinese = /[\u4e00-\u9fff]/.test(plan.description || plan.name);
+  const hasChinese = isZh ?? /[\u4e00-\u9fff]/.test(plan.description || plan.name);
   const lang = hasChinese ? "用中文输出所有内容。" : "Output all content in English.";
 
   return `You are a senior software architect. Generate a structured technical scheme as a JSON object.
@@ -343,8 +343,8 @@ function createProjectTools(repoPath: string) {
 export async function POST(req: NextRequest) {
   const [body, errRes] = await parseJsonBody(req);
   if (errRes) return errRes;
-  const { planId, provider, model, interactive, idea } = body as {
-    planId: string; provider?: string; model?: string; interactive?: boolean; idea?: string;
+  const { planId, provider, model, interactive, idea, locale } = body as {
+    planId: string; provider?: string; model?: string; interactive?: boolean; idea?: string; locale?: string;
   };
 
   if (!planId) return NextResponse.json({ error: "planId required" }, { status: 400 });
@@ -364,10 +364,12 @@ export async function POST(req: NextRequest) {
   const resolved = resolveStepConfig("scheme", provider as string, model);
 
   // --- Interactive mode: two-phase generation with user Q&A ---
+  const isZh = locale ? locale === "zh" : undefined;
+
   if (interactive) {
     const generationId = crypto.randomUUID();
     const session = createSession(generationId, planId);
-    const hasChinese = /[\u4e00-\u9fff]/.test(plan.description || plan.name);
+    const hasChinese = isZh ?? /[\u4e00-\u9fff]/.test(plan.description || plan.name);
 
     const isAcpInteractive = resolved.provider === "acp" || resolved.provider === "codex-acp" || resolved.provider === "copilot-acp";
     let sharedAcpClient: AcpClient | null = null;
@@ -543,7 +545,7 @@ export async function POST(req: NextRequest) {
   const memCtx = loadMemoryContext(project.id);
   const isAcp = resolved.provider === "acp" || resolved.provider === "codex-acp" || resolved.provider === "copilot-acp";
 
-  const prompt = buildPrompt(project, plan, isAcp, idea) + (memCtx ? `\n\n${memCtx}` : "");
+  const prompt = buildPrompt(project, plan, isAcp, idea, isZh) + (memCtx ? `\n\n${memCtx}` : "");
 
   // ACP engine: use Claude Code / Codex via Agent Client Protocol
   if (resolved.provider === "acp" || resolved.provider === "codex-acp" || resolved.provider === "copilot-acp") {

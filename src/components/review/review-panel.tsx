@@ -197,7 +197,7 @@ export function ReviewPanel({
       const res = await fetch("/api/reviews/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ planId, type, ...(reviewProvider && { provider: reviewProvider }), ...(reviewModel && { model: reviewModel }), ...(reviewTaskId && { scheduleItemId: reviewTaskId }) }),
+        body: JSON.stringify({ planId, type, locale: isZh ? "zh" : "en", ...(reviewProvider && { provider: reviewProvider }), ...(reviewModel && { model: reviewModel }), ...(reviewTaskId && { scheduleItemId: reviewTaskId }) }),
       });
 
       if (!res.ok) {
@@ -1041,6 +1041,7 @@ export function ReviewPanel({
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({
                           planId,
+                          locale: isZh ? "zh" : "en",
                           scheduleItemIds: [resolvedTaskInfo.id],
                         }),
                       });

@@ -10,11 +10,12 @@ import fs from "fs";
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { planId, provider, model, scheduleItemIds } = body as {
+  const { planId, provider, model, scheduleItemIds, locale } = body as {
     planId: string;
     provider?: string;
     model?: string;
     scheduleItemIds?: string[];
+    locale?: string;
   };
 
   if (!planId) {
@@ -93,7 +94,7 @@ export async function POST(req: NextRequest) {
         const session = await acpClient.createSession(resolved.model);
         if (resolved.model) await acpClient.setModel(session.sessionId, resolved.model);
 
-        const zh = /[\u4e00-\u9fff]/.test(plan.name);
+        const zh = locale ? locale === "zh" : /[\u4e00-\u9fff]/.test(plan.name);
         const taskList = tasks.map(t => `- #${t.order} ${t.title} (id: "${t.scheduleItemId}")`).join("\n");
         const acpPrompt = `You are a test engineer. Generate test cases for recently implemented code changes.
 

@@ -64,7 +64,7 @@ function saveScheduleFromJson(planId: string, jsonText: string) {
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { planId, provider: rawProvider, model } = body as { planId: string; provider?: string; model?: string };
+  const { planId, provider: rawProvider, model, locale } = body as { planId: string; provider?: string; model?: string; locale?: string };
 
   if (!planId) {
     return NextResponse.json({ error: "planId required" }, { status: 400 });
@@ -83,8 +83,8 @@ export async function POST(req: NextRequest) {
     .map((s, i) => `### Scheme ${i + 1}: ${s.title} (id: ${s.id})\n${s.content}`)
     .join("\n\n");
 
-  const hasChinese = /[\u4e00-\u9fff]/.test(schemeSummary);
-  const langNote = hasChinese
+  const isZh = locale ? locale === "zh" : /[\u4e00-\u9fff]/.test(schemeSummary);
+  const langNote = isZh
     ? "\n\nIMPORTANT: Write task title and description in Chinese (中文), matching the language of the schemes."
     : "";
 
@@ -179,8 +179,7 @@ Output the JSON array now:`;
   const result = streamText({
     model: aiModel,
     prompt: (() => {
-      const hasChinese = /[\u4e00-\u9fff]/.test(schemeSummary);
-      const langNote = hasChinese
+      const langNote2 = isZh
         ? "\n\nIMPORTANT: Write task title and description in Chinese (中文), matching the language of the schemes."
         : "";
       return `<IMPORTANT>
@@ -213,7 +212,7 @@ JSON array format — each object has:
 
 Plan: ${plan.name}
 
-${schemeSummary}${langNote}
+${schemeSummary}${langNote2}
 
 Output the JSON array now:`;
     })(),

@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
   const [body, errRes] = await parseJsonBody(req);
   if (errRes) return errRes;
 
-  const { schemeId, provider, model } = body as { schemeId: string; provider?: string; model?: string };
+  const { schemeId, provider, model, locale } = body as { schemeId: string; provider?: string; model?: string; locale?: string };
   if (!schemeId) return NextResponse.json({ error: "schemeId required" }, { status: 400 });
 
   const db = getDb();
@@ -25,11 +25,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: String(err) }, { status: 503 });
   }
 
-  const hasChinese = /[\u4e00-\u9fff]/.test(scheme.content || "");
+  const isZh = locale ? locale === "zh" : /[\u4e00-\u9fff]/.test(scheme.content || "");
 
   const result = await generateText({
     model: aiModel,
-    system: `Convert the given markdown scheme into a structured JSON object. Output ONLY the JSON.${hasChinese ? " 保持中文内容。" : ""}`,
+    system: `Convert the given markdown scheme into a structured JSON object. Output ONLY the JSON.${isZh ? " 保持中文内容。" : ""}`,
     prompt: `Convert this scheme to JSON with this structure:
 {
   "overview": "2-3 sentence summary",

@@ -231,7 +231,7 @@ export function ScheduleView({
       const res = await fetch("/api/schedules/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ planId, ...(schedProvider && { provider: schedProvider }), ...(schedModel && { model: schedModel }) }),
+        body: JSON.stringify({ planId, locale: isZh ? "zh" : "en", ...(schedProvider && { provider: schedProvider }), ...(schedModel && { model: schedModel }) }),
       });
 
       if (res.ok && res.body) {

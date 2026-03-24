@@ -57,7 +57,8 @@ function getGitUnifiedDiff(repoPath: string): string {
 function buildReviewPrompt(
   type: "scheme" | "implementation",
   planName: string,
-  items: Array<{ id: string; title: string; content: string }>
+  items: Array<{ id: string; title: string; content: string }>,
+  isZh?: boolean,
 ) {
   const itemsSummary = items
     .map((item) => `### ${item.title} (id: ${item.id})\n${item.content}`)
@@ -70,9 +71,9 @@ function buildReviewPrompt(
 
 IMPORTANT: Each finding's targetId MUST exactly match the "(id: ...)" from the section it refers to. This is how findings are linked to scheme sections.`;
 
-  // Detect language from content
-  const hasChinese = /[\u4e00-\u9fff]/.test(itemsSummary);
-  const langInstruction = hasChinese
+  // Use locale if provided, otherwise fall back to content detection
+  const isChinese = isZh ?? /[\u4e00-\u9fff]/.test(itemsSummary);
+  const langInstruction = isChinese
     ? "\n\nIMPORTANT: Write all summary and finding content in Chinese (中文), matching the language of the input."
     : "";
 
@@ -197,12 +198,13 @@ function saveReviewResult(
 export async function POST(req: NextRequest) {
   const [body, errRes] = await parseJsonBody(req);
   if (errRes) return errRes;
-  const { planId, type, provider: rawProvider, model, scheduleItemId } = body as {
+  const { planId, type, provider: rawProvider, model, scheduleItemId, locale } = body as {
     planId: string;
     type: "scheme" | "implementation";
     scheduleItemId?: string;
     provider?: string;
     model?: string;
+    locale?: string;
   };
 
   if (!planId || !type) {
@@ -340,7 +342,8 @@ export async function POST(req: NextRequest) {
     .values({ id: reviewId, planId, type, status: "in_progress" })
     .run();
 
-  const { system, prompt } = buildReviewPrompt(type, plan.name, itemsToReview);
+  const isZh = locale ? locale === "zh" : undefined;
+  const { system, prompt } = buildReviewPrompt(type, plan.name, itemsToReview, isZh);
   const resolved = resolveStepConfig("review", rawProvider, model);
 
   const project = type === "implementation"
@@ -355,7 +358,7 @@ export async function POST(req: NextRequest) {
 
   // ACP engine: provide the diff content directly in the prompt
   if (resolved.provider === "acp" || resolved.provider === "codex-acp" || resolved.provider === "copilot-acp") {
-    const zh = /[\u4e00-\u9fff]/.test(plan.name || "");
+    const zh = locale ? locale === "zh" : /[\u4e00-\u9fff]/.test(plan.name || "");
 
     // Build full content with diffs already included
     const itemsContent = itemsToReview
@@ -433,7 +436,7 @@ ${zh ? "用中文输出所有内容。" : ""}`;
     return NextResponse.json({ error: String(err) }, { status: 503 });
   }
 
-  const zh = /[\u4e00-\u9fff]/.test(plan.name || "");
+  const zh = locale ? locale === "zh" : /[\u4e00-\u9fff]/.test(plan.name || "");
   const result = streamText({ model: aiModel, system, prompt });
 
   const responseStream = new ReadableStream({

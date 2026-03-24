@@ -133,12 +133,31 @@ export async function POST(
   const hasChinese = /[\u4e00-\u9fff]/.test(
     (testCase.description || "") + (testCase.name || "") + (plan.description || plan.name)
   );
-  const langHint = hasChinese ? "\n\n请用中文回复。" : "";
 
-  const prompt = `Run the following test and report the results.
+  const prompt = hasChinese
+    ? `你是一个测试工程师。请用中文回复，不要使用英文或日文。
+
+运行以下测试并报告结果。
+
+测试文件: ${testCase.filePath || "自动检测"}
+测试名称: ${testCase.name}
+${testCase.description ? `测试描述: ${testCase.description}` : ""}
+
+测试代码:
+\`\`\`
+${testCase.generatedCode || ""}
+\`\`\`
+
+如果测试文件不存在，先创建它，然后运行。
+
+重要：运行完测试后，你必须在回复的最后一行输出以下标记之一：
+- <!--TEST:PASSED--> 如果测试通过
+- <!--TEST:FAILED--> 如果测试失败或无法运行`
+    : `Run the following test and report the results.
 
 Test file: ${testCase.filePath || "auto-detect"}
 Test name: ${testCase.name}
+${testCase.description ? `Description: ${testCase.description}` : ""}
 
 Test code:
 \`\`\`
@@ -149,7 +168,7 @@ If the test file doesn't exist, create it first, then run it.
 
 IMPORTANT: After running the test, you MUST end your response with exactly one of these markers on its own line:
 - <!--TEST:PASSED--> if the test passed
-- <!--TEST:FAILED--> if the test failed or could not run${langHint}`;
+- <!--TEST:FAILED--> if the test failed or could not run`;
 
   const startTime = Date.now();
   const repoPath = fs.existsSync(project.targetRepoPath) ? project.targetRepoPath : process.cwd();

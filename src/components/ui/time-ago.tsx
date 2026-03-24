@@ -35,5 +35,5 @@ export function TimeAgo({ date, locale = "en" }: TimeAgoProps) {
     return () => clearInterval(interval);
   }, [date, isZh]);
 
-  return <span className="text-xs text-gray-400">{text}</span>;
+  return <span className="text-xs text-[var(--on-surface-variant)]">{text}</span>;
 }

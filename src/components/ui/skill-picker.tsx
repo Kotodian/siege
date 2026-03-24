@@ -45,7 +45,7 @@ export function SkillPicker({ skills, selected, onToggle }: SkillPickerProps) {
     <div>
       <label
         className="block text-sm font-medium mb-1"
-        style={{ color: "var(--foreground)" }}
+        style={{ color: "var(--on-surface)" }}
       >
         {t("generate.skills")} ({selected.length})
       </label>
@@ -54,21 +54,21 @@ export function SkillPicker({ skills, selected, onToggle }: SkillPickerProps) {
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         placeholder={isZh ? "搜索技能..." : "Search skills..."}
-        className="w-full px-3 py-1.5 text-sm border rounded-md mb-1 focus:outline-none focus:ring-1 focus:ring-blue-500"
+        className="w-full px-3 py-1.5 text-sm border rounded-md mb-1 focus:outline-none focus:ring-1 focus:ring-[var(--focus-ring)]"
         style={{
-          background: "var(--card)",
-          color: "var(--foreground)",
-          borderColor: "var(--card-border)",
+          background: "var(--surface-container-high)",
+          color: "var(--on-surface)",
+          borderColor: "var(--outline-variant)",
         }}
       />
       <div
         className="max-h-48 overflow-y-auto border rounded-md divide-y"
-        style={{ borderColor: "var(--card-border)" }}
+        style={{ borderColor: "var(--outline-variant)" }}
       >
         {Object.keys(bySource).length === 0 ? (
           <p
             className="text-xs text-center py-3"
-            style={{ color: "var(--muted)" }}
+            style={{ color: "var(--outline)" }}
           >
             {isZh ? "无匹配技能" : "No matching skills"}
           </p>
@@ -79,7 +79,7 @@ export function SkillPicker({ skills, selected, onToggle }: SkillPickerProps) {
                 className="px-3 py-1.5 text-xs font-medium"
                 style={{
                   background: "var(--background)",
-                  color: "var(--muted)",
+                  color: "var(--outline)",
                 }}
               >
                 {source}
@@ -102,7 +102,7 @@ export function SkillPicker({ skills, selected, onToggle }: SkillPickerProps) {
                     {skill.description && (
                       <span
                         className="text-xs truncate block"
-                        style={{ color: "var(--muted)" }}
+                        style={{ color: "var(--outline)" }}
                       >
                         {skill.description}
                       </span>

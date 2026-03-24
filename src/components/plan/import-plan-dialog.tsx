@@ -168,14 +168,14 @@ function QuickSetupForm({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-lg bg-blue-50 border border-blue-100 px-4 py-3">
-        <p className="text-sm font-medium text-blue-800 mb-1">
+      <div className="rounded-lg bg-[rgba(192,193,255,0.12)] border border-blue-100 px-4 py-3">
+        <p className="text-sm font-medium text-[var(--primary)] mb-1">
           {isZh
             ? `配置 ${sourceType.toUpperCase()} 连接`
             : `Set up ${sourceType.toUpperCase()} connection`}
         </p>
         {hint && (
-          <p className="text-xs text-blue-600">
+          <p className="text-xs text-[var(--primary)]">
             {isZh ? hint.zh : hint.en}
           </p>
         )}
@@ -195,7 +195,7 @@ function QuickSetupForm({
       ))}
 
       {error && (
-        <p className="text-xs text-red-600 bg-red-50 rounded px-3 py-2">
+        <p className="text-xs text-[var(--error)] bg-[var(--error-container)] rounded px-3 py-2">
           {error}
         </p>
       )}
@@ -375,7 +375,7 @@ function SourceTab({
 
   if (!activeConfig) {
     return (
-      <p className="text-sm text-center py-6" style={{ color: "var(--muted)" }}>
+      <p className="text-sm text-center py-6" style={{ color: "var(--outline)" }}>
         {t("common.loading")}
       </p>
     );
@@ -405,9 +405,9 @@ function SourceTab({
         </Button>
       </div>
 
-      <div className="max-h-64 overflow-y-auto border rounded-lg divide-y" style={{ borderColor: "var(--card-border)", "--tw-divide-color": "var(--card-border)" } as React.CSSProperties}>
+      <div className="max-h-64 overflow-y-auto border rounded-lg divide-y" style={{ borderColor: "var(--outline-variant)", "--tw-divide-color": "var(--outline-variant)" } as React.CSSProperties}>
         {items.length === 0 ? (
-          <p className="text-sm text-center py-6" style={{ color: "var(--muted)" }}>
+          <p className="text-sm text-center py-6" style={{ color: "var(--outline)" }}>
             {searching
               ? t("common.loading")
               : t("common.noData")}
@@ -429,7 +429,7 @@ function SourceTab({
                   {item.title}
                 </div>
                 {item.description && (
-                  <div className="text-xs truncate" style={{ color: "var(--muted)" }}>
+                  <div className="text-xs truncate" style={{ color: "var(--outline)" }}>
                     {item.description}
                   </div>
                 )}
@@ -440,7 +440,7 @@ function SourceTab({
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={(e) => e.stopPropagation()}
-                  className="text-xs text-blue-500 hover:underline shrink-0"
+                  className="text-xs text-[var(--primary)] hover:underline shrink-0"
                 >
                   {isZh ? "链接" : "Link"}
                 </a>
@@ -451,7 +451,7 @@ function SourceTab({
       </div>
 
       <div className="flex items-center justify-between">
-        <span className="text-xs" style={{ color: "var(--muted)" }}>
+        <span className="text-xs" style={{ color: "var(--outline)" }}>
           {isZh
             ? `已选 ${selected.size} 项`
             : `${selected.size} selected`}
@@ -524,15 +524,15 @@ export function ImportPlanDialog({
     >
       <div className="flex min-h-[400px] -mx-6 -mb-6">
         {/* Left sidebar */}
-        <div className="w-40 shrink-0 border-r rounded-bl-lg overflow-y-auto" style={{ background: "var(--background)", borderColor: "var(--card-border)" }}>
+        <div className="w-40 shrink-0 border-r rounded-bl-lg overflow-y-auto" style={{ background: "var(--background)", borderColor: "var(--outline-variant)" }}>
           {allSources.map((src) => (
             <button
               key={src.id}
               onClick={() => setActiveSource(src.id)}
               className={`w-full text-left px-3 py-2.5 text-sm flex items-center gap-2 transition-colors font-${activeSource === src.id ? "medium" : "normal"} hover:opacity-80`}
               style={activeSource === src.id
-                ? { background: "var(--card-border)", color: "var(--foreground)", borderRight: "2px solid var(--foreground)" }
-                : { color: "var(--muted)" }
+                ? { background: "var(--outline-variant)", color: "var(--on-surface)", borderRight: "2px solid var(--on-surface)" }
+                : { color: "var(--outline)" }
               }
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}

@@ -65,7 +65,7 @@ export function ProjectList({ locale }: ProjectListProps) {
   }, [projects]);
 
   if (!loaded) {
-    return <p className="text-center py-12 text-gray-400">{t("common.loading")}</p>;
+    return <p className="text-center py-12 text-[var(--on-surface-variant)]">{t("common.loading")}</p>;
   }
 
   // Show onboarding guide on first visit (no projects)
@@ -98,7 +98,7 @@ export function ProjectList({ locale }: ProjectListProps) {
 
       {recentProjects.length > 0 && (
         <div className="mb-6">
-          <h3 className="text-sm font-medium text-gray-500 mb-3">
+          <h3 className="text-sm font-medium text-[var(--on-surface-variant)] mb-3">
             {locale === "zh" ? "最近打开" : "Recently Opened"}
           </h3>
           <div className={`grid gap-3 ${
@@ -121,7 +121,7 @@ export function ProjectList({ locale }: ProjectListProps) {
       {otherProjects.length > 0 && (
         <>
           {recentProjects.length > 0 && (
-            <h3 className="text-sm font-medium text-gray-500 mb-3">
+            <h3 className="text-sm font-medium text-[var(--on-surface-variant)] mb-3">
               {locale === "zh" ? "全部项目" : "All Projects"}
             </h3>
           )}

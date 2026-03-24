@@ -39,13 +39,13 @@ export function VersionDiffPanel({
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between pb-3 mb-3" style={{ borderBottom: "1px solid var(--card-border)" }}>
-        <div className="text-xs" style={{ color: "var(--muted)" }}>
-          <span className="font-mono font-medium" style={{ color: "var(--foreground)" }}>
+      <div className="flex items-center justify-between pb-3 mb-3" style={{ borderBottom: "1px solid var(--outline-variant)" }}>
+        <div className="text-xs" style={{ color: "var(--outline)" }}>
+          <span className="font-mono font-medium" style={{ color: "var(--on-surface)" }}>
             {oldLabel}
           </span>
           {" → "}
-          <span className="font-mono font-medium" style={{ color: "var(--foreground)" }}>
+          <span className="font-mono font-medium" style={{ color: "var(--on-surface)" }}>
             {newLabel}
           </span>
         </div>
@@ -63,12 +63,12 @@ export function VersionDiffPanel({
 
       {/* Diff content */}
       {isIdentical ? (
-        <div className="flex-1 flex items-center justify-center text-sm" style={{ color: "var(--muted)" }}>
+        <div className="flex-1 flex items-center justify-center text-sm" style={{ color: "var(--outline)" }}>
           {t("noDiff")}
         </div>
       ) : (
         <div className="flex-1 overflow-y-auto border rounded font-mono text-xs leading-relaxed"
-          style={{ background: "var(--background)", borderColor: "var(--card-border)" }}>
+          style={{ background: "var(--background)", borderColor: "var(--outline-variant)" }}>
           {diffLines.map((line, i) => (
             <div
               key={i}
@@ -82,11 +82,11 @@ export function VersionDiffPanel({
               }}
             >
               <span className="w-10 shrink-0 text-right pr-2 py-px select-none"
-                style={{ color: "var(--muted)", borderRight: "1px solid var(--card-border)" }}>
+                style={{ color: "var(--outline)", borderRight: "1px solid var(--outline-variant)" }}>
                 {line.oldLineNumber ?? ""}
               </span>
               <span className="w-10 shrink-0 text-right pr-2 py-px select-none"
-                style={{ color: "var(--muted)", borderRight: "1px solid var(--card-border)" }}>
+                style={{ color: "var(--outline)", borderRight: "1px solid var(--outline-variant)" }}>
                 {line.newLineNumber ?? ""}
               </span>
               <span
@@ -94,7 +94,7 @@ export function VersionDiffPanel({
                 style={{
                   color: line.type === "add" ? "#4ade80"
                     : line.type === "remove" ? "#f87171"
-                    : "var(--card-border)",
+                    : "var(--outline-variant)",
                 }}
               >
                 {line.type === "add" ? "+" : line.type === "remove" ? "-" : " "}
@@ -104,7 +104,7 @@ export function VersionDiffPanel({
                 style={{
                   color: line.type === "add" ? "#4ade80"
                     : line.type === "remove" ? "#f87171"
-                    : "var(--foreground)",
+                    : "var(--on-surface)",
                   textDecoration: line.type === "remove" ? "line-through" : undefined,
                 }}
               >

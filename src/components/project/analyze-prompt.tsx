@@ -127,7 +127,7 @@ export function AnalyzePrompt({ repoPath, onResult, isZh }: AnalyzePromptProps) 
 
   if (state === "checking") {
     return (
-      <div className="rounded-md bg-gray-50 border px-4 py-3 text-sm text-gray-500 flex items-center gap-2">
+      <div className="rounded-md bg-[var(--surface-container)] border px-4 py-3 text-sm text-[var(--on-surface-variant)] flex items-center gap-2">
         <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
@@ -139,9 +139,9 @@ export function AnalyzePrompt({ repoPath, onResult, isZh }: AnalyzePromptProps) 
 
   if (state === "done") {
     return (
-      <div className="rounded-md bg-gray-50 border px-4 py-2 space-y-1">
+      <div className="rounded-md bg-[var(--surface-container)] border px-4 py-2 space-y-1">
         {source && (
-          <p className="text-xs text-green-700">
+          <p className="text-xs text-[var(--success)]">
             {isZh ? `已从 ${source} 读取项目描述` : `Loaded from ${source}`}
           </p>
         )}
@@ -159,8 +159,8 @@ export function AnalyzePrompt({ repoPath, onResult, isZh }: AnalyzePromptProps) 
 
   // state === "asking"
   return (
-    <div className="rounded-md bg-blue-50 border border-blue-200 px-4 py-3 text-sm">
-      <p className="text-blue-700">
+    <div className="rounded-md bg-[rgba(192,193,255,0.12)] border border-[var(--primary)] px-4 py-3 text-sm">
+      <p className="text-[var(--primary)]">
         {isZh
           ? "检测到项目包含代码。AI 将分析代码结构并生成 CLAUDE.md 和 AGENTS.md。"
           : "Project contains code. AI will analyze and generate CLAUDE.md + AGENTS.md."}

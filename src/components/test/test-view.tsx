@@ -309,7 +309,7 @@ export function TestView({ planId, planStatus, onPlanStatusChange }: TestViewPro
         <div className="flex items-center gap-3">
           <h3 className="text-lg font-semibold">{t("plan.tabs.tests")}</h3>
           {suite && totalCount > 0 && (
-            <span className="text-sm" style={{ color: "var(--muted)" }}>
+            <span className="text-sm" style={{ color: "var(--outline)" }}>
               {passedCount}/{totalCount} {isZh ? "通过" : "passed"}
             </span>
           )}
@@ -328,12 +328,12 @@ export function TestView({ planId, planStatus, onPlanStatusChange }: TestViewPro
 
       {/* Task selector for generation */}
       {tasks.length > 0 && (
-        <div className="rounded-lg border p-4" style={{ background: "var(--card)", borderColor: "var(--card-border)" }}>
+        <div className="rounded-lg border p-4" style={{ background: "var(--surface-container-high)", borderColor: "var(--outline-variant)" }}>
           <div className="flex items-center justify-between mb-3">
-            <h4 className="text-sm font-medium" style={{ color: "var(--foreground)" }}>
+            <h4 className="text-sm font-medium" style={{ color: "var(--on-surface)" }}>
               {isZh ? "选择要测试的已完成任务" : "Select completed tasks to test"}
             </h4>
-            <button onClick={selectAll} className="text-xs" style={{ color: "var(--muted)" }}>
+            <button onClick={selectAll} className="text-xs" style={{ color: "var(--outline)" }}>
               {selectedTasks.size === tasks.length ? (isZh ? "取消全选" : "Deselect All") : (isZh ? "全选" : "Select All")}
             </button>
           </div>
@@ -353,10 +353,10 @@ export function TestView({ planId, planStatus, onPlanStatusChange }: TestViewPro
                     onChange={() => toggleTask(task.id)}
                     className="rounded"
                   />
-                  <span className="text-sm flex-1" style={{ color: "var(--foreground)" }}>
+                  <span className="text-sm flex-1" style={{ color: "var(--on-surface)" }}>
                     #{task.order} {task.title}
                   </span>
-                  <span className="text-[10px]" style={{ color: "var(--muted)" }}>
+                  <span className="text-[10px]" style={{ color: "var(--outline)" }}>
                     {task.fileCount} {isZh ? "文件" : "files"}
                   </span>
                   {existingCases.length > 0 && (
@@ -399,7 +399,7 @@ export function TestView({ planId, planStatus, onPlanStatusChange }: TestViewPro
       )}
 
       {tasks.length === 0 && (
-        <p className="text-sm text-center py-4" style={{ color: "var(--muted)" }}>
+        <p className="text-sm text-center py-4" style={{ color: "var(--outline)" }}>
           {isZh ? "暂无已完成的任务。请先执行排期任务。" : "No completed tasks yet. Execute schedule tasks first."}
         </p>
       )}
@@ -410,36 +410,36 @@ export function TestView({ planId, planStatus, onPlanStatusChange }: TestViewPro
           {sortedGroups.map((group) => {
             const groupPassed = group.cases.filter(c => c.status === "passed").length;
             return (
-              <div key={group.order} className="rounded-lg border" style={{ borderColor: "var(--card-border)" }}>
+              <div key={group.order} className="rounded-lg border" style={{ borderColor: "var(--outline-variant)" }}>
                 {hasGroups && (
-                  <div className="px-4 py-2 flex items-center justify-between" style={{ background: "var(--background)", borderBottom: "1px solid var(--card-border)" }}>
-                    <span className="text-xs font-medium" style={{ color: "var(--muted)" }}>
+                  <div className="px-4 py-2 flex items-center justify-between" style={{ background: "var(--background)", borderBottom: "1px solid var(--outline-variant)" }}>
+                    <span className="text-xs font-medium" style={{ color: "var(--outline)" }}>
                       #{group.order} {group.title}
                     </span>
-                    <span className="text-[10px]" style={{ color: groupPassed === group.cases.length ? "#86efac" : "var(--muted)" }}>
+                    <span className="text-[10px]" style={{ color: groupPassed === group.cases.length ? "#86efac" : "var(--outline)" }}>
                       {groupPassed}/{group.cases.length}
                     </span>
                   </div>
                 )}
                 {group.cases.map((tc) => (
-                  <div key={tc.id} style={{ borderBottom: "1px solid var(--card-border)" }}>
+                  <div key={tc.id} style={{ borderBottom: "1px solid var(--outline-variant)" }}>
                     <div
                       className="px-4 py-3 flex items-center justify-between cursor-pointer hover:opacity-80"
-                      style={{ background: "var(--card)" }}
+                      style={{ background: "var(--surface-container-high)" }}
                       onClick={() => setExpandedCase(expandedCase === tc.id ? null : tc.id)}
                     >
                       <div className="flex items-center gap-2 min-w-0">
                         {tc.status === "passed"
-                          ? <CheckIcon size={16} className="text-green-500 shrink-0" />
+                          ? <CheckIcon size={16} className="text-[var(--success)] shrink-0" />
                           : tc.status === "failed"
-                            ? <XIcon size={16} className="text-red-500 shrink-0" />
-                            : <CircleIcon size={16} className="text-gray-500 shrink-0" />}
+                            ? <XIcon size={16} className="text-[var(--error)] shrink-0" />
+                            : <CircleIcon size={16} className="text-[var(--on-surface-variant)] shrink-0" />}
                         <div className="min-w-0">
-                          <span className="text-sm truncate block" style={{ color: "var(--foreground)" }}>
+                          <span className="text-sm truncate block" style={{ color: "var(--on-surface)" }}>
                             {tc.description || tc.name}
                           </span>
                           {tc.description && (
-                            <span className="text-[10px] font-mono truncate block" style={{ color: "var(--muted)" }}>
+                            <span className="text-[10px] font-mono truncate block" style={{ color: "var(--outline)" }}>
                               {tc.name}
                             </span>
                           )}
@@ -448,7 +448,7 @@ export function TestView({ planId, planStatus, onPlanStatusChange }: TestViewPro
                       </div>
                       <div className="flex items-center gap-2">
                         {tc.results.length > 0 && (
-                          <span className="text-xs" style={{ color: "var(--muted)" }}>
+                          <span className="text-xs" style={{ color: "var(--outline)" }}>
                             {tc.results[tc.results.length - 1].durationMs}ms
                           </span>
                         )}
@@ -464,16 +464,16 @@ export function TestView({ planId, planStatus, onPlanStatusChange }: TestViewPro
                     </div>
 
                     {expandedCase === tc.id && (
-                      <div className="px-4 pb-4 space-y-3" style={{ borderTop: "1px solid var(--card-border)", background: "var(--card)" }}>
+                      <div className="px-4 pb-4 space-y-3" style={{ borderTop: "1px solid var(--outline-variant)", background: "var(--surface-container-high)" }}>
                         {editingCase === tc.id ? (
                           <div className="pt-3 space-y-3">
                             <Input label={isZh ? "名称" : "Name"} value={editForm.name} onChange={(e) => setEditForm(f => ({ ...f, name: e.target.value }))} />
                             <Input label={isZh ? "描述" : "Description"} value={editForm.description} onChange={(e) => setEditForm(f => ({ ...f, description: e.target.value }))} />
                             <Input label={isZh ? "文件路径" : "File Path"} value={editForm.filePath} onChange={(e) => setEditForm(f => ({ ...f, filePath: e.target.value }))} />
                             <div>
-                              <label className="block text-sm font-medium mb-1" style={{ color: "var(--foreground)" }}>{isZh ? "测试代码" : "Test Code"}</label>
+                              <label className="block text-sm font-medium mb-1" style={{ color: "var(--on-surface)" }}>{isZh ? "测试代码" : "Test Code"}</label>
                               <textarea value={editForm.code} onChange={(e) => setEditForm(f => ({ ...f, code: e.target.value }))} rows={8}
-                                className="w-full rounded-md border px-3 py-2 text-sm font-mono" style={{ background: "var(--card)", color: "var(--foreground)", borderColor: "var(--card-border)" }} />
+                                className="w-full rounded-md border px-3 py-2 text-sm font-mono" style={{ background: "var(--surface-container-high)", color: "var(--on-surface)", borderColor: "var(--outline-variant)" }} />
                             </div>
                             <div className="flex gap-2">
                               <Button size="sm" onClick={saveEditCase}>{t("common.save")}</Button>
@@ -484,10 +484,10 @@ export function TestView({ planId, planStatus, onPlanStatusChange }: TestViewPro
                         <>
                         {/* Action buttons */}
                         <div className="pt-3 flex gap-2">
-                          <button onClick={() => startEditCase(tc)} className="text-xs px-2 py-1 rounded hover:opacity-80" style={{ background: "var(--card-border)", color: "var(--foreground)" }}>
+                          <button onClick={() => startEditCase(tc)} className="text-xs px-2 py-1 rounded hover:opacity-80" style={{ background: "var(--outline-variant)", color: "var(--on-surface)" }}>
                             {t("common.edit")}
                           </button>
-                          <button onClick={() => { confirm(isZh ? "删除测试" : "Delete Test", isZh ? "确定删除？" : "Delete this test?").then(ok => { if (ok) deleteCase(tc.id); }); }} className="text-xs px-2 py-1 rounded hover:opacity-80 text-red-400" style={{ background: "rgba(239,68,68,0.1)" }}>
+                          <button onClick={() => { confirm(isZh ? "删除测试" : "Delete Test", isZh ? "确定删除？" : "Delete this test?").then(ok => { if (ok) deleteCase(tc.id); }); }} className="text-xs px-2 py-1 rounded hover:opacity-80 text-[var(--error)]" style={{ background: "rgba(239,68,68,0.1)" }}>
                             {t("common.delete")}
                           </button>
                         </div>
@@ -498,7 +498,7 @@ export function TestView({ planId, planStatus, onPlanStatusChange }: TestViewPro
                         )}
                         {tc.generatedCode && (
                           <div className="pt-2">
-                            <h5 className="text-sm font-medium mb-1" style={{ color: "var(--foreground)" }}>
+                            <h5 className="text-sm font-medium mb-1" style={{ color: "var(--on-surface)" }}>
                               {isZh ? "测试代码" : "Test Code"}
                             </h5>
                             <MarkdownRenderer content={`\`\`\`\n${tc.generatedCode}\n\`\`\``} />
@@ -506,20 +506,20 @@ export function TestView({ planId, planStatus, onPlanStatusChange }: TestViewPro
                         )}
                         {tc.results.length > 0 && (
                           <div className="pt-2">
-                            <h5 className="text-sm font-medium mb-1" style={{ color: "var(--foreground)" }}>
+                            <h5 className="text-sm font-medium mb-1" style={{ color: "var(--on-surface)" }}>
                               {isZh ? `运行记录 (${tc.results.length})` : `Results (${tc.results.length})`}
                             </h5>
                             {tc.results.slice().reverse().map((r) => (
-                              <div key={r.id} className="text-xs p-3 rounded mb-2" style={{ background: "var(--background)", color: "var(--foreground)" }}>
+                              <div key={r.id} className="text-xs p-3 rounded mb-2" style={{ background: "var(--background)", color: "var(--on-surface)" }}>
                                 <div className="flex items-center gap-2 mb-1">
                                   <StatusBadge status={r.status} label={r.status} />
-                                  <span style={{ color: "var(--muted)" }}>{r.durationMs}ms</span>
-                                  <span style={{ color: "var(--muted)" }} suppressHydrationWarning>
+                                  <span style={{ color: "var(--outline)" }}>{r.durationMs}ms</span>
+                                  <span style={{ color: "var(--outline)" }} suppressHydrationWarning>
                                     {new Date(r.runAt).toLocaleString()}
                                   </span>
                                 </div>
                                 {r.output && <pre className="whitespace-pre-wrap mt-1">{r.output}</pre>}
-                                {r.errorMessage && <pre className="whitespace-pre-wrap text-red-400 mt-1">{r.errorMessage}</pre>}
+                                {r.errorMessage && <pre className="whitespace-pre-wrap text-[var(--error)] mt-1">{r.errorMessage}</pre>}
                               </div>
                             ))}
                           </div>
@@ -542,22 +542,22 @@ export function TestView({ planId, planStatus, onPlanStatusChange }: TestViewPro
           <Input label={isZh ? "测试名称" : "Test Name"} value={addForm.name} onChange={(e) => setAddForm(f => ({ ...f, name: e.target.value }))} placeholder="test_something" />
           <Input label={isZh ? "描述" : "Description"} value={addForm.description} onChange={(e) => setAddForm(f => ({ ...f, description: e.target.value }))} placeholder={isZh ? "验证某个功能" : "Validates something"} />
           <div>
-            <label className="block text-sm font-medium mb-1" style={{ color: "var(--foreground)" }}>{isZh ? "类型" : "Type"}</label>
-            <select value={addForm.type} onChange={(e) => setAddForm(f => ({ ...f, type: e.target.value }))} className="w-full rounded-md border px-3 py-2 text-sm" style={{ background: "var(--card)", color: "var(--foreground)", borderColor: "var(--card-border)" }}>
+            <label className="block text-sm font-medium mb-1" style={{ color: "var(--on-surface)" }}>{isZh ? "类型" : "Type"}</label>
+            <select value={addForm.type} onChange={(e) => setAddForm(f => ({ ...f, type: e.target.value }))} className="w-full rounded-md border px-3 py-2 text-sm" style={{ background: "var(--surface-container-high)", color: "var(--on-surface)", borderColor: "var(--outline-variant)" }}>
               <option value="unit">Unit</option>
               <option value="integration">Integration</option>
               <option value="e2e">E2E</option>
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1" style={{ color: "var(--foreground)" }}>{isZh ? "测试代码" : "Test Code"}</label>
-            <textarea value={addForm.code} onChange={(e) => setAddForm(f => ({ ...f, code: e.target.value }))} rows={6} className="w-full rounded-md border px-3 py-2 text-sm font-mono focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" style={{ background: "var(--card)", color: "var(--foreground)", borderColor: "var(--card-border)" }} placeholder={isZh ? "测试代码..." : "Test code..."} />
+            <label className="block text-sm font-medium mb-1" style={{ color: "var(--on-surface)" }}>{isZh ? "测试代码" : "Test Code"}</label>
+            <textarea value={addForm.code} onChange={(e) => setAddForm(f => ({ ...f, code: e.target.value }))} rows={6} className="w-full rounded-md border px-3 py-2 text-sm font-mono focus:border-[var(--primary)] focus:outline-none focus:ring-1 focus:ring-[var(--focus-ring)]" style={{ background: "var(--surface-container-high)", color: "var(--on-surface)", borderColor: "var(--outline-variant)" }} placeholder={isZh ? "测试代码..." : "Test code..."} />
           </div>
           <Input label={isZh ? "文件路径" : "File Path"} value={addForm.filePath} onChange={(e) => setAddForm(f => ({ ...f, filePath: e.target.value }))} placeholder="tests/test_something.rs" />
           {tasks.length > 0 && (
             <div>
-              <label className="block text-sm font-medium mb-1" style={{ color: "var(--foreground)" }}>{isZh ? "关联任务" : "Linked Task"}</label>
-              <select value={addForm.taskId} onChange={(e) => setAddForm(f => ({ ...f, taskId: e.target.value }))} className="w-full rounded-md border px-3 py-2 text-sm" style={{ background: "var(--card)", color: "var(--foreground)", borderColor: "var(--card-border)" }}>
+              <label className="block text-sm font-medium mb-1" style={{ color: "var(--on-surface)" }}>{isZh ? "关联任务" : "Linked Task"}</label>
+              <select value={addForm.taskId} onChange={(e) => setAddForm(f => ({ ...f, taskId: e.target.value }))} className="w-full rounded-md border px-3 py-2 text-sm" style={{ background: "var(--surface-container-high)", color: "var(--on-surface)", borderColor: "var(--outline-variant)" }}>
                 <option value="">{isZh ? "无" : "None"}</option>
                 {tasks.map(t => <option key={t.id} value={t.id}>#{t.order} {t.title}</option>)}
               </select>
@@ -586,7 +586,7 @@ export function TestView({ planId, planStatus, onPlanStatusChange }: TestViewPro
                 </div>
               ))}
             </div>
-            <p className="text-xs" style={{ color: "var(--muted)" }}>
+            <p className="text-xs" style={{ color: "var(--outline)" }}>
               {isZh
                 ? `${failedPrompt.cases.length} 个测试未通过，你可以：`
                 : `${failedPrompt.cases.length} test(s) failed. You can:`}

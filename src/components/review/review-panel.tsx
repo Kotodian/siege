@@ -533,19 +533,19 @@ export function ReviewPanel({
 
       {/* Progress indicator */}
       {generating && (
-        <div className="rounded-lg border p-4" style={{ background: "var(--card)", borderColor: "var(--card-border)" }}>
+        <div className="rounded-lg border p-4" style={{ background: "var(--surface-container-high)", borderColor: "var(--outline-variant)" }}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <svg className="animate-spin h-4 w-4" style={{ color: "var(--foreground)" }} viewBox="0 0 24 24">
+              <svg className="animate-spin h-4 w-4" style={{ color: "var(--on-surface)" }} viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
               </svg>
-              <span className="text-sm font-medium" style={{ color: "var(--foreground)" }}>
+              <span className="text-sm font-medium" style={{ color: "var(--on-surface)" }}>
                 {isZh ? "AI 正在审查中..." : "AI reviewing..."}
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-xs font-mono" style={{ color: "var(--muted)" }}>{elapsed}s</span>
+              <span className="text-xs font-mono" style={{ color: "var(--outline)" }}>{elapsed}s</span>
               <button
                 onClick={async () => {
                   // Cancel: reset in_progress reviews for this plan
@@ -562,7 +562,7 @@ export function ReviewPanel({
                   await fetchReviews();
                 }}
                 className="text-xs px-2 py-1 rounded hover:opacity-80"
-                style={{ background: "rgba(239,68,68,0.15)", color: "#ef4444" }}
+                style={{ background: "var(--error-container)", color: "var(--error)" }}
               >
                 {isZh ? "取消" : "Cancel"}
               </button>
@@ -573,29 +573,29 @@ export function ReviewPanel({
               {streamContent.split("\n").filter(Boolean).map((line, i) => {
                 // Tool call lines
                 if (line.startsWith("> **")) {
-                  return <div key={i} className="flex items-center gap-1" style={{ color: "var(--muted)" }}>
+                  return <div key={i} className="flex items-center gap-1" style={{ color: "var(--outline)" }}>
                     <span className="text-[10px]">▸</span>
                     <span>{line.replace(/^> \*\*/, "").replace(/\*\*.*/, "")}: {line.replace(/.*\*\*:?\s*/, "").slice(0, 80)}</span>
                   </div>;
                 }
                 // Thinking lines
                 if (line.startsWith("[thinking]")) {
-                  return <div key={i} className="italic" style={{ color: "var(--muted)" }}>{line.replace("[thinking] ", "").slice(0, 80)}...</div>;
+                  return <div key={i} className="italic" style={{ color: "var(--outline)" }}>{line.replace("[thinking] ", "").slice(0, 80)}...</div>;
                 }
                 // Status lines
                 if (line.startsWith("AI ") || line.startsWith("Session:")) {
-                  return <div key={i} style={{ color: "var(--muted)" }}>{line}</div>;
+                  return <div key={i} style={{ color: "var(--outline)" }}>{line}</div>;
                 }
                 // JSON lines — hide
                 if (line.trim().startsWith("{") || line.trim().startsWith('"') || line.trim().startsWith("[")) {
                   return null;
                 }
                 // Normal text
-                return <div key={i} style={{ color: "var(--foreground)" }}>{line.slice(0, 120)}</div>;
+                return <div key={i} style={{ color: "var(--on-surface)" }}>{line.slice(0, 120)}</div>;
               })}
             </div>
           ) : (
-            <p className="text-xs mt-2" style={{ color: "var(--muted)" }}>
+            <p className="text-xs mt-2" style={{ color: "var(--outline)" }}>
               {isZh
                 ? "等待 AI 响应..."
                 : "Waiting for AI response..."}
@@ -612,12 +612,12 @@ export function ReviewPanel({
               status={latestReview.status}
               label={t(`review.status.${latestReview.status}`)}
             />
-            <span className="text-xs" style={{ color: "var(--muted)" }} suppressHydrationWarning>
+            <span className="text-xs" style={{ color: "var(--outline)" }} suppressHydrationWarning>
               {new Date(latestReview.createdAt).toLocaleString()}
             </span>
           </div>
           {latestReview.content && (
-            <div className="rounded-lg border p-4" style={{ background: "var(--card)", borderColor: "var(--card-border)", color: "var(--foreground)" }}>
+            <div className="rounded-lg border p-4" style={{ background: "var(--surface-container-high)", borderColor: "var(--outline-variant)", color: "var(--on-surface)" }}>
               <MarkdownRenderer content={latestReview.content} />
             </div>
           )}
@@ -760,7 +760,7 @@ export function ReviewPanel({
           </div>
 
           {viewMode === "diff" || !latestReview ? (
-            <div className="flex border rounded-lg overflow-hidden" style={{ height: "600px", borderColor: "var(--card-border)" }}>
+            <div className="flex border rounded-lg overflow-hidden" style={{ height: "600px", borderColor: "var(--outline-variant)" }}>
               <FileSidebar
                 files={filteredSnapshots.map((snap) => {
                   const stats = computeDiffStats(snap.contentBefore, snap.contentAfter);
@@ -798,7 +798,7 @@ export function ReviewPanel({
                   );
                 })()
               ) : (
-                <div className="flex-1 flex items-center justify-center text-sm" style={{ color: "var(--muted)" }}>
+                <div className="flex-1 flex items-center justify-center text-sm" style={{ color: "var(--outline)" }}>
                   {isZh ? "请选择一个文件查看差异" : "Select a file to view diff"}
                 </div>
               )}
@@ -809,7 +809,7 @@ export function ReviewPanel({
               {latestReview.items.length > 0 ? (
                 <>
                   <div className="flex items-center justify-between">
-                    <h5 className="text-sm font-medium" style={{ color: "var(--foreground)" }}>
+                    <h5 className="text-sm font-medium" style={{ color: "var(--on-surface)" }}>
                       {t("review.findings")} ({latestReview.items.length})
                     </h5>
                     {latestReview.items.some(i => !i.resolved && i.targetId) && (
@@ -858,7 +858,7 @@ export function ReviewPanel({
                   })()}
                 </>
               ) : (
-                <p className="text-sm text-center py-4" style={{ color: "var(--muted)" }}>
+                <p className="text-sm text-center py-4" style={{ color: "var(--outline)" }}>
                   {t("review.noReview")}
                 </p>
               )}
@@ -884,7 +884,7 @@ export function ReviewPanel({
                       : ""
                   }`}
                   style={item.resolved
-                    ? { background: "var(--background)", borderColor: "var(--card-border)", color: "var(--foreground)" }
+                    ? { background: "var(--background)", borderColor: "var(--outline-variant)", color: "var(--on-surface)" }
                     : (() => { const s = severityStyles[item.severity] || severityStyles.info; return { background: s.bg, borderColor: s.border, color: s.color }; })()
                   }
                 >
@@ -899,7 +899,7 @@ export function ReviewPanel({
                           onClick={() => { setFixPromptItem(item); setFixUserNote(""); }}
                           disabled={fixingItem !== null}
                           className="text-xs px-2 py-1 rounded hover:opacity-80 disabled:opacity-50"
-                          style={{ background: "var(--card-border)", color: "var(--foreground)" }}
+                          style={{ background: "var(--outline-variant)", color: "var(--on-surface)" }}
                         >
                           {fixingItem === item.id
                             ? <><HourglassIcon size={12} className="inline-block align-[-1px]" /> {isZh ? "修复中..." : "Fixing..."}</>
@@ -910,15 +910,15 @@ export function ReviewPanel({
                         onClick={() => handleResolve(item.id, !item.resolved)}
                         className="text-xs px-2 py-1 rounded"
                         style={item.resolved
-                          ? { background: "var(--card-border)", color: "var(--muted)" }
-                          : { background: "rgba(255,255,255,0.5)", color: "var(--foreground)" }}
+                          ? { background: "var(--outline-variant)", color: "var(--outline)" }
+                          : { background: "var(--surface-container)", color: "var(--on-surface)" }}
                       >
                         {item.resolved ? <><CheckIcon size={12} className="inline-block align-[-1px]" /> {t("review.resolved")}</> : t("review.resolve")}
                       </button>
                     </div>
                   </div>
                   {item.content && (
-                    <div className="mt-2 text-sm" style={{ color: "var(--foreground)" }}>
+                    <div className="mt-2 text-sm" style={{ color: "var(--on-surface)" }}>
                       <MarkdownRenderer content={item.content} />
                     </div>
                   )}
@@ -931,19 +931,19 @@ export function ReviewPanel({
                         placeholder={isZh ? "补充说明（可选，直接回车修复）" : "Additional notes (optional, Enter to fix)"}
                         autoFocus
                         className="flex-1 rounded border px-2 py-1 text-xs"
-                        style={{ background: "var(--card)", color: "var(--foreground)", borderColor: "var(--card-border)" }}
+                        style={{ background: "var(--surface-container-high)", color: "var(--on-surface)", borderColor: "var(--outline-variant)" }}
                       />
                       <button
                         onClick={() => handleFix(item, fixUserNote)}
                         className="shrink-0 px-2 py-1 rounded text-xs font-medium hover:opacity-80"
-                        style={{ background: "var(--foreground)", color: "var(--background)" }}
+                        style={{ background: "var(--on-surface)", color: "var(--background)" }}
                       >
                         {isZh ? "修复" : "Fix"}
                       </button>
                       <button
                         onClick={() => setFixPromptItem(null)}
                         className="shrink-0 px-2 py-1 rounded text-xs hover:opacity-80"
-                        style={{ color: "var(--muted)" }}
+                        style={{ color: "var(--outline)" }}
                       >
                         {isZh ? "取消" : "Cancel"}
                       </button>
@@ -956,7 +956,7 @@ export function ReviewPanel({
         </div>
       ) : !generating && type === "implementation" && snapshots.length === 0 ? (
         <div className="text-center py-6 space-y-3">
-          <p className="text-sm" style={{ color: "var(--muted)" }}>
+          <p className="text-sm" style={{ color: "var(--outline)" }}>
             {isZh ? "暂无文件变更记录。已完成的任务可从 Git 历史补录。" : "No file change records. Completed tasks can be backfilled from git history."}
           </p>
           <Button
@@ -973,7 +973,7 @@ export function ReviewPanel({
           </Button>
         </div>
       ) : !generating && !latestReview && snapshots.length === 0 ? (
-        <p className="text-sm text-center py-4" style={{ color: "var(--muted)" }}>
+        <p className="text-sm text-center py-4" style={{ color: "var(--outline)" }}>
           {t("review.noReview")}
         </p>
       ) : null}
@@ -988,13 +988,13 @@ export function ReviewPanel({
       >
         <div className="space-y-4">
           <div className="text-center py-2">
-            <CheckCircleIcon size={40} className="mx-auto text-green-500" />
+            <CheckCircleIcon size={40} className="mx-auto text-[var(--success)]" />
             {resolvedTaskInfo && (
-              <p className="text-xs mt-2 font-mono" style={{ color: "var(--muted)" }}>
+              <p className="text-xs mt-2 font-mono" style={{ color: "var(--outline)" }}>
                 {resolvedTaskInfo.title}
               </p>
             )}
-            <p className="text-sm mt-3" style={{ color: "var(--foreground)" }}>
+            <p className="text-sm mt-3" style={{ color: "var(--on-surface)" }}>
               {resolvedTaskInfo
                 ? (isZh ? "该任务的所有审查意见已处理完毕，接下来：" : "All findings for this task are resolved. Next:")
                 : (isZh ? "所有审查意见已处理完毕，接下来：" : "All findings resolved. Next:")}
@@ -1105,7 +1105,7 @@ function FindingsGroup({
         <button
           onClick={() => setExpanded(!expanded)}
           className="w-full flex items-center gap-2 text-left text-xs font-medium mt-3 mb-1 py-1 rounded hover:opacity-80"
-          style={{ color: isFix ? "#c4b5fd" : "var(--muted)", paddingLeft: isFix ? "1.5rem" : "0.25rem" }}
+          style={{ color: isFix ? "var(--secondary)" : "var(--outline)", paddingLeft: isFix ? "1.5rem" : "0.25rem" }}
         >
           <svg
             className={`w-3 h-3 shrink-0 transition-transform ${expanded ? "rotate-90" : ""}`}
@@ -1116,7 +1116,7 @@ function FindingsGroup({
           {isFix && <span>↳</span>}
           <span>#{group.order} {isFix ? group.title.replace("[fix] ", "") : group.title}</span>
           {isFix && (
-            <span className="text-[9px] px-1 py-0.5 rounded" style={{ background: "rgba(124,58,237,0.2)", color: "#c4b5fd" }}>fix</span>
+            <span className="text-[9px] px-1 py-0.5 rounded" style={{ background: "rgba(124,58,237,0.2)", color: "var(--secondary)" }}>fix</span>
           )}
           <span className="font-normal">({group.items.length})</span>
           {unresolvedCount > 0 && (
@@ -1125,7 +1125,7 @@ function FindingsGroup({
             </span>
           )}
           {unresolvedCount === 0 && (
-            <span className="text-[10px] text-green-600">✓</span>
+            <span className="text-[10px] text-[var(--success)]">✓</span>
           )}
         </button>
       )}
@@ -1134,7 +1134,7 @@ function FindingsGroup({
           key={item.id}
           className={`rounded-lg border p-3 mb-2 ${item.resolved ? "opacity-60" : ""}`}
           style={item.resolved
-            ? { background: "var(--background)", borderColor: "var(--card-border)", color: "var(--foreground)" }
+            ? { background: "var(--background)", borderColor: "var(--outline-variant)", color: "var(--on-surface)" }
             : (() => { const s = styles[item.severity] || styles.info; return { background: s.bg, borderColor: s.border, color: s.color }; })()
           }
         >
@@ -1143,31 +1143,31 @@ function FindingsGroup({
               <StatusBadge status={item.severity} label={item.severity} />
               <span className="font-medium text-sm"><SeverityIcon severity={item.severity} /> {item.title}</span>
               {item.filePath && (
-                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded" style={{ background: "var(--card-border)", color: "var(--muted)" }}>
+                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded" style={{ background: "var(--outline-variant)", color: "var(--outline)" }}>
                   {item.filePath.split("/").pop()}{item.lineNumber ? `:${item.lineNumber}` : ""}
                 </span>
               )}
             </div>
             {item.resolved ? (
-              <span className="text-xs px-2 py-1 rounded shrink-0" style={{ background: "var(--card-border)", color: "var(--muted)" }}>
+              <span className="text-xs px-2 py-1 rounded shrink-0" style={{ background: "var(--outline-variant)", color: "var(--outline)" }}>
                 <CheckIcon size={12} className="inline-block align-[-1px]" /> {isZh ? "已解决" : "Resolved"}
               </span>
             ) : acceptedIds.has(item.id) ? (
-              <span className="text-xs px-2 py-1 rounded shrink-0" style={{ background: "rgba(124,58,237,0.15)", color: "#c4b5fd" }}>
+              <span className="text-xs px-2 py-1 rounded shrink-0" style={{ background: "rgba(124,58,237,0.15)", color: "var(--secondary)" }}>
                 {isZh ? "已加入排期" : "Scheduled"}
               </span>
             ) : (
               <button
                 onClick={() => onResolve(item.id, true)}
                 className="text-xs px-2 py-1 rounded hover:opacity-80 shrink-0"
-                style={{ background: "rgba(239,68,68,0.15)", color: "#fca5a5" }}
+                style={{ background: "var(--error-container)", color: "#fca5a5" }}
               >
                 {isZh ? "忽略" : "Dismiss"}
               </button>
             )}
           </div>
           {item.content && (
-            <div className="mt-2 text-sm" style={{ color: "var(--foreground)" }}>
+            <div className="mt-2 text-sm" style={{ color: "var(--on-surface)" }}>
               <MarkdownRenderer content={item.content} />
             </div>
           )}
@@ -1175,7 +1175,7 @@ function FindingsGroup({
             const opts: string[] = item.options ? (() => { try { return JSON.parse(item.options); } catch { return []; } })() : [];
             return opts.length > 0 ? (
               <div className="mt-2 flex flex-wrap gap-1.5">
-                <span className="text-[10px] self-center" style={{ color: "var(--muted)" }}>
+                <span className="text-[10px] self-center" style={{ color: "var(--outline)" }}>
                   {isZh ? "解决方案:" : "Solutions:"}
                 </span>
                 {opts.map((opt: string, i: number) => (
@@ -1241,7 +1241,7 @@ function TaskFilterDropdown({
       <button
         onClick={() => setOpen(!open)}
         className="rounded-md border px-3 py-1.5 text-xs flex items-center gap-2 min-w-[180px]"
-        style={{ background: "var(--card)", color: "var(--foreground)", borderColor: "var(--card-border)" }}
+        style={{ background: "var(--surface-container-high)", color: "var(--on-surface)", borderColor: "var(--outline-variant)" }}
       >
         <span className="flex-1 text-left truncate">
           {selected
@@ -1255,15 +1255,15 @@ function TaskFilterDropdown({
       {open && (
         <div
           className="absolute top-full left-0 mt-1 w-72 rounded-lg border shadow-lg z-20 max-h-64 overflow-y-auto"
-          style={{ background: "var(--card)", borderColor: "var(--card-border)" }}
+          style={{ background: "var(--surface-container-high)", borderColor: "var(--outline-variant)" }}
         >
           <button
             onClick={() => { onSelect(null); setOpen(false); }}
             className="w-full text-left px-3 py-2 text-xs hover:opacity-80"
             style={{
               background: !selectedTask ? "var(--background)" : undefined,
-              color: "var(--foreground)",
-              borderBottom: "1px solid var(--card-border)",
+              color: "var(--on-surface)",
+              borderBottom: "1px solid var(--outline-variant)",
             }}
           >
             {isZh ? "全部任务" : "All Tasks"}{totalFiles ? ` (${totalFiles})` : ""}
@@ -1279,8 +1279,8 @@ function TaskFilterDropdown({
                 style={{
                   background: isActive ? "var(--background)" : undefined,
                   paddingLeft: isFix ? "1.75rem" : "0.75rem",
-                  color: isFix ? "#c4b5fd" : "var(--foreground)",
-                  borderBottom: "1px solid var(--card-border)",
+                  color: isFix ? "var(--secondary)" : "var(--on-surface)",
+                  borderBottom: "1px solid var(--outline-variant)",
                 }}
               >
                 {isFix && <span>↳</span>}
@@ -1290,7 +1290,7 @@ function TaskFilterDropdown({
                 {isFix && (
                   <span className="text-[9px] px-1 py-0.5 rounded shrink-0" style={{ background: "rgba(124,58,237,0.2)" }}>fix</span>
                 )}
-                {task.fileCount > 0 && <span className="shrink-0" style={{ color: "var(--muted)" }}>({task.fileCount})</span>}
+                {task.fileCount > 0 && <span className="shrink-0" style={{ color: "var(--outline)" }}>({task.fileCount})</span>}
               </button>
             );
           })}

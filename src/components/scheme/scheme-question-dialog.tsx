@@ -65,7 +65,7 @@ export function SchemeQuestionDialog({
     >
       <div className="space-y-4">
         {/* Progress bar */}
-        <div className="w-full h-1.5 rounded-full" style={{ background: "var(--card-border)" }}>
+        <div className="w-full h-1.5 rounded-full" style={{ background: "var(--outline-variant)" }}>
           <div
             className="h-full rounded-full transition-all"
             style={{ width: `${(questionNumber / totalQuestions) * 100}%`, background: "var(--accent, #22c55e)" }}
@@ -73,7 +73,7 @@ export function SchemeQuestionDialog({
         </div>
 
         {/* Question text */}
-        <p className="text-sm font-medium" style={{ color: "var(--foreground)" }}>
+        <p className="text-sm font-medium" style={{ color: "var(--on-surface)" }}>
           {question.text}
         </p>
 
@@ -87,8 +87,8 @@ export function SchemeQuestionDialog({
                   !useCustom && selected === opt ? "ring-2 ring-green-400" : ""
                 }`}
                 style={{
-                  background: !useCustom && selected === opt ? "rgba(34,197,94,0.08)" : "var(--card)",
-                  borderColor: !useCustom && selected === opt ? "rgba(34,197,94,0.4)" : "var(--card-border)",
+                  background: !useCustom && selected === opt ? "rgba(34,197,94,0.08)" : "var(--surface-container-high)",
+                  borderColor: !useCustom && selected === opt ? "rgba(34,197,94,0.4)" : "var(--outline-variant)",
                 }}
               >
                 <input
@@ -98,10 +98,10 @@ export function SchemeQuestionDialog({
                   onChange={() => { setSelected(opt); setUseCustom(false); }}
                   className="mt-0.5"
                 />
-                <span className="text-sm" style={{ color: "var(--foreground)" }}>
+                <span className="text-sm" style={{ color: "var(--on-surface)" }}>
                   {opt}
                   {opt === question.default && (
-                    <span className="ml-1 text-[10px] px-1.5 py-0.5 rounded" style={{ background: "var(--card-border)", color: "var(--muted)" }}>
+                    <span className="ml-1 text-[10px] px-1.5 py-0.5 rounded" style={{ background: "var(--outline-variant)", color: "var(--outline)" }}>
                       {isZh ? "推荐" : "recommended"}
                     </span>
                   )}
@@ -115,8 +115,8 @@ export function SchemeQuestionDialog({
                 useCustom ? "ring-2 ring-green-400" : ""
               }`}
               style={{
-                background: useCustom ? "rgba(34,197,94,0.08)" : "var(--card)",
-                borderColor: useCustom ? "rgba(34,197,94,0.4)" : "var(--card-border)",
+                background: useCustom ? "rgba(34,197,94,0.08)" : "var(--surface-container-high)",
+                borderColor: useCustom ? "rgba(34,197,94,0.4)" : "var(--outline-variant)",
               }}
             >
               <input
@@ -127,7 +127,7 @@ export function SchemeQuestionDialog({
                 className="mt-0.5"
               />
               <div className="flex-1">
-                <span className="text-sm" style={{ color: "var(--foreground)" }}>
+                <span className="text-sm" style={{ color: "var(--on-surface)" }}>
                   {isZh ? "自定义回答" : "Custom answer"}
                 </span>
                 {useCustom && (
@@ -137,7 +137,7 @@ export function SchemeQuestionDialog({
                     autoFocus
                     rows={2}
                     className="mt-2 w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-1"
-                    style={{ background: "var(--card)", color: "var(--foreground)", borderColor: "var(--card-border)" }}
+                    style={{ background: "var(--surface-container-high)", color: "var(--on-surface)", borderColor: "var(--outline-variant)" }}
                     placeholder={isZh ? "输入你的想法..." : "Type your answer..."}
                   />
                 )}
@@ -154,7 +154,7 @@ export function SchemeQuestionDialog({
             autoFocus
             rows={3}
             className="w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-1"
-            style={{ background: "var(--card)", color: "var(--foreground)", borderColor: "var(--card-border)" }}
+            style={{ background: "var(--surface-container-high)", color: "var(--on-surface)", borderColor: "var(--outline-variant)" }}
             placeholder={isZh ? "输入你的想法..." : "Type your answer..."}
           />
         )}

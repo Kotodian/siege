@@ -25,7 +25,7 @@ export default async function LocaleLayout({
     <NextIntlClientProvider messages={messages}>
       <GlobalLoadingProvider>
       <ConfirmProvider>
-      <div className="min-h-screen" style={{ background: "var(--background)", color: "var(--foreground)" }}>
+      <div className="min-h-screen" style={{ background: "var(--background)", color: "var(--on-surface)" }}>
         <nav className="px-6 py-3 flex items-center justify-between" style={{ background: "var(--surface-container)" }}>
           <div className="flex items-center gap-6">
             <a href={`/${locale}`} className="flex items-center gap-2">
@@ -36,14 +36,14 @@ export default async function LocaleLayout({
             <a
               href={`/${locale}`}
               className="text-sm hover:text-[var(--accent)]"
-              style={{ color: "var(--muted)" }}
+              style={{ color: "var(--outline)" }}
             >
               <><FolderIcon size={14} className="inline-block align-[-2px]" /> {locale === "zh" ? "项目" : "Projects"}</>
             </a>
             <a
               href={`/${locale}/settings`}
               className="text-sm hover:text-[var(--accent)]"
-              style={{ color: "var(--muted)" }}
+              style={{ color: "var(--outline)" }}
             >
               <><SettingsIcon size={14} className="inline-block align-[-2px]" /> {locale === "zh" ? "设置" : "Settings"}</>
             </a>
@@ -52,15 +52,15 @@ export default async function LocaleLayout({
             <a
               href="/en"
               className={`text-xs ${locale === "en" ? "font-medium" : ""} hover:text-[var(--accent)]`}
-              style={{ color: locale === "en" ? "var(--foreground)" : "var(--muted)" }}
+              style={{ color: locale === "en" ? "var(--on-surface)" : "var(--outline)" }}
             >
               EN
             </a>
-            <span style={{ color: "var(--card-border)" }}>|</span>
+            <span style={{ color: "var(--outline-variant)" }}>|</span>
             <a
               href="/zh"
               className={`text-xs ${locale === "zh" ? "font-medium" : ""} hover:text-[var(--accent)]`}
-              style={{ color: locale === "zh" ? "var(--foreground)" : "var(--muted)" }}
+              style={{ color: locale === "zh" ? "var(--on-surface)" : "var(--outline)" }}
             >
               中文
             </a>

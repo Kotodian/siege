@@ -108,14 +108,14 @@ export function SchemeEditor({
   if (!hasSections) {
     // Original single-editor mode
     return (
-      <div className="rounded-lg border p-5 space-y-4" style={{ background: "var(--card)", borderColor: "var(--card-border)" }}>
+      <div className="rounded-lg border p-5 space-y-4" style={{ background: "var(--surface-container-high)", borderColor: "var(--outline-variant)" }}>
         <Input
           label={t("scheme.schemeTitle")}
           value={title}
           onChange={(e) => setTitle(e.target.value)}
         />
         <div>
-          <label className="block text-sm font-medium mb-1" style={{ color: "var(--foreground)" }}>
+          <label className="block text-sm font-medium mb-1" style={{ color: "var(--on-surface)" }}>
             {t("scheme.content")}
           </label>
           <MarkdownEditor value={singleContent} onChange={setSingleContent} height={300} />
@@ -133,7 +133,7 @@ export function SchemeEditor({
   }
 
   return (
-    <div className="rounded-lg border p-5 space-y-4" style={{ background: "var(--card)", borderColor: "var(--card-border)" }}>
+    <div className="rounded-lg border p-5 space-y-4" style={{ background: "var(--surface-container-high)", borderColor: "var(--outline-variant)" }}>
       <Input
         label={t("scheme.schemeTitle")}
         value={title}
@@ -142,13 +142,13 @@ export function SchemeEditor({
 
       {/* Preamble */}
       {preamble.trim() && (
-        <div className="text-sm rounded p-3" style={{ background: "var(--background)", color: "var(--muted)" }}>
+        <div className="text-sm rounded p-3" style={{ background: "var(--background)", color: "var(--outline)" }}>
           <MarkdownRenderer content={preamble} />
         </div>
       )}
 
       {/* Sections accordion */}
-      <div className="border rounded-lg divide-y" style={{ borderColor: "var(--card-border)", "--tw-divide-color": "var(--card-border)" } as React.CSSProperties}>
+      <div className="border rounded-lg divide-y" style={{ borderColor: "var(--outline-variant)", "--tw-divide-color": "var(--outline-variant)" } as React.CSSProperties}>
         {sections.map((section, i) => {
           const isEditing = editingIndex === i;
           return (

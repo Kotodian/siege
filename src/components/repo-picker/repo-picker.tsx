@@ -31,12 +31,12 @@ export function RepoPicker({ onSelect, locale, githubAuthed = false }: RepoPicke
 
   const tabStyle = (active: boolean) =>
     `py-2 px-3 text-sm font-medium border-b-2 ${
-      active ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500"
+      active ? "border-blue-600 text-[var(--primary)]" : "border-transparent text-[var(--on-surface-variant)]"
     }`;
 
   return (
     <div>
-      <div className="flex gap-2 mb-3 border-b" style={{ borderColor: "var(--card-border)" }}>
+      <div className="flex gap-2 mb-3 border-b" style={{ borderColor: "var(--outline-variant)" }}>
         <button onClick={() => setTab("local")} className={tabStyle(tab === "local")}>
           {isZh ? "本地目录" : "Local"}
         </button>
@@ -101,26 +101,26 @@ function LocalBrowser({
         >
           ..
         </Button>
-        <span className="text-xs text-gray-500 font-mono truncate flex-1">
+        <span className="text-xs text-[var(--on-surface-variant)] font-mono truncate flex-1">
           {currentPath}
         </span>
       </div>
 
       {loading ? (
-        <p className="text-gray-400 text-sm text-center py-4">
+        <p className="text-[var(--on-surface-variant)] text-sm text-center py-4">
           {isZh ? "加载中..." : "Loading..."}
         </p>
       ) : (
         <div className="max-h-60 overflow-y-auto border rounded-md divide-y">
           {dirs.length === 0 ? (
-            <p className="text-gray-400 text-sm text-center py-4">
+            <p className="text-[var(--on-surface-variant)] text-sm text-center py-4">
               {isZh ? "无子目录" : "No subdirectories"}
             </p>
           ) : (
             dirs.map((dir) => (
               <div
                 key={dir.path}
-                className="flex items-center justify-between px-3 py-2 hover:bg-gray-50"
+                className="flex items-center justify-between px-3 py-2 hover:bg-[var(--surface-container)]"
               >
                 <button
                   onClick={() => browse(dir.path)}
@@ -129,7 +129,7 @@ function LocalBrowser({
                   <span>{dir.isGitRepo ? "📦" : "📁"}</span>
                   <span className="truncate">{dir.name}</span>
                   {dir.isGitRepo && (
-                    <span className="text-xs text-green-600 bg-green-50 px-1.5 py-0.5 rounded">
+                    <span className="text-xs text-[var(--success)] bg-[var(--success-container)] px-1.5 py-0.5 rounded">
                       git
                     </span>
                   )}
@@ -216,7 +216,7 @@ function GitUrlCloner({
 
   return (
     <div className="space-y-3">
-      <p className="text-xs" style={{ color: "var(--muted)" }}>
+      <p className="text-xs" style={{ color: "var(--outline)" }}>
         {isZh
           ? "支持 GitLab、Gitea、Bitbucket 等任何 Git 仓库 URL"
           : "Works with GitLab, Gitea, Bitbucket, or any Git repository URL"}
@@ -233,20 +233,20 @@ function GitUrlCloner({
         <button
           onClick={() => { if (!showDirPicker) browseDir(); setShowDirPicker(!showDirPicker); }}
           className="text-xs hover:opacity-80 flex items-center gap-1"
-          style={{ color: "var(--muted)" }}
+          style={{ color: "var(--outline)" }}
         >
           {isZh ? "克隆到:" : "Clone to:"}{" "}
-          <span className="font-mono" style={{ color: "var(--foreground)" }}>
+          <span className="font-mono" style={{ color: "var(--on-surface)" }}>
             {targetDir || (isZh ? "~/projects/ (默认)" : "~/projects/ (default)")}
           </span>
           <span className="text-[10px]">{showDirPicker ? "▲" : "▼"}</span>
         </button>
 
         {showDirPicker && (
-          <div className="mt-2 rounded-lg border max-h-48 overflow-y-auto" style={{ borderColor: "var(--card-border)", background: "var(--card)" }}>
-            <div className="flex items-center gap-2 px-3 py-1.5" style={{ borderBottom: "1px solid var(--card-border)" }}>
-              <button onClick={() => browseDir(browseParent)} disabled={browsePath === browseParent} className="text-xs" style={{ color: "var(--muted)" }}>..</button>
-              <span className="text-[10px] font-mono truncate" style={{ color: "var(--muted)" }}>{browsePath}</span>
+          <div className="mt-2 rounded-lg border max-h-48 overflow-y-auto" style={{ borderColor: "var(--outline-variant)", background: "var(--surface-container-high)" }}>
+            <div className="flex items-center gap-2 px-3 py-1.5" style={{ borderBottom: "1px solid var(--outline-variant)" }}>
+              <button onClick={() => browseDir(browseParent)} disabled={browsePath === browseParent} className="text-xs" style={{ color: "var(--outline)" }}>..</button>
+              <span className="text-[10px] font-mono truncate" style={{ color: "var(--outline)" }}>{browsePath}</span>
               <button
                 onClick={() => { setTargetDir(browsePath); setShowDirPicker(false); }}
                 className="ml-auto text-[10px] px-2 py-0.5 rounded"
@@ -256,16 +256,16 @@ function GitUrlCloner({
               </button>
             </div>
             {browseLoading ? (
-              <p className="text-xs text-center py-3" style={{ color: "var(--muted)" }}>...</p>
+              <p className="text-xs text-center py-3" style={{ color: "var(--outline)" }}>...</p>
             ) : (
               browseDirs.map((dir) => (
                 <button
                   key={dir.path}
                   onClick={() => browseDir(dir.path)}
                   className="w-full text-left px-3 py-1.5 text-xs hover:opacity-80 flex items-center gap-1.5"
-                  style={{ color: "var(--foreground)" }}
+                  style={{ color: "var(--on-surface)" }}
                 >
-                  <span style={{ color: "var(--muted)" }}>📁</span>
+                  <span style={{ color: "var(--outline)" }}>📁</span>
                   <span className="truncate">{dir.name}</span>
                 </button>
               ))
@@ -274,7 +274,7 @@ function GitUrlCloner({
         )}
       </div>
 
-      {error && <p className="text-xs text-red-500">{error}</p>}
+      {error && <p className="text-xs text-[var(--error)]">{error}</p>}
       <Button onClick={handleClone} disabled={cloning || !url.trim()} className="w-full">
         {cloning ? (isZh ? "克隆中..." : "Cloning...") : (isZh ? "克隆仓库" : "Clone Repository")}
       </Button>
@@ -340,7 +340,7 @@ function GitHubBrowser({
   if (error) {
     return (
       <div className="text-center py-6">
-        <p className="text-red-500 text-sm mb-2">{error}</p>
+        <p className="text-[var(--error)] text-sm mb-2">{error}</p>
         <Button variant="ghost" size="sm" onClick={() => fetchRepos()}>
           {isZh ? "重试" : "Retry"}
         </Button>
@@ -363,20 +363,20 @@ function GitHubBrowser({
       </div>
 
       {loading ? (
-        <p className="text-gray-400 text-sm text-center py-4">
+        <p className="text-[var(--on-surface-variant)] text-sm text-center py-4">
           {isZh ? "加载中..." : "Loading..."}
         </p>
       ) : (
         <div className="max-h-60 overflow-y-auto border rounded-md divide-y">
           {repos.length === 0 ? (
-            <p className="text-gray-400 text-sm text-center py-4">
+            <p className="text-[var(--on-surface-variant)] text-sm text-center py-4">
               {isZh ? "无仓库" : "No repos found"}
             </p>
           ) : (
             repos.map((repo) => (
               <div
                 key={repo.fullName}
-                className="flex items-center justify-between px-3 py-2 hover:bg-gray-50"
+                className="flex items-center justify-between px-3 py-2 hover:bg-[var(--surface-container)]"
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
@@ -384,18 +384,18 @@ function GitHubBrowser({
                       {repo.fullName}
                     </span>
                     {repo.isPrivate && (
-                      <span className="text-xs text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
+                      <span className="text-xs text-[var(--on-surface-variant)] bg-[var(--surface-container)] px-1.5 py-0.5 rounded">
                         private
                       </span>
                     )}
                     {repo.language && (
-                      <span className="text-xs text-blue-600">
+                      <span className="text-xs text-[var(--primary)]">
                         {repo.language}
                       </span>
                     )}
                   </div>
                   {repo.description && (
-                    <p className="text-xs text-gray-500 truncate">
+                    <p className="text-xs text-[var(--on-surface-variant)] truncate">
                       {repo.description}
                     </p>
                   )}

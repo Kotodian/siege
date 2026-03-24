@@ -300,25 +300,25 @@ export function SchemeList({
       </div>
 
       {readonly && planStatus === "confirmed" && (
-        <div className="mb-4 rounded-md bg-blue-50 border border-blue-200 px-4 py-2 text-sm text-blue-700">
+        <div className="mb-4 rounded-md bg-[rgba(192,193,255,0.12)] border border-[var(--primary)] px-4 py-2 text-sm text-[var(--primary)]">
           {t("scheme.confirmed")}
         </div>
       )}
 
       {/* Streaming preview while generating */}
       {generating && (
-        <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-5">
+        <div className="mb-4 rounded-lg border border-[var(--primary)] bg-[rgba(192,193,255,0.12)] p-5">
           <div className="flex items-center gap-2 mb-3">
-            <svg className="animate-spin h-4 w-4 text-blue-600" viewBox="0 0 24 24">
+            <svg className="animate-spin h-4 w-4 text-[var(--primary)]" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
             </svg>
-            <span className="text-sm font-medium text-blue-700">
+            <span className="text-sm font-medium text-[var(--primary)]">
               {t("scheme.generate")}...
             </span>
           </div>
           {streamingContent && (
-            <div className="bg-white rounded p-3 max-h-60 overflow-y-auto">
+            <div className="bg-[var(--surface-container-highest)] rounded p-3 max-h-60 overflow-y-auto">
               <MarkdownRenderer content={streamingContent} />
             </div>
           )}
@@ -326,7 +326,7 @@ export function SchemeList({
       )}
 
       {schemes.length === 0 && !generating ? (
-        <p className="text-gray-500 text-center py-8">
+        <p className="text-[var(--on-surface-variant)] text-center py-8">
           {t("common.noData")}
         </p>
       ) : (

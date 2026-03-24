@@ -78,7 +78,7 @@ export function GenerateSchemeDialog({
             style={{ background: interactiveMode ? "var(--success)" : "var(--outline-variant)" }}
             onClick={() => setInteractiveMode(!interactiveMode)}
           >
-            <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${interactiveMode ? "translate-x-5" : "translate-x-0.5"}`} />
+            <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-[var(--surface-container-highest)] shadow transition-transform ${interactiveMode ? "translate-x-5" : "translate-x-0.5"}`} />
           </div>
           <div>
             <span className="text-sm font-medium" style={{ color: "var(--on-surface)" }}>

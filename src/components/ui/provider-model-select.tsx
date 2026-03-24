@@ -67,28 +67,28 @@ function Dropdown({ value, options, onChange, disabled, placeholder, compact }: 
         onClick={() => !disabled && setOpen(!open)}
         disabled={disabled}
         className={`flex items-center gap-1.5 rounded-md border ${compact ? "px-2 py-1 text-xs" : "px-3 py-1.5 text-sm"} w-full text-left`}
-        style={{ background: "var(--card)", color: "var(--foreground)", borderColor: open ? "var(--foreground)" : "var(--card-border)" }}
+        style={{ background: "var(--surface-container-high)", color: "var(--on-surface)", borderColor: open ? "var(--on-surface)" : "var(--outline-variant)" }}
       >
         <span className="flex-1 truncate">
           {selected ? (
             <span className="flex items-center gap-1.5">
               {selected.label}
-              {selected.badge && <span className="text-[10px] px-1 rounded" style={{ background: "var(--card-border)" }}>{selected.badge}</span>}
+              {selected.badge && <span className="text-[10px] px-1 rounded" style={{ background: "var(--outline-variant)" }}>{selected.badge}</span>}
             </span>
           ) : (
-            <span style={{ color: "var(--muted)" }}>{placeholder}</span>
+            <span style={{ color: "var(--outline)" }}>{placeholder}</span>
           )}
         </span>
-        <svg className={`w-3 h-3 shrink-0 transition-transform ${open ? "rotate-180" : ""}`} style={{ color: "var(--muted)" }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg className={`w-3 h-3 shrink-0 transition-transform ${open ? "rotate-180" : ""}`} style={{ color: "var(--outline)" }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>
       </button>
       {open && (
         <div className="absolute z-50 mt-1 w-full min-w-[160px] rounded-md border shadow-lg overflow-hidden"
-          style={{ background: "var(--card)", borderColor: "var(--card-border)" }}>
+          style={{ background: "var(--surface-container-high)", borderColor: "var(--outline-variant)" }}>
           <button
             className={`w-full text-left ${compact ? "px-2 py-1.5 text-xs" : "px-3 py-2 text-sm"} hover:opacity-80`}
-            style={{ color: "var(--muted)" }}
+            style={{ color: "var(--outline)" }}
             onClick={() => { onChange(""); setOpen(false); }}
           >
             {placeholder}
@@ -98,15 +98,15 @@ function Dropdown({ value, options, onChange, disabled, placeholder, compact }: 
               key={o.value}
               className={`w-full text-left ${compact ? "px-2 py-1.5 text-xs" : "px-3 py-2 text-sm"} flex items-center gap-1.5 hover:opacity-80`}
               style={{
-                background: o.value === value ? "var(--foreground)" : undefined,
-                color: o.value === value ? "var(--background)" : "var(--foreground)",
+                background: o.value === value ? "var(--on-surface)" : undefined,
+                color: o.value === value ? "var(--background)" : "var(--on-surface)",
               }}
               onClick={() => { onChange(o.value); setOpen(false); }}
             >
               {o.label}
               {o.badge && (
                 <span className="text-[10px] px-1 rounded" style={{
-                  background: o.value === value ? "rgba(0,0,0,0.2)" : "var(--card-border)",
+                  background: o.value === value ? "rgba(0,0,0,0.2)" : "var(--outline-variant)",
                 }}>{o.badge}</span>
               )}
             </button>
@@ -195,14 +195,14 @@ export function ProviderModelSelect({
             disabled={disabled}
             className="px-3 py-1.5 text-sm rounded-md border flex items-center gap-1"
             style={provider === p.id
-              ? { background: "var(--foreground)", color: "var(--background)", borderColor: "var(--foreground)" }
-              : { background: "var(--card)", color: "var(--muted)", borderColor: "var(--card-border)" }
+              ? { background: "var(--on-surface)", color: "var(--background)", borderColor: "var(--on-surface)" }
+              : { background: "var(--surface-container-high)", color: "var(--outline)", borderColor: "var(--outline-variant)" }
             }
           >
             {p.label}
             {p.badge && (
               <span className="text-[10px] px-1 rounded" style={
-                provider === p.id ? { background: "rgba(0,0,0,0.2)" } : { background: "var(--card-border)", color: "var(--foreground)" }
+                provider === p.id ? { background: "rgba(0,0,0,0.2)" } : { background: "var(--outline-variant)", color: "var(--on-surface)" }
               }>{p.badge}</span>
             )}
           </button>

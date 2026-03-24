@@ -97,7 +97,7 @@ function DirNode({
         <button
           onClick={() => setExpanded(!expanded)}
           className="w-full flex items-center gap-1 px-2 py-1 text-xs hover:opacity-80 transition-colors"
-          style={{ color: "var(--muted)", paddingLeft: `${depth * 12 + 8}px` }}
+          style={{ color: "var(--outline)", paddingLeft: `${depth * 12 + 8}px` }}
         >
           <svg
             className={`w-3 h-3 shrink-0 transition-transform ${expanded ? "rotate-90" : ""}`}
@@ -160,8 +160,8 @@ function FileLeaf({
       style={{
         paddingLeft: `${depth * 12 + 8}px`,
         ...(isActive
-          ? { background: "var(--card-border)", color: "var(--foreground)" }
-          : { color: "var(--muted)" }),
+          ? { background: "var(--outline-variant)", color: "var(--on-surface)" }
+          : { color: "var(--outline)" }),
       }}
       title={file.filePath}
     >
@@ -169,15 +169,15 @@ function FileLeaf({
       <span className="font-mono truncate flex-1">{name}</span>
       <span className="flex items-center gap-1 shrink-0">
         {file.findingCount > 0 && (
-          <span className="px-1 py-0.5 rounded-full bg-orange-100 text-orange-700 text-[10px] leading-none">
+          <span className="px-1 py-0.5 rounded-full bg-[rgba(255,183,131,0.12)] text-[var(--tertiary)] text-[10px] leading-none">
             {file.findingCount}
           </span>
         )}
         {file.additions > 0 && (
-          <span className="text-green-600 text-[10px]">+{file.additions}</span>
+          <span className="text-[var(--success)] text-[10px]">+{file.additions}</span>
         )}
         {file.deletions > 0 && (
-          <span className="text-red-600 text-[10px]">-{file.deletions}</span>
+          <span className="text-[var(--error)] text-[10px]">-{file.deletions}</span>
         )}
       </span>
     </button>
@@ -268,8 +268,8 @@ function FileIcon({ name }: { name: string }) {
 
 function FileIconLegacy({ name }: { name: string }) {
   const ext = name.slice(name.lastIndexOf(".")).toLowerCase();
-  let color = "text-gray-400";
-  if ([".ts", ".tsx"].includes(ext)) color = "text-blue-500";
+  let color = "text-[var(--on-surface-variant)]";
+  if ([".ts", ".tsx"].includes(ext)) color = "text-[var(--primary)]";
 
   return (
     <svg className={`w-3.5 h-3.5 shrink-0 ${color}`} viewBox="0 0 20 20" fill="currentColor">
@@ -292,8 +292,8 @@ export function FileSidebar({ files, selectedFile, onSelectFile }: FileSidebarPr
 
   if (files.length === 0) {
     return (
-      <div className="w-64 p-4" style={{ borderRight: "1px solid var(--card-border)" }}>
-        <p className="text-sm" style={{ color: "var(--muted)" }}>{t("review.noChanges")}</p>
+      <div className="w-64 p-4" style={{ borderRight: "1px solid var(--outline-variant)" }}>
+        <p className="text-sm" style={{ color: "var(--outline)" }}>{t("review.noChanges")}</p>
       </div>
     );
   }
@@ -313,16 +313,16 @@ export function FileSidebar({ files, selectedFile, onSelectFile }: FileSidebarPr
     const sorted = [...taskGroups.values()].sort((a, b) => a.order - b.order);
 
     return (
-      <div className="w-64 overflow-y-auto" style={{ background: "var(--card)", borderRight: "1px solid var(--card-border)" }}>
-        <div className="p-3" style={{ background: "var(--background)", borderBottom: "1px solid var(--card-border)" }}>
-          <h5 className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--muted)" }}>
+      <div className="w-64 overflow-y-auto" style={{ background: "var(--surface-container-high)", borderRight: "1px solid var(--outline-variant)" }}>
+        <div className="p-3" style={{ background: "var(--background)", borderBottom: "1px solid var(--outline-variant)" }}>
+          <h5 className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--outline)" }}>
             {t("review.changedFiles")}
           </h5>
-          <span className="text-[10px]" style={{ color: "var(--muted)" }}>{files.length} files · {sorted.length} tasks</span>
+          <span className="text-[10px]" style={{ color: "var(--outline)" }}>{files.length} files · {sorted.length} tasks</span>
         </div>
         {sorted.map((group) => (
           <div key={group.title}>
-            <div className="px-3 py-2 text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--muted)", background: "var(--background)", borderBottom: "1px solid var(--card-border)" }}>
+            <div className="px-3 py-2 text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--outline)", background: "var(--background)", borderBottom: "1px solid var(--outline-variant)" }}>
               #{group.order} {group.title}
               <span className="ml-1 font-normal">({group.files.length})</span>
             </div>
@@ -343,12 +343,12 @@ export function FileSidebar({ files, selectedFile, onSelectFile }: FileSidebarPr
   }
 
   return (
-    <div className="w-64 overflow-y-auto" style={{ background: "var(--card)", borderRight: "1px solid var(--card-border)" }}>
-      <div className="p-3" style={{ background: "var(--background)", borderBottom: "1px solid var(--card-border)" }}>
-        <h5 className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--muted)" }}>
+    <div className="w-64 overflow-y-auto" style={{ background: "var(--surface-container-high)", borderRight: "1px solid var(--outline-variant)" }}>
+      <div className="p-3" style={{ background: "var(--background)", borderBottom: "1px solid var(--outline-variant)" }}>
+        <h5 className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--outline)" }}>
           {t("review.changedFiles")}
         </h5>
-        <span className="text-[10px]" style={{ color: "var(--muted)" }}>{files.length} files</span>
+        <span className="text-[10px]" style={{ color: "var(--outline)" }}>{files.length} files</span>
       </div>
       <div className="py-1">
         <DirNode

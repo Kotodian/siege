@@ -209,10 +209,10 @@ export function DiffViewer({
 
   return (
     <div className="flex-1 overflow-auto">
-      <div className="sticky top-0 px-4 py-2 font-mono text-xs z-10 flex items-center gap-2" style={{ background: "var(--background)", borderBottom: "1px solid var(--card-border)", color: "var(--muted)" }}>
+      <div className="sticky top-0 px-4 py-2 font-mono text-xs z-10 flex items-center gap-2" style={{ background: "var(--background)", borderBottom: "1px solid var(--outline-variant)", color: "var(--outline)" }}>
         <span className="flex-1 truncate">{filePath}</span>
         {taskTitle && (
-          <span className="shrink-0 text-[10px] font-sans font-medium px-1.5 py-0.5 rounded" style={{ background: "var(--card-border)", color: "var(--foreground)" }}>
+          <span className="shrink-0 text-[10px] font-sans font-medium px-1.5 py-0.5 rounded" style={{ background: "var(--outline-variant)", color: "var(--on-surface)" }}>
             #{taskOrder} {taskTitle}
           </span>
         )}
@@ -253,7 +253,7 @@ export function DiffViewer({
                 const skipped = i - lastShown - 1;
                 lastShown = i;
                 return (
-                  <div key={`sep-${i}`} className="text-center py-1" style={{ background: "var(--card)", color: "var(--muted)" }}>
+                  <div key={`sep-${i}`} className="text-center py-1" style={{ background: "var(--surface-container-high)", color: "var(--outline)" }}>
                     ··· {skipped} {skipped === 1 ? "line" : "lines"} ···
                   </div>
                 );
@@ -265,7 +265,7 @@ export function DiffViewer({
             if (lastShown >= 0 && lastShown < i - 1) {
               const skipped = i - lastShown - 1;
               separator = (
-                <div key={`sep-${i}`} className="text-center py-1" style={{ background: "var(--card)", color: "var(--muted)" }}>
+                <div key={`sep-${i}`} className="text-center py-1" style={{ background: "var(--surface-container-high)", color: "var(--outline)" }}>
                   ··· {skipped} {skipped === 1 ? "line" : "lines"} ···
                 </div>
               );
@@ -306,7 +306,7 @@ export function DiffViewer({
                 {/* Old line number gutter */}
                 <button
                   className="w-12 text-right pr-2 select-none hover:opacity-80 shrink-0"
-                  style={{ color: "var(--muted)", borderRight: "1px solid var(--card-border)" }}
+                  style={{ color: "var(--outline)", borderRight: "1px solid var(--outline-variant)" }}
                   onClick={() => setCommentLineIdx(commentLineIdx === i ? null : i)}
                   title={t("review.addComment")}
                 >
@@ -315,7 +315,7 @@ export function DiffViewer({
                 {/* New line number gutter */}
                 <button
                   className="w-12 text-right pr-2 select-none hover:opacity-80 shrink-0"
-                  style={{ color: "var(--muted)", borderRight: "1px solid var(--card-border)" }}
+                  style={{ color: "var(--outline)", borderRight: "1px solid var(--outline-variant)" }}
                   onClick={() => setCommentLineIdx(commentLineIdx === i ? null : i)}
                   title={t("review.addComment")}
                 >
@@ -323,7 +323,7 @@ export function DiffViewer({
                 </button>
                 {/* +/- indicator */}
                 <span className={`w-5 text-center select-none shrink-0 ${
-                  line.type === "add" ? "text-green-600" : line.type === "remove" ? "text-red-600" : "text-gray-300"
+                  line.type === "add" ? "text-[var(--success)]" : line.type === "remove" ? "text-[var(--error)]" : "text-[var(--on-surface-variant)]"
                 }`}>
                   {line.type === "add" ? "+" : line.type === "remove" ? "-" : " "}
                 </span>
@@ -349,7 +349,7 @@ export function DiffViewer({
                     key={finding.id}
                     className={`mx-12 my-1 p-2 rounded border text-xs ${finding.resolved ? "opacity-60" : ""}`}
                     style={finding.resolved
-                      ? { background: "var(--background)", borderColor: "var(--card-border)", color: "var(--foreground)" }
+                      ? { background: "var(--background)", borderColor: "var(--outline-variant)", color: "var(--on-surface)" }
                       : (() => { const s = severityStyles[finding.severity] || severityStyles.info; return { background: s.bg, borderColor: s.border, color: s.color }; })()
                     }
                   >
@@ -391,12 +391,12 @@ export function DiffViewer({
                       )}
                     </div>
                     {finding.content && (
-                      <p className="mt-1" style={{ color: "var(--foreground)" }}>{finding.content}</p>
+                      <p className="mt-1" style={{ color: "var(--on-surface)" }}>{finding.content}</p>
                     )}
                     {fixResult && !fixResult.applied && (
-                      <div className="mt-2 p-2 rounded border" style={{ background: "var(--card)", borderColor: "var(--card-border)" }}>
+                      <div className="mt-2 p-2 rounded border" style={{ background: "var(--surface-container-high)", borderColor: "var(--outline-variant)" }}>
                         <span className="font-semibold" style={{ color: "#93c5fd" }}>{t("review.aiSuggestion")}:</span>
-                        <pre className="mt-1 whitespace-pre-wrap text-xs" style={{ color: "var(--foreground)" }}>{fixResult.aiResponse}</pre>
+                        <pre className="mt-1 whitespace-pre-wrap text-xs" style={{ color: "var(--on-surface)" }}>{fixResult.aiResponse}</pre>
                       </div>
                     )}
                   </div>
@@ -405,12 +405,12 @@ export function DiffViewer({
 
               {/* Existing comments */}
               {lineComments?.map((comment) => (
-                <div key={comment.id} className="mx-12 my-1 p-2 rounded border text-xs" style={{ borderColor: "var(--card-border)", background: "var(--card)" }}>
-                  <p style={{ color: "var(--foreground)" }}>{comment.content}</p>
+                <div key={comment.id} className="mx-12 my-1 p-2 rounded border text-xs" style={{ borderColor: "var(--outline-variant)", background: "var(--surface-container-high)" }}>
+                  <p style={{ color: "var(--on-surface)" }}>{comment.content}</p>
                   {comment.aiResponse && (
-                    <div className="mt-1 p-1.5 rounded border" style={{ background: "var(--card)", borderColor: "var(--card-border)" }}>
-                      <span className="font-semibold" style={{ color: "#c4b5fd" }}>{t("review.aiSuggestion")}:</span>
-                      <p className="mt-0.5 whitespace-pre-wrap" style={{ color: "var(--foreground)" }}>{comment.aiResponse}</p>
+                    <div className="mt-1 p-1.5 rounded border" style={{ background: "var(--surface-container-high)", borderColor: "var(--outline-variant)" }}>
+                      <span className="font-semibold" style={{ color: "var(--secondary)" }}>{t("review.aiSuggestion")}:</span>
+                      <p className="mt-0.5 whitespace-pre-wrap" style={{ color: "var(--on-surface)" }}>{comment.aiResponse}</p>
                     </div>
                   )}
                 </div>

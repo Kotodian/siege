@@ -51,8 +51,8 @@ export function SchemeToc({ content, activeId }: SchemeTocProps) {
           onClick={() => handleClick(h.id)}
           className={`block w-full text-left text-xs py-1 rounded transition-colors truncate ${
             activeId === h.id
-              ? "text-blue-700 font-medium bg-blue-50"
-              : "text-gray-500 hover:text-gray-800 hover:bg-gray-50"
+              ? "text-[var(--primary)] font-medium bg-[rgba(192,193,255,0.12)]"
+              : "text-[var(--on-surface-variant)] hover:text-[var(--on-surface)] hover:bg-[var(--surface-container)]"
           }`}
           style={{ paddingLeft: `${(h.level - 1) * 12 + 4}px` }}
           title={h.text}

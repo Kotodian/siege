@@ -162,14 +162,14 @@ export function PublishView({ planId, projectId }: PublishViewProps) {
   };
 
   if (!gitStatus) {
-    return <p className="text-sm text-center py-8" style={{ color: "var(--muted)" }}>{isZh ? "加载中..." : "Loading..."}</p>;
+    return <p className="text-sm text-center py-8" style={{ color: "var(--outline)" }}>{isZh ? "加载中..." : "Loading..."}</p>;
   }
 
   if (!gitStatus.isGit) {
     return (
       <div className="text-center py-12 space-y-2">
-        <AlertTriangleIcon size={32} className="mx-auto text-yellow-500" />
-        <p className="text-sm" style={{ color: "var(--muted)" }}>
+        <AlertTriangleIcon size={32} className="mx-auto text-[var(--warning)]" />
+        <p className="text-sm" style={{ color: "var(--outline)" }}>
           {isZh ? "该项目不是 Git 仓库，无法发布。" : "This project is not a Git repository."}
         </p>
       </div>
@@ -179,11 +179,11 @@ export function PublishView({ planId, projectId }: PublishViewProps) {
   return (
     <div className="space-y-4">
       {/* Branch & Status */}
-      <div className="rounded-lg border p-4" style={{ background: "var(--card)", borderColor: "var(--card-border)" }}>
+      <div className="rounded-lg border p-4" style={{ background: "var(--surface-container-high)", borderColor: "var(--outline-variant)" }}>
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <GitBranchIcon size={16} />
-            <span className="font-mono text-sm font-medium" style={{ color: "var(--foreground)" }}>
+            <span className="font-mono text-sm font-medium" style={{ color: "var(--on-surface)" }}>
               {gitStatus.currentBranch}
             </span>
           </div>
@@ -195,7 +195,7 @@ export function PublishView({ planId, projectId }: PublishViewProps) {
             {pushing ? (isZh ? "推送中..." : "Pushing...") : (isZh ? "推送到远程" : "Push to Remote")}
           </Button>
           {pushResult && (
-            <span className={`text-xs ${pushResult.ok ? "text-green-500" : "text-red-500"}`}>
+            <span className={`text-xs ${pushResult.ok ? "text-[var(--success)]" : "text-[var(--error)]"}`}>
               {pushResult.msg.slice(0, 100)}
             </span>
           )}
@@ -203,38 +203,38 @@ export function PublishView({ planId, projectId }: PublishViewProps) {
       </div>
 
       {/* PR section */}
-      <div className="rounded-lg border p-4" style={{ background: "var(--card)", borderColor: "var(--card-border)" }}>
-        <h4 className="text-sm font-medium mb-3" style={{ color: "var(--foreground)" }}>
+      <div className="rounded-lg border p-4" style={{ background: "var(--surface-container-high)", borderColor: "var(--outline-variant)" }}>
+        <h4 className="text-sm font-medium mb-3" style={{ color: "var(--on-surface)" }}>
           Pull Request
         </h4>
 
         {prInfo?.hasPR && prInfo.pr ? (
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <CheckIcon size={14} className="text-green-500" />
+              <CheckIcon size={14} className="text-[var(--success)]" />
               <a
                 href={prInfo.pr.url}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-sm font-medium hover:underline"
-                style={{ color: "#60a5fa" }}
+                style={{ color: "var(--primary)" }}
               >
                 #{prInfo.pr.number} {prInfo.pr.title}
               </a>
               <span className="text-[10px] px-1.5 py-0.5 rounded" style={{
                 background: prInfo.pr.state === "OPEN" ? "rgba(34,197,94,0.15)" : "rgba(139,92,246,0.15)",
-                color: prInfo.pr.state === "OPEN" ? "#86efac" : "#c4b5fd",
+                color: prInfo.pr.state === "OPEN" ? "#86efac" : "var(--secondary)",
               }}>
                 {prInfo.pr.state}
               </span>
             </div>
-            <p className="text-xs" style={{ color: "var(--muted)" }}>
+            <p className="text-xs" style={{ color: "var(--outline)" }}>
               {prInfo.pr.headRefName || gitStatus.currentBranch} → {prInfo.pr.baseRefName}
             </p>
           </div>
         ) : (
           <div className="space-y-3">
-            <p className="text-xs" style={{ color: "var(--muted)" }}>
+            <p className="text-xs" style={{ color: "var(--outline)" }}>
               {isZh ? "当前分支没有 Pull Request" : "No Pull Request for current branch"}
             </p>
             <Button size="sm" onClick={() => {
@@ -248,8 +248,8 @@ export function PublishView({ planId, projectId }: PublishViewProps) {
       </div>
 
       {/* AI Deploy */}
-      <div className="rounded-lg border p-4" style={{ background: "var(--card)", borderColor: "var(--card-border)" }}>
-        <h4 className="text-sm font-medium mb-3" style={{ color: "var(--foreground)" }}>
+      <div className="rounded-lg border p-4" style={{ background: "var(--surface-container-high)", borderColor: "var(--outline-variant)" }}>
+        <h4 className="text-sm font-medium mb-3" style={{ color: "var(--on-surface)" }}>
           <SparklesIcon size={14} className="inline-block align-[-2px]" /> {isZh ? "AI 部署" : "AI Deploy"}
         </h4>
         <div className="flex flex-wrap gap-2 mb-3">
@@ -258,7 +258,7 @@ export function PublishView({ planId, projectId }: PublishViewProps) {
               key={p.label}
               onClick={() => setDeployCmd(p.cmd)}
               className="text-[11px] px-2 py-1 rounded hover:opacity-80"
-              style={{ background: "var(--card-border)", color: "var(--foreground)" }}
+              style={{ background: "var(--outline-variant)", color: "var(--on-surface)" }}
             >
               {p.label}
             </button>
@@ -268,8 +268,8 @@ export function PublishView({ planId, projectId }: PublishViewProps) {
           value={deployCmd}
           onChange={(e) => setDeployCmd(e.target.value)}
           rows={3}
-          className="w-full rounded-md border px-3 py-2 text-sm mb-3 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-          style={{ background: "var(--card)", color: "var(--foreground)", borderColor: "var(--card-border)" }}
+          className="w-full rounded-md border px-3 py-2 text-sm mb-3 focus:border-[var(--primary)] focus:outline-none focus:ring-1 focus:ring-[var(--focus-ring)]"
+          style={{ background: "var(--surface-container-high)", color: "var(--on-surface)", borderColor: "var(--outline-variant)" }}
           placeholder={isZh
             ? "告诉 AI 怎么部署，例如：推送代码、构建 Docker 镜像并部署到 K8s..."
             : "Tell AI how to deploy, e.g.: push code, build Docker image and deploy to K8s..."}
@@ -303,27 +303,27 @@ export function PublishView({ planId, projectId }: PublishViewProps) {
             placeholder="feat: implement new feature"
           />
           <div>
-            <label className="block text-sm font-medium mb-1" style={{ color: "var(--foreground)" }}>
+            <label className="block text-sm font-medium mb-1" style={{ color: "var(--on-surface)" }}>
               {isZh ? "描述" : "Description"}
             </label>
             <textarea
               value={prBody}
               onChange={(e) => setPrBody(e.target.value)}
               rows={4}
-              className="w-full rounded-md border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              style={{ background: "var(--card)", color: "var(--foreground)", borderColor: "var(--card-border)" }}
+              className="w-full rounded-md border px-3 py-2 text-sm focus:border-[var(--primary)] focus:outline-none focus:ring-1 focus:ring-[var(--focus-ring)]"
+              style={{ background: "var(--surface-container-high)", color: "var(--on-surface)", borderColor: "var(--outline-variant)" }}
               placeholder={isZh ? "PR 描述..." : "PR description..."}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1" style={{ color: "var(--foreground)" }}>
+            <label className="block text-sm font-medium mb-1" style={{ color: "var(--on-surface)" }}>
               Base Branch
             </label>
             <select
               value={prBase}
               onChange={(e) => setPrBase(e.target.value)}
               className="w-full rounded-md border px-3 py-2 text-sm"
-              style={{ background: "var(--card)", color: "var(--foreground)", borderColor: "var(--card-border)" }}
+              style={{ background: "var(--surface-container-high)", color: "var(--on-surface)", borderColor: "var(--outline-variant)" }}
             >
               <option value="">{isZh ? "默认 (main/master)" : "Default (main/master)"}</option>
               {gitStatus.branches?.filter(b => b !== gitStatus.currentBranch).map(b => (

@@ -40,7 +40,7 @@ export function CreateSchemeDialog({
           required
         />
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-[var(--on-surface)] mb-1">
             {t("scheme.content")}
           </label>
           <MarkdownEditor

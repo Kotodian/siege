@@ -131,10 +131,10 @@ export function PlanList({ projectId, locale }: PlanListProps) {
           <h2 className="text-2xl font-bold">{t("plan.title")}</h2>
           {/* Breadcrumb */}
           {folderPath.length > 0 && (
-            <div className="flex items-center gap-1 text-sm ml-2" style={{ color: "var(--muted)" }}>
+            <div className="flex items-center gap-1 text-sm ml-2" style={{ color: "var(--outline)" }}>
               <button
                 onClick={navigateToRoot}
-                className="hover:text-blue-600"
+                className="hover:text-[var(--primary)]"
               >
                 /
               </button>
@@ -146,7 +146,7 @@ export function PlanList({ projectId, locale }: PlanListProps) {
                       setFolderPath(folderPath.slice(0, i + 1));
                       setCurrentFolderId(f.id);
                     }}
-                    className="hover:text-blue-600"
+                    className="hover:text-[var(--primary)]"
                   >
                     {f.name}
                   </button>
@@ -178,7 +178,7 @@ export function PlanList({ projectId, locale }: PlanListProps) {
       {currentFolderId && (
         <button
           onClick={navigateUp}
-          className="text-sm text-blue-600 hover:underline mb-3 block"
+          className="text-sm text-[var(--primary)] hover:underline mb-3 block"
         >
           &larr; ..
         </button>
@@ -195,7 +195,7 @@ export function PlanList({ projectId, locale }: PlanListProps) {
             <div
               key={folder.id}
               className="rounded-lg border p-3 flex items-center justify-between hover:shadow-sm cursor-pointer"
-              style={{ background: "var(--card)", borderColor: "var(--card-border)" }}
+              style={{ background: "var(--surface-container-high)", borderColor: "var(--outline-variant)" }}
               onClick={() => navigateToFolder(folder)}
             >
               <div className="flex items-center gap-2">
@@ -209,8 +209,8 @@ export function PlanList({ projectId, locale }: PlanListProps) {
                     if (ok) handleDeleteFolder(folder.id);
                   });
                 }}
-                className="hover:text-red-500 text-xs"
-                style={{ color: "var(--muted)" }}
+                className="hover:text-[var(--error)] text-xs"
+                style={{ color: "var(--outline)" }}
               >
                 {t("common.delete")}
               </button>
@@ -221,7 +221,7 @@ export function PlanList({ projectId, locale }: PlanListProps) {
 
       {/* Plans */}
       {plans.length === 0 && folders.length === 0 ? (
-        <p className="text-center py-12" style={{ color: "var(--muted)" }}>
+        <p className="text-center py-12" style={{ color: "var(--outline)" }}>
           {t("common.noData")}
         </p>
       ) : (

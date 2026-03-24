@@ -17,12 +17,12 @@ function CollapsibleSection({ title, icon, defaultOpen = false, badge, children 
         onClick={() => setOpen(!open)}
         className="w-full flex items-center gap-2 py-3 text-left hover:opacity-80"
       >
-        <svg className={`w-4 h-4 shrink-0 transition-transform ${open ? "rotate-90" : ""}`} style={{ color: "var(--muted)" }} viewBox="0 0 20 20" fill="currentColor">
+        <svg className={`w-4 h-4 shrink-0 transition-transform ${open ? "rotate-90" : ""}`} style={{ color: "var(--outline)" }} viewBox="0 0 20 20" fill="currentColor">
           <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
         </svg>
         {icon}
-        <span className="text-lg font-semibold" style={{ color: "var(--foreground)" }}>{title}</span>
-        {badge && <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: "var(--card-border)", color: "var(--muted)" }}>{badge}</span>}
+        <span className="text-lg font-semibold" style={{ color: "var(--on-surface)" }}>{title}</span>
+        {badge && <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: "var(--outline-variant)", color: "var(--outline)" }}>{badge}</span>}
       </button>
       {open && <div className="pl-6">{children}</div>}
     </section>
@@ -154,7 +154,7 @@ export default function SettingsPage({
 
   return (
     <div>
-      <a href={`/${locale}`} className="text-sm text-blue-600 hover:underline">
+      <a href={`/${locale}`} className="text-sm text-[var(--primary)] hover:underline">
         &larr; {t("common.back")}
       </a>
       <h1 className="text-3xl font-bold mt-2 mb-8">{t("nav.settings")}</h1>
@@ -167,7 +167,7 @@ export default function SettingsPage({
       >
 
         {/* Claude Code Login — for ACP engine */}
-        <div className="rounded-lg border p-4 mb-3" style={{ background: "var(--card)", borderColor: "var(--card-border)" }}>
+        <div className="rounded-lg border p-4 mb-3" style={{ background: "var(--surface-container-high)", borderColor: "var(--outline-variant)" }}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="font-medium text-sm"><MessageSquareIcon size={14} className="inline-block align-[-2px]" /> Claude Code</span>
@@ -176,7 +176,7 @@ export default function SettingsPage({
             <div className="flex items-center gap-2">
               {aiConfig?.claude?.loggedIn ? (
                 <>
-                  <span className="text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
+                  <span className="text-xs text-[var(--success)] bg-[var(--success-container)] px-2 py-0.5 rounded-full">
                     ✓ {aiConfig.claude.email || (isZh ? "已登录" : "Logged in")}
                   </span>
                   {aiConfig.claude.subscriptionType && (
@@ -186,38 +186,38 @@ export default function SettingsPage({
                   )}
                 </>
               ) : aiConfig?.claude?.installed ? (
-                <span className="text-xs text-yellow-600 bg-yellow-50 px-2 py-0.5 rounded-full">
+                <span className="text-xs text-[var(--warning)] bg-[var(--warning-container)] px-2 py-0.5 rounded-full">
                   {isZh ? "未登录" : "Not logged in"}
                 </span>
               ) : (
-                <span className="text-xs" style={{ color: "var(--muted)" }}>
+                <span className="text-xs" style={{ color: "var(--outline)" }}>
                   {isZh ? "未安装" : "Not installed"}
                 </span>
               )}
             </div>
           </div>
           {aiConfig?.claude?.loggedIn ? (
-            <p className="text-xs mt-2" style={{ color: "var(--muted)" }}>
+            <p className="text-xs mt-2" style={{ color: "var(--outline)" }}>
               {isZh
                 ? "任务排期中选择「Claude Code (ACP)」引擎即可使用"
                 : "Select 'Claude Code (ACP)' engine in task scheduler"}
             </p>
           ) : aiConfig?.claude?.installed ? (
             <div className="mt-2 flex items-center gap-2">
-              <code className="text-xs px-2 py-1 rounded font-mono select-all" style={{ background: "var(--background)", color: "var(--foreground)" }}>claude login</code>
+              <code className="text-xs px-2 py-1 rounded font-mono select-all" style={{ background: "var(--background)", color: "var(--on-surface)" }}>claude login</code>
               <Button variant="ghost" size="sm" onClick={() => fetch("/api/ai-config").then(r => r.json()).then(setAiConfig)}>
                 {isZh ? "刷新状态" : "Refresh"}
               </Button>
             </div>
           ) : (
-            <p className="text-xs mt-2" style={{ color: "var(--muted)" }}>
+            <p className="text-xs mt-2" style={{ color: "var(--outline)" }}>
               {isZh ? "请先安装 Claude Code CLI" : "Install Claude Code CLI first"}
             </p>
           )}
         </div>
 
         {/* Codex Login — for Codex ACP engine */}
-        <div className="rounded-lg border p-4 mb-3" style={{ background: "var(--card)", borderColor: "var(--card-border)" }}>
+        <div className="rounded-lg border p-4 mb-3" style={{ background: "var(--surface-container-high)", borderColor: "var(--outline-variant)" }}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="font-medium text-sm"><PackageIcon size={14} className="inline-block align-[-2px]" /> Codex</span>
@@ -225,35 +225,35 @@ export default function SettingsPage({
             </div>
             <div className="flex items-center gap-2">
               {aiConfig?.codex?.loggedIn ? (
-                <span className="text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
+                <span className="text-xs text-[var(--success)] bg-[var(--success-container)] px-2 py-0.5 rounded-full">
                   ✓ {aiConfig.codex.method || (isZh ? "已登录" : "Logged in")}
                 </span>
               ) : aiConfig?.codex?.installed ? (
-                <span className="text-xs text-yellow-600 bg-yellow-50 px-2 py-0.5 rounded-full">
+                <span className="text-xs text-[var(--warning)] bg-[var(--warning-container)] px-2 py-0.5 rounded-full">
                   {isZh ? "未登录" : "Not logged in"}
                 </span>
               ) : (
-                <span className="text-xs" style={{ color: "var(--muted)" }}>
+                <span className="text-xs" style={{ color: "var(--outline)" }}>
                   {isZh ? "未安装" : "Not installed"}
                 </span>
               )}
             </div>
           </div>
           {aiConfig?.codex?.loggedIn ? (
-            <p className="text-xs mt-2" style={{ color: "var(--muted)" }}>
+            <p className="text-xs mt-2" style={{ color: "var(--outline)" }}>
               {isZh
                 ? "任务排期中选择「Codex (ACP)」引擎即可使用"
                 : "Select 'Codex (ACP)' engine in task scheduler"}
             </p>
           ) : aiConfig?.codex?.installed ? (
             <div className="mt-2 flex items-center gap-2">
-              <code className="text-xs px-2 py-1 rounded font-mono select-all" style={{ background: "var(--background)", color: "var(--foreground)" }}>codex login</code>
+              <code className="text-xs px-2 py-1 rounded font-mono select-all" style={{ background: "var(--background)", color: "var(--on-surface)" }}>codex login</code>
               <Button variant="ghost" size="sm" onClick={() => fetch("/api/ai-config").then(r => r.json()).then(setAiConfig)}>
                 {isZh ? "刷新状态" : "Refresh"}
               </Button>
             </div>
           ) : (
-            <p className="text-xs mt-2" style={{ color: "var(--muted)" }}>
+            <p className="text-xs mt-2" style={{ color: "var(--outline)" }}>
               {isZh ? "请先安装 Codex CLI" : "Install Codex CLI first"}
             </p>
           )}
@@ -265,13 +265,13 @@ export default function SettingsPage({
             const isEditing = editingProvider === prov.id;
 
             return (
-              <div key={prov.id} className="rounded-lg border p-4" style={{ background: "var(--card)", borderColor: "var(--card-border)" }}>
+              <div key={prov.id} className="rounded-lg border p-4" style={{ background: "var(--surface-container-high)", borderColor: "var(--outline-variant)" }}>
                 <div className="flex items-center justify-between">
                   <span className="font-medium text-sm">{PROVIDER_ICONS[prov.id] ? <>{PROVIDER_ICONS[prov.id]({ size: 14, className: "inline-block align-[-2px]" })} </> : null}{prov.label}</span>
                   <div className="flex items-center gap-2">
                     {status?.configured ? (
                       <>
-                        <span className="text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
+                        <span className="text-xs text-[var(--success)] bg-[var(--success-container)] px-2 py-0.5 rounded-full">
                           ✓ {status.masked || (status.baseURL ? "Proxy" : "OK")}
                         </span>
                         {settings[`default_model_${prov.id}`] && (
@@ -280,25 +280,25 @@ export default function SettingsPage({
                           </span>
                         )}
                         {status.baseURL && (
-                          <span className="text-xs font-mono" style={{ color: "var(--muted)" }}>
+                          <span className="text-xs font-mono" style={{ color: "var(--outline)" }}>
                             {status.baseURL.slice(0, 30)}
                           </span>
                         )}
                       </>
                     ) : (
-                      <span className="text-xs" style={{ color: "var(--muted)" }}>
+                      <span className="text-xs" style={{ color: "var(--outline)" }}>
                         {isZh ? "未配置" : "Not configured"}
                       </span>
                     )}
                     {status?.configured && !isEditing && (
                       <>
                         {testResult[prov.id] === true && (
-                          <span className="text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
+                          <span className="text-xs text-[var(--success)] bg-[var(--success-container)] px-2 py-0.5 rounded-full">
                             {isZh ? "连接正常" : "OK"}
                           </span>
                         )}
                         {testResult[prov.id] === false && (
-                          <span className="text-xs text-red-600 bg-red-50 px-2 py-0.5 rounded-full">
+                          <span className="text-xs text-[var(--error)] bg-[var(--error-container)] px-2 py-0.5 rounded-full">
                             {isZh ? "连接失败" : "Failed"}
                           </span>
                         )}
@@ -339,7 +339,7 @@ export default function SettingsPage({
                             const res = await fetch("/api/ai-config");
                             setAiConfig(await res.json());
                           }}
-                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                          className="text-[var(--error)] hover:text-[var(--error)] hover:bg-[var(--error-container)]"
                         >
                           {isZh ? "清除" : "Clear"}
                         </Button>
@@ -369,7 +369,7 @@ export default function SettingsPage({
                 </div>
 
                 {isEditing && (
-                  <div className="mt-3 space-y-3 border-t pt-3" style={{ borderColor: "var(--card-border)" }}>
+                  <div className="mt-3 space-y-3 border-t pt-3" style={{ borderColor: "var(--outline-variant)" }}>
                     <Input
                       label="API Key"
                       value={editKey}
@@ -390,13 +390,13 @@ export default function SettingsPage({
                       }
                     />
                     <div>
-                      <label className="block text-sm font-medium mb-1" style={{ color: "var(--foreground)" }}>
+                      <label className="block text-sm font-medium mb-1" style={{ color: "var(--on-surface)" }}>
                         {isZh ? "模型" : "Model"}
                       </label>
                       <div className="flex gap-2">
                         <select
-                          className="flex-1 rounded-md border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                          style={{ background: "var(--card)", color: "var(--foreground)", borderColor: "var(--card-border)" }}
+                          className="flex-1 rounded-md border px-3 py-2 text-sm focus:border-[var(--primary)] focus:outline-none focus:ring-1 focus:ring-[var(--focus-ring)]"
+                          style={{ background: "var(--surface-container-high)", color: "var(--on-surface)", borderColor: "var(--outline-variant)" }}
                           value={editModel}
                           onChange={(e) => setEditModel(e.target.value)}
                         >
@@ -406,8 +406,8 @@ export default function SettingsPage({
                           ))}
                         </select>
                         <input
-                          className="flex-1 rounded-md border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                          style={{ background: "var(--card)", color: "var(--foreground)", borderColor: "var(--card-border)" }}
+                          className="flex-1 rounded-md border px-3 py-2 text-sm focus:border-[var(--primary)] focus:outline-none focus:ring-1 focus:ring-[var(--focus-ring)]"
+                          style={{ background: "var(--surface-container-high)", color: "var(--on-surface)", borderColor: "var(--outline-variant)" }}
                           value={editModel}
                           onChange={(e) => setEditModel(e.target.value)}
                           placeholder={isZh ? "或输入自定义模型名" : "Or enter custom model name"}
@@ -442,16 +442,16 @@ export default function SettingsPage({
         title={isZh ? "通用设置" : "General Settings"}
         icon={<SettingsIcon size={18} />}
       >
-        <div className="rounded-lg border p-6 space-y-4" style={{ background: "var(--card)", borderColor: "var(--card-border)" }}>
+        <div className="rounded-lg border p-6 space-y-4" style={{ background: "var(--surface-container-high)", borderColor: "var(--outline-variant)" }}>
           <div>
-            <label className="block text-sm font-medium mb-1" style={{ color: "var(--foreground)" }}>
+            <label className="block text-sm font-medium mb-1" style={{ color: "var(--on-surface)" }}>
               {isZh ? "默认 AI 提供商" : "Default AI Provider"}
             </label>
             <select
               value={settings.default_provider || "anthropic"}
               onChange={(e) => setSettings((s) => ({ ...s, default_provider: e.target.value }))}
               className="w-full border rounded-md px-3 py-2 text-sm"
-              style={{ background: "var(--card)", color: "var(--foreground)", borderColor: "var(--card-border)" }}
+              style={{ background: "var(--surface-container-high)", color: "var(--on-surface)", borderColor: "var(--outline-variant)" }}
             >
               <option value="acp">Claude Code (ACP)</option>
               <option value="codex-acp">Codex (ACP)</option>
@@ -474,7 +474,7 @@ export default function SettingsPage({
           />
           <div className="flex items-center gap-3">
             <Button onClick={saveSettings}>{t("common.save")}</Button>
-            {saved && <span className="text-sm text-green-600">✓</span>}
+            {saved && <span className="text-sm text-[var(--success)]">✓</span>}
           </div>
         </div>
       </CollapsibleSection>
@@ -580,14 +580,14 @@ function SkillsSectionInner({
       </h2>
 
       {/* Generate skill from prompt */}
-      <div className="rounded-lg border p-4 mb-4" style={{ background: "var(--card)", borderColor: "var(--card-border)" }}>
-        <h3 className="text-sm font-medium mb-2" style={{ color: "var(--foreground)" }}>
+      <div className="rounded-lg border p-4 mb-4" style={{ background: "var(--surface-container-high)", borderColor: "var(--outline-variant)" }}>
+        <h3 className="text-sm font-medium mb-2" style={{ color: "var(--on-surface)" }}>
           {isZh ? "通过描述安装技能" : "Install Skill from Prompt"}
         </h3>
         <div className="flex gap-2">
           <textarea
-            className="flex-1 rounded-md border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none"
-            style={{ background: "var(--card)", color: "var(--foreground)", borderColor: "var(--card-border)" }}
+            className="flex-1 rounded-md border px-3 py-2 text-sm focus:border-[var(--primary)] focus:outline-none focus:ring-1 focus:ring-[var(--focus-ring)] resize-none"
+            style={{ background: "var(--surface-container-high)", color: "var(--on-surface)", borderColor: "var(--outline-variant)" }}
             rows={2}
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
@@ -608,7 +608,7 @@ function SkillsSectionInner({
           </Button>
         </div>
         {result && (
-          <p className={`text-xs mt-2 ${result.startsWith("Installed") || result.startsWith("已安装") ? "text-green-600" : "text-red-500"}`}>
+          <p className={`text-xs mt-2 ${result.startsWith("Installed") || result.startsWith("已安装") ? "text-[var(--success)]" : "text-[var(--error)]"}`}>
             {result}
           </p>
         )}
@@ -617,28 +617,28 @@ function SkillsSectionInner({
       {/* Installed skills */}
       {Object.entries(skillsBySource).map(([source, items]) => (
         <div key={source} className="mb-4">
-          <h3 className="text-sm font-medium mb-2" style={{ color: "var(--muted)" }}>
+          <h3 className="text-sm font-medium mb-2" style={{ color: "var(--outline)" }}>
             {source} ({items.length})
           </h3>
-          <div className="rounded-lg border divide-y" style={{ background: "var(--card)", borderColor: "var(--card-border)", "--tw-divide-color": "var(--card-border)" } as React.CSSProperties}>
+          <div className="rounded-lg border divide-y" style={{ background: "var(--surface-container-high)", borderColor: "var(--outline-variant)", "--tw-divide-color": "var(--outline-variant)" } as React.CSSProperties}>
             {items.map((skill) => (
               <div key={skill.name} className="px-4 py-3">
                 <div className="flex items-start justify-between">
                   <div className="flex-1 min-w-0">
                     <span className="font-mono text-sm font-medium">{skill.name}</span>
                     {skill.description && (
-                      <p className="text-xs mt-0.5" style={{ color: "var(--muted)" }}>{skill.description}</p>
+                      <p className="text-xs mt-0.5" style={{ color: "var(--outline)" }}>{skill.description}</p>
                     )}
                   </div>
                   <button
                     onClick={() => handleDelete(skill.name)}
-                    className="text-xs text-red-500 hover:text-red-700 hover:bg-red-50 px-2 py-1 rounded shrink-0 ml-2"
+                    className="text-xs text-[var(--error)] hover:text-[var(--error)] hover:bg-[var(--error-container)] px-2 py-1 rounded shrink-0 ml-2"
                   >
                     {isZh ? "删除" : "Delete"}
                   </button>
                 </div>
                 {skill.preview && (
-                  <pre className="text-[11px] mt-1.5 whitespace-pre-wrap line-clamp-3 font-mono leading-relaxed" style={{ color: "var(--muted)" }}>{skill.preview}</pre>
+                  <pre className="text-[11px] mt-1.5 whitespace-pre-wrap line-clamp-3 font-mono leading-relaxed" style={{ color: "var(--outline)" }}>{skill.preview}</pre>
                 )}
               </div>
             ))}
@@ -646,7 +646,7 @@ function SkillsSectionInner({
         </div>
       ))}
       {skills.length === 0 && (
-        <p className="text-sm" style={{ color: "var(--muted)" }}>
+        <p className="text-sm" style={{ color: "var(--outline)" }}>
           {isZh ? "未找到技能（~/.claude/skills/）" : "No skills found in ~/.claude/skills/"}
         </p>
       )}
@@ -773,30 +773,30 @@ function ImportSourcesSectionInner({ isZh }: { isZh: boolean }) {
       </div>
 
       {configs.length === 0 ? (
-        <p className="text-sm" style={{ color: "var(--muted)" }}>
+        <p className="text-sm" style={{ color: "var(--outline)" }}>
           {isZh ? "暂无配置的导入来源" : "No import sources configured"}
         </p>
       ) : (
         <div className="space-y-3">
           {configs.map((cfg) => (
-            <div key={cfg.id} className="rounded-lg border p-4" style={{ background: "var(--card)", borderColor: "var(--card-border)" }}>
+            <div key={cfg.id} className="rounded-lg border p-4" style={{ background: "var(--surface-container-high)", borderColor: "var(--outline-variant)" }}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="font-medium text-sm">
                     {sourceLabel(cfg.source)}
                   </span>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 font-medium">
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-[rgba(192,193,255,0.12)] text-[var(--primary)] font-medium">
                     {cfg.source}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
                   {validationResult[cfg.id] === true && (
-                    <span className="text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
+                    <span className="text-xs text-[var(--success)] bg-[var(--success-container)] px-2 py-0.5 rounded-full">
                       {isZh ? "连接成功" : "Connected"}
                     </span>
                   )}
                   {validationResult[cfg.id] === false && (
-                    <span className="text-xs text-red-600 bg-red-50 px-2 py-0.5 rounded-full">
+                    <span className="text-xs text-[var(--error)] bg-[var(--error-container)] px-2 py-0.5 rounded-full">
                       {isZh ? "连接失败" : "Failed"}
                     </span>
                   )}
@@ -814,13 +814,13 @@ function ImportSourcesSectionInner({ isZh }: { isZh: boolean }) {
                     variant="ghost"
                     size="sm"
                     onClick={() => handleDelete(cfg.id)}
-                    className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                    className="text-[var(--error)] hover:text-[var(--error)] hover:bg-[var(--error-container)]"
                   >
                     {isZh ? "删除" : "Delete"}
                   </Button>
                 </div>
               </div>
-              <div className="mt-2 text-xs font-mono" style={{ color: "var(--muted)" }}>
+              <div className="mt-2 text-xs font-mono" style={{ color: "var(--outline)" }}>
                 {Object.entries(cfg.config)
                   .map(([k, v]) => `${k}: ${v}`)
                   .join(" | ")}
@@ -837,7 +837,7 @@ function ImportSourcesSectionInner({ isZh }: { isZh: boolean }) {
       >
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-1" style={{ color: "var(--foreground)" }}>
+            <label className="block text-sm font-medium mb-1" style={{ color: "var(--on-surface)" }}>
               {isZh ? "类型" : "Type"}
             </label>
             <select
@@ -847,7 +847,7 @@ function ImportSourcesSectionInner({ isZh }: { isZh: boolean }) {
                 setAddFields({});
               }}
               className="w-full border rounded-md px-3 py-2 text-sm"
-              style={{ background: "var(--card)", color: "var(--foreground)", borderColor: "var(--card-border)" }}
+              style={{ background: "var(--surface-container-high)", color: "var(--on-surface)", borderColor: "var(--outline-variant)" }}
             >
               {Object.keys(IMPORT_SOURCE_FIELDS).map((s) => (
                 <option key={s} value={s}>
@@ -928,12 +928,12 @@ function StepModelSectionInner({
 
   return (
     <div>
-      <p className="text-xs mb-4" style={{ color: "var(--muted)" }}>
+      <p className="text-xs mb-4" style={{ color: "var(--outline)" }}>
         {isZh
           ? "为不同步骤设置不同的 AI 提供商和模型。留空则使用全局默认。"
           : "Set different AI providers and models for each step. Empty uses global default."}
       </p>
-      <div className="rounded-lg border divide-y" style={{ background: "var(--card)", borderColor: "var(--card-border)", "--tw-divide-color": "var(--card-border)" } as React.CSSProperties}>
+      <div className="rounded-lg border divide-y" style={{ background: "var(--surface-container-high)", borderColor: "var(--outline-variant)", "--tw-divide-color": "var(--outline-variant)" } as React.CSSProperties}>
         {AI_STEPS.map((step) => {
           const provKey = `step_provider_${step.id}`;
           const modelKey = `step_model_${step.id}`;
@@ -952,7 +952,7 @@ function StepModelSectionInner({
                     setSettings((s) => ({ ...s, [provKey]: e.target.value }))
                   }
                   className="flex-1 rounded-md border px-2 py-1.5 text-sm"
-                  style={{ background: "var(--card)", color: "var(--foreground)", borderColor: "var(--card-border)" }}
+                  style={{ background: "var(--surface-container-high)", color: "var(--on-surface)", borderColor: "var(--outline-variant)" }}
                 >
                   {ALL_PROVIDER_OPTIONS.map((opt) => (
                     <option key={opt.value} value={opt.value}>
@@ -971,11 +971,11 @@ function StepModelSectionInner({
                       : (isZh ? "模型（可选）" : "Model (optional)")
                   }
                   className="flex-1 rounded-md border px-2 py-1.5 text-sm"
-                  style={{ background: "var(--card)", color: "var(--foreground)", borderColor: "var(--card-border)" }}
+                  style={{ background: "var(--surface-container-high)", color: "var(--on-surface)", borderColor: "var(--outline-variant)" }}
                 />
               </div>
               {isAcpProvider && (
-                <p className="text-xs mt-1 ml-28" style={{ color: "var(--muted)" }}>
+                <p className="text-xs mt-1 ml-28" style={{ color: "var(--outline)" }}>
                   {isZh
                     ? `${selectedProvider === "codex-acp" ? "Codex" : "Claude Code"} ACP 引擎模型，留空使用默认`
                     : `Model for ${selectedProvider === "codex-acp" ? "Codex" : "Claude Code"} ACP engine. Leave empty for default.`}
@@ -989,7 +989,7 @@ function StepModelSectionInner({
         <Button size="sm" onClick={handleSave}>
           {isZh ? "保存" : "Save"}
         </Button>
-        {saved && <span className="text-sm text-green-600">✓</span>}
+        {saved && <span className="text-sm text-[var(--success)]">✓</span>}
       </div>
     </div>
   );
@@ -1063,40 +1063,40 @@ function MemorySectionInner({ isZh }: { isZh: boolean }) {
       </div>
 
       {items.length === 0 ? (
-        <p className="text-sm" style={{ color: "var(--muted)" }}>
+        <p className="text-sm" style={{ color: "var(--outline)" }}>
           {isZh ? "暂无记忆。AI 执行任务后会自动学习，你也可以手动添加。" : "No memories yet. AI learns automatically, or add manually."}
         </p>
       ) : (
-        <div className="rounded-lg border divide-y" style={{ background: "var(--card)", borderColor: "var(--card-border)" }}>
+        <div className="rounded-lg border divide-y" style={{ background: "var(--surface-container-high)", borderColor: "var(--outline-variant)" }}>
           {items.map((m) => (
             <div key={m.id} className="px-4 py-3">
               <div className="flex items-start justify-between">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium" style={{ color: "var(--foreground)" }}>{m.title}</span>
-                    <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: "var(--card-border)", color: "var(--muted)" }}>
+                    <span className="text-sm font-medium" style={{ color: "var(--on-surface)" }}>{m.title}</span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: "var(--outline-variant)", color: "var(--outline)" }}>
                       {typeLabel(m.type)}
                     </span>
                     <span className="text-[10px] px-1.5 py-0.5 rounded" style={{
                       background: m.source === "auto" ? "rgba(59,130,246,0.15)" : "rgba(124,58,237,0.15)",
-                      color: m.source === "auto" ? "#93c5fd" : "#c4b5fd",
+                      color: m.source === "auto" ? "#93c5fd" : "var(--secondary)",
                     }}>
                       {m.source === "auto" ? (isZh ? "自动" : "Auto") : (isZh ? "手动" : "Manual")}
                     </span>
                   </div>
-                  <p className="text-xs mt-0.5" style={{ color: "var(--muted)" }}>{m.content}</p>
+                  <p className="text-xs mt-0.5" style={{ color: "var(--outline)" }}>{m.content}</p>
                 </div>
                 <div className="flex gap-1 shrink-0 ml-2">
                   <button
                     onClick={() => { setForm({ title: m.title, content: m.content, type: m.type }); setEditId(m.id); setAddOpen(true); }}
                     className="text-xs px-2 py-1 rounded hover:opacity-80"
-                    style={{ color: "var(--muted)" }}
+                    style={{ color: "var(--outline)" }}
                   >
                     {isZh ? "编辑" : "Edit"}
                   </button>
                   <button
                     onClick={() => handleDelete(m.id)}
-                    className="text-xs px-2 py-1 rounded text-red-500 hover:opacity-80"
+                    className="text-xs px-2 py-1 rounded text-[var(--error)] hover:opacity-80"
                   >
                     {isZh ? "删除" : "Delete"}
                   </button>
@@ -1116,17 +1116,17 @@ function MemorySectionInner({ isZh }: { isZh: boolean }) {
           <div className="space-y-3">
             <Input label={isZh ? "标题" : "Title"} value={form.title} onChange={(e) => setForm(f => ({ ...f, title: e.target.value }))} placeholder={isZh ? "如：技术栈是 Rust + eBPF" : "e.g.: Tech stack is Rust + eBPF"} />
             <div>
-              <label className="block text-sm font-medium mb-1" style={{ color: "var(--foreground)" }}>{isZh ? "内容" : "Content"}</label>
+              <label className="block text-sm font-medium mb-1" style={{ color: "var(--on-surface)" }}>{isZh ? "内容" : "Content"}</label>
               <textarea value={form.content} onChange={(e) => setForm(f => ({ ...f, content: e.target.value }))} rows={3}
                 className="w-full rounded-md border px-3 py-2 text-sm"
-                style={{ background: "var(--card)", color: "var(--foreground)", borderColor: "var(--card-border)" }}
+                style={{ background: "var(--surface-container-high)", color: "var(--on-surface)", borderColor: "var(--outline-variant)" }}
                 placeholder={isZh ? "详细描述..." : "Details..."} />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1" style={{ color: "var(--foreground)" }}>{isZh ? "类型" : "Type"}</label>
+              <label className="block text-sm font-medium mb-1" style={{ color: "var(--on-surface)" }}>{isZh ? "类型" : "Type"}</label>
               <select value={form.type} onChange={(e) => setForm(f => ({ ...f, type: e.target.value }))}
                 className="w-full rounded-md border px-3 py-2 text-sm"
-                style={{ background: "var(--card)", color: "var(--foreground)", borderColor: "var(--card-border)" }}>
+                style={{ background: "var(--surface-container-high)", color: "var(--on-surface)", borderColor: "var(--outline-variant)" }}>
                 <option value="user">{isZh ? "用户偏好" : "User Preference"}</option>
                 <option value="project">{isZh ? "项目信息" : "Project Info"}</option>
                 <option value="feedback">{isZh ? "反馈/教训" : "Feedback/Lesson"}</option>

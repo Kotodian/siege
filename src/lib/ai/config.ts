@@ -124,7 +124,7 @@ export function getConfiguredModel(provider?: Provider, model?: string) {
  */
 export function withLocale(prompt: string, locale?: string): string {
   if (locale === "zh") {
-    return `[LANGUAGE INSTRUCTION: You MUST respond entirely in Chinese (简体中文). Every sentence, explanation, and comment must be in Chinese. Do NOT use English or Japanese for any part of your response except for code, file paths, and command names.]\n\n${prompt}`;
+    return `<language>简体中文</language>\n<instruction>你必须全程使用简体中文回复。所有解释、分析、总结都用中文。代码、文件路径、命令名保持原样。严禁使用英文或日文回复。</instruction>\n\n${prompt}`;
   }
   return prompt;
 }

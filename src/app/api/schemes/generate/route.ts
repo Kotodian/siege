@@ -5,7 +5,7 @@ import { eq, and } from "drizzle-orm";
 import { execSync } from "child_process";
 import { streamText, tool, stepCountIs, generateText } from "ai";
 import { z } from "zod";
-import { resolveStepConfig, getStepModel } from "@/lib/ai/config";
+import { resolveStepConfig, getStepModel, withLocale } from "@/lib/ai/config";
 import { AcpClient } from "@/lib/acp/client";
 import { parseJsonBody } from "@/lib/utils";
 import { sseEncode } from "@/lib/ai/sse";
@@ -581,7 +581,7 @@ export async function POST(req: NextRequest) {
             const currentPrompt = attempts === 0
               ? prompt
               : "Your previous response was truncated. Continue EXACTLY where you left off — do not repeat what was already written. Complete the remaining sections.";
-            const result = await acpClient.prompt(session.sessionId, currentPrompt, (type, text) => {
+            const result = await acpClient.prompt(session.sessionId, withLocale(currentPrompt, locale), (type, text) => {
               if (type === "text") {
                 fullText += text;
                 controller.enqueue(encoder.encode(text));

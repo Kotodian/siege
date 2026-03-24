@@ -117,3 +117,14 @@ export function getConfiguredModel(provider?: Provider, model?: string) {
 
   return createModel(resolvedProvider, resolvedModel, config);
 }
+
+/**
+ * Prefix a prompt with a strong language instruction based on locale.
+ * For ACP prompts where the agent's system prompt may override weak hints.
+ */
+export function withLocale(prompt: string, locale?: string): string {
+  if (locale === "zh") {
+    return `[LANGUAGE INSTRUCTION: You MUST respond entirely in Chinese (简体中文). Every sentence, explanation, and comment must be in Chinese. Do NOT use English or Japanese for any part of your response except for code, file paths, and command names.]\n\n${prompt}`;
+  }
+  return prompt;
+}

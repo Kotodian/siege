@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { resolveStepConfig, getStepModel } from "@/lib/ai/config";
+import { resolveStepConfig, getStepModel, withLocale } from "@/lib/ai/config";
 import { streamText } from "ai";
 import { AcpClient } from "@/lib/acp/client";
 import { parseJsonBody } from "@/lib/utils";
@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
   const [body, errRes] = await parseJsonBody(req);
   if (errRes) return errRes;
 
-  const { prompt } = body as { prompt: string };
+  const { prompt, locale } = body as { prompt: string; locale?: string };
   if (!prompt) {
     return NextResponse.json({ error: "prompt is required" }, { status: 400 });
   }
@@ -90,7 +90,7 @@ Output the complete file content starting with the --- frontmatter block.`;
           const acpClient = new AcpClient(process.cwd(), resolved.provider === "codex-acp" ? "codex" : resolved.provider === "copilot-acp" ? "copilot" : "claude");
           await acpClient.start();
           const session = await acpClient.createSession(resolved.model);
-          await acpClient.prompt(session.sessionId, acpPrompt, (type, text) => {
+          await acpClient.prompt(session.sessionId, withLocale(acpPrompt, locale), (type, text) => {
             if (type === "text") {
               fullText += text;
               controller.enqueue(encoder.encode(text));

@@ -67,6 +67,7 @@ export function PublishView({ planId, projectId }: PublishViewProps) {
         body: JSON.stringify({
           repoPath,
           instruction: deployCmd.trim(),
+          locale: isZh ? "zh" : "en",
           provider: deployProvider || undefined,
           model: deployModel || undefined,
         }),

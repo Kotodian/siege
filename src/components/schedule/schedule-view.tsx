@@ -303,7 +303,7 @@ export function ScheduleView({
       const res = await fetch("/api/execute", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ itemId, skills, ...(provider && { provider }), ...(model && { model }) }),
+        body: JSON.stringify({ itemId, skills, locale: isZh ? "zh" : "en", ...(provider && { provider }), ...(model && { model }) }),
         signal,
       });
 

@@ -11,7 +11,7 @@ import { eq } from "drizzle-orm";
 import { execSync } from "child_process";
 import { streamText, tool, stepCountIs } from "ai";
 import { z } from "zod";
-import { getStepModel, resolveStepConfig } from "@/lib/ai/config";
+import { getStepModel, resolveStepConfig, withLocale } from "@/lib/ai/config";
 import { AcpClient } from "@/lib/acp/client";
 import fs from "fs";
 import path from "path";
@@ -134,7 +134,7 @@ export async function POST(
   const isZh = locale === "zh";
 
   const prompt = isZh
-    ? `你是一个测试工程师。请用中文回复，不要使用英文或日文。
+    ? `你是一个测试工程师。
 
 运行以下测试并报告结果。
 
@@ -187,7 +187,7 @@ IMPORTANT: After running the test, you MUST end your response with exactly one o
           await acp.start();
           const session = await acp.createSession(model);
 
-          await acp.prompt(session.sessionId, prompt, (type, text) => {
+          await acp.prompt(session.sessionId, withLocale(prompt, locale), (type, text) => {
             fullLog += text;
             controller.enqueue(encoder.encode(text));
           });

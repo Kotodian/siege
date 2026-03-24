@@ -3,7 +3,7 @@ import { getDb } from "@/lib/db";
 import { plans, schedules, scheduleItems, fileSnapshots, testSuites, testCases, projects } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { generateTests } from "@/lib/ai/test-generator";
-import { resolveStepConfig } from "@/lib/ai/config";
+import { resolveStepConfig, withLocale } from "@/lib/ai/config";
 import { AcpClient } from "@/lib/acp/client";
 import type { Provider } from "@/lib/ai/provider";
 import fs from "fs";
@@ -111,7 +111,7 @@ Output a JSON array. Each object: scheduleItemId (must match task id), name, des
 Output ONLY the JSON array.${zh ? " 用中文写描述。" : ""}`;
 
         let fullText = "";
-        await acpClient.prompt(session.sessionId, acpPrompt, (t, text) => {
+        await acpClient.prompt(session.sessionId, withLocale(acpPrompt, locale), (t, text) => {
           if (t === "text") fullText += text;
         });
 

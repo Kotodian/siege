@@ -12,7 +12,7 @@ import {
   fileSnapshots,
 } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { resolveStepConfig, getStepModel } from "@/lib/ai/config";
+import { resolveStepConfig, getStepModel, withLocale } from "@/lib/ai/config";
 import { streamText } from "ai";
 import { AcpClient } from "@/lib/acp/client";
 import { parseJsonBody } from "@/lib/utils";
@@ -396,7 +396,7 @@ ${zh ? "用中文输出所有内容。" : ""}`;
 
           controller.enqueue(encoder.encode(zh ? "AI 正在检查 git 提交...\n" : "AI inspecting git commits...\n"));
 
-          await acpClient.prompt(session.sessionId, acpPrompt, (t, text) => {
+          await acpClient.prompt(session.sessionId, withLocale(acpPrompt, locale), (t, text) => {
             if (t === "text") {
               fullText += text;
               controller.enqueue(encoder.encode(text));

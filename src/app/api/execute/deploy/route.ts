@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { execSync } from "child_process";
 import { streamText, tool, stepCountIs } from "ai";
 import { z } from "zod";
-import { resolveStepConfig, getStepModel } from "@/lib/ai/config";
+import { resolveStepConfig, getStepModel, withLocale } from "@/lib/ai/config";
 import { AcpClient } from "@/lib/acp/client";
 import { parseJsonBody } from "@/lib/utils";
 import fs from "fs";
@@ -16,11 +16,12 @@ import path from "path";
 export async function POST(req: NextRequest) {
   const [body, errRes] = await parseJsonBody(req);
   if (errRes) return errRes;
-  const { repoPath, instruction, provider, model } = body as {
+  const { repoPath, instruction, provider, model, locale } = body as {
     repoPath: string;
     instruction: string;
     provider?: string;
     model?: string;
+    locale?: string;
   };
 
   if (!repoPath || !instruction) {
@@ -51,7 +52,7 @@ Use the available tools to run commands, read/write files as needed. Report prog
           const session = await acpClient.createSession(resolved.model);
           controller.enqueue(encoder.encode(`Session: ${session.sessionId}\n\n`));
 
-          await acpClient.prompt(session.sessionId, prompt, (type, text) => {
+          await acpClient.prompt(session.sessionId, withLocale(prompt, locale), (type, text) => {
             if (type === "text" || type === "tool") {
               controller.enqueue(encoder.encode(text));
             } else if (type === "plan") {

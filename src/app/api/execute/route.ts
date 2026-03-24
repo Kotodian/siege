@@ -13,7 +13,7 @@ import { eq } from "drizzle-orm";
 import { execSync } from "child_process";
 import { streamText, tool, stepCountIs } from "ai";
 import { z } from "zod";
-import { getStepModel, resolveStepConfig } from "@/lib/ai/config";
+import { getStepModel, resolveStepConfig, withLocale } from "@/lib/ai/config";
 import { scanAllSkills, getSkillContent } from "@/lib/skills/registry";
 import { loadMemoryContext } from "@/lib/ai/memory";
 import { parseJsonBody } from "@/lib/utils";
@@ -394,7 +394,7 @@ function createLspTools(repoPath: string) {
 export async function POST(req: NextRequest) {
   const [body, errRes] = await parseJsonBody(req);
   if (errRes) return errRes;
-  const { itemId, skills: requestSkills, provider: reqProvider, model: reqModel } = body as { itemId: string; skills?: string[]; provider?: string; model?: string };
+  const { itemId, skills: requestSkills, provider: reqProvider, model: reqModel, locale } = body as { itemId: string; skills?: string[]; provider?: string; model?: string; locale?: string };
 
   if (!itemId) {
     return NextResponse.json({ error: "itemId is required" }, { status: 400 });
@@ -522,7 +522,7 @@ After implementing, commit your changes with a descriptive commit message follow
           controller.enqueue(encoder.encode(`Session: ${session.sessionId}\n\n`));
           fullLog += `[ACP] Session: ${session.sessionId}\n`;
 
-          const result = await acpClient.prompt(session.sessionId, prompt, (type, text) => {
+          const result = await acpClient.prompt(session.sessionId, withLocale(prompt, locale), (type, text) => {
             if (type === "text") {
               fullLog += text;
               controller.enqueue(encoder.encode(text));

@@ -140,7 +140,9 @@ export function TestView({ planId, planStatus, onPlanStatusChange }: TestViewPro
   const handleRunCase = async (caseId: string) => {
     setRunningCase(caseId);
     const tc = suite?.cases.find(c => c.id === caseId);
-    startLoading(isZh ? `运行测试: ${tc?.description || tc?.name || ""}` : `Running: ${tc?.description || tc?.name || ""}`);
+    const label = tc?.description || tc?.name || "";
+    startLoading(isZh ? `运行测试` : `Running test`);
+    setLoadingTasks([{ id: caseId, order: 1, title: label, status: "running" }]);
     try {
       await fetch(`/api/test-cases/${caseId}/run`, { method: "POST" });
       const freshRes = await fetch(`/api/test-suites?planId=${planId}`);
@@ -148,14 +150,17 @@ export function TestView({ planId, planStatus, onPlanStatusChange }: TestViewPro
       setSuite(freshSuite);
       const freshCase = freshSuite?.cases.find(c => c.id === caseId);
       if (freshCase?.status === "passed") {
+        updateTaskStatus(caseId, "completed");
         stopLoading(isZh ? "测试通过" : "Test passed");
       } else if (freshCase?.status === "failed") {
+        updateTaskStatus(caseId, "failed");
         stopLoading(isZh ? "测试未通过" : "Test failed", "error");
         setFailedPrompt({ cases: [freshCase] });
       } else {
         stopLoading();
       }
     } catch {
+      updateTaskStatus(caseId, "failed");
       stopLoading(isZh ? "运行失败" : "Run failed", "error");
     } finally {
       setRunningCase(null);

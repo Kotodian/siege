@@ -28,7 +28,7 @@ function CollapsibleSection({ title, icon, defaultOpen = false, badge, children 
     </section>
   );
 }
-import { BotIcon, MessageSquareIcon, PackageIcon, SettingsIcon, TargetIcon, InboxIcon, LayoutGridIcon, BrainIcon, GlobeIcon, SearchIcon, CalendarIcon, ZapIcon, FlaskIcon, FileTextIcon } from "@/components/ui/icons";
+import { BotIcon, MessageSquareIcon, PackageIcon, SettingsIcon, TargetIcon, InboxIcon, LayoutGridIcon, BrainIcon, GlobeIcon, SearchIcon, CalendarIcon, ZapIcon, FlaskIcon, FileTextIcon, AnthropicLogo, OpenAILogo, ZhipuLogo, ClaudeCodeLogo, CodexLogo } from "@/components/ui/icons";
 
 interface ProviderStatus {
   configured: boolean;
@@ -74,8 +74,9 @@ const PROVIDERS = [
 ] as const;
 
 const PROVIDER_ICONS: Record<string, (props: { size?: number; className?: string }) => React.ReactNode> = {
-  anthropic: BrainIcon,
-  glm: GlobeIcon,
+  anthropic: AnthropicLogo,
+  openai: OpenAILogo,
+  glm: ZhipuLogo,
 };
 
 export default function SettingsPage({
@@ -170,7 +171,7 @@ export default function SettingsPage({
         <div className="rounded-lg border p-4 mb-3" style={{ background: "var(--surface-container-high)", borderColor: "var(--outline-variant)" }}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="font-medium text-sm"><MessageSquareIcon size={14} className="inline-block align-[-2px]" /> Claude Code</span>
+              <span className="font-medium text-sm"><ClaudeCodeLogo size={14} className="inline-block align-[-2px]" /> Claude Code</span>
               <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-50 text-purple-600 font-medium">ACP</span>
             </div>
             <div className="flex items-center gap-2">
@@ -220,7 +221,7 @@ export default function SettingsPage({
         <div className="rounded-lg border p-4 mb-3" style={{ background: "var(--surface-container-high)", borderColor: "var(--outline-variant)" }}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="font-medium text-sm"><PackageIcon size={14} className="inline-block align-[-2px]" /> Codex</span>
+              <span className="font-medium text-sm"><CodexLogo size={14} className="inline-block align-[-2px]" /> Codex</span>
               <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-600 font-medium">ACP</span>
             </div>
             <div className="flex items-center gap-2">

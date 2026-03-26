@@ -346,9 +346,7 @@ export async function POST(req: NextRequest) {
   const { system, prompt } = buildReviewPrompt(type, plan.name, itemsToReview, isZh);
   const resolved = resolveStepConfig("review", rawProvider, model);
 
-  const project = type === "implementation"
-    ? db.select().from(projects).where(eq(projects.id, plan.projectId)).get()
-    : null;
+  const project = db.select().from(projects).where(eq(projects.id, plan.projectId)).get();
   const cwd = project?.targetRepoPath && fs.existsSync(project.targetRepoPath)
     ? project.targetRepoPath
     : process.cwd();
@@ -396,32 +394,50 @@ ${zh ? "用中文输出所有内容。" : ""}`;
 
     const responseStream = new ReadableStream({
       async start(controller) {
-        const acpClient = new AcpClient(cwd, resolved.provider === "codex-acp" ? "codex" : resolved.provider === "copilot-acp" ? "copilot" : "claude");
+        const agentType = resolved.provider === "codex-acp" ? "codex" : resolved.provider === "copilot-acp" ? "copilot" : "claude";
+        const acpClient = new AcpClient(cwd, agentType);
         try {
+          controller.enqueue(encoder.encode(zh ? `[启动 ${agentType} agent...]\n` : `[Starting ${agentType} agent...]\n`));
           await acpClient.start();
+
+          controller.enqueue(encoder.encode(zh ? "[创建会话...]\n" : "[Creating session...]\n"));
           const session = await acpClient.createSession(resolved.model);
           if (resolved.model) {
             await acpClient.setModel(session.sessionId, resolved.model);
           }
 
           controller.enqueue(encoder.encode(zh
-            ? (type === "scheme" ? "AI 正在审查方案...\n" : "AI 正在检查代码变更...\n")
-            : (type === "scheme" ? "AI reviewing scheme...\n" : "AI inspecting code changes...\n")));
+            ? (type === "scheme" ? "[发送审查请求...]\n" : "[发送代码审查请求...]\n")
+            : (type === "scheme" ? "[Sending review request...]\n" : "[Sending code review request...]\n")));
 
+          let eventCount = 0;
           await acpClient.prompt(session.sessionId, withLocale(acpPrompt, locale), (t, text) => {
+            eventCount++;
             if (t === "text") {
               fullText += text;
               controller.enqueue(encoder.encode(text));
-            } else if (t === "tool") {
+            } else if (t === "tool" || t === "plan") {
               controller.enqueue(encoder.encode(text));
             } else if (t === "thought") {
               controller.enqueue(encoder.encode(`[thinking] ${text.slice(0, 100)}\n`));
+            } else {
+              // Unknown event type — show it for debugging
+              controller.enqueue(encoder.encode(`[${t}] ${text.slice(0, 200)}\n`));
             }
           });
+
+          if (eventCount === 0) {
+            controller.enqueue(encoder.encode(zh ? "\n[警告: Agent 未返回任何事件]\n" : "\n[Warning: Agent returned no events]\n"));
+            const stderr = acpClient.getRecentErrors();
+            if (stderr) controller.enqueue(encoder.encode(`[stderr] ${stderr.slice(-300)}\n`));
+          }
+
           controller.close();
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
+          const stderr = acpClient.getRecentErrors();
           controller.enqueue(encoder.encode(`\nError: ${msg}`));
+          if (stderr) controller.enqueue(encoder.encode(`\n[stderr] ${stderr.slice(-300)}`));
           controller.close();
         } finally {
           try { await acpClient.stop(); } catch {}

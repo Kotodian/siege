@@ -9,7 +9,7 @@ export async function PUT(
 ) {
   const { itemId } = await params;
   const body = await req.json();
-  const { title, description, startDate, endDate, order, engine, skills, status } = body;
+  const { title, description, startDate, endDate, order, engine, skills, status, parentId } = body;
   const db = getDb();
 
   db.update(scheduleItems)
@@ -22,6 +22,7 @@ export async function PUT(
       ...(engine !== undefined && { engine }),
       ...(skills !== undefined && { skills }),
       ...(status !== undefined && { status }),
+      ...(parentId !== undefined && { parentId }),
     })
     .where(eq(scheduleItems.id, itemId))
     .run();

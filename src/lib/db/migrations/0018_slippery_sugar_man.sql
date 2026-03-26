@@ -1,0 +1,1 @@
+ALTER TABLE `schedule_items` ADD `parent_id` text;

@@ -117,13 +117,14 @@ export const scheduleItems = sqliteTable("schedule_items", {
   schemeId: text("scheme_id").references(() => schemes.id, {
     onDelete: "set null",
   }),
+  parentId: text("parent_id"),
   title: text("title").notNull(),
   description: text("description").default(""),
   startDate: text("start_date").notNull(),
   endDate: text("end_date").notNull(),
   order: integer("order").notNull().default(0),
   status: text("status", {
-    enum: ["pending", "in_progress", "completed", "failed"],
+    enum: ["pending", "in_progress", "completed", "failed", "rolled_back"],
   })
     .notNull()
     .default("pending"),

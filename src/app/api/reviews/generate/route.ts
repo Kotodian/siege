@@ -374,7 +374,17 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const acpPrompt = `${system}
+    const acpPrompt = type === "scheme"
+      ? `${system}
+
+${zh ? "重要：这是方案审查，不是代码审查。不要运行 git 命令，不要查看代码文件。只根据下面提供的方案内容进行审查。" : "IMPORTANT: This is a SCHEME review, NOT a code review. Do NOT run git commands or read code files. Review based ONLY on the scheme content below."}
+
+Plan: ${plan.name}
+
+${itemsContent}
+
+${zh ? "用中文输出所有内容。" : ""}`
+      : `${system}
 
 Plan: ${plan.name}
 
@@ -394,7 +404,9 @@ ${zh ? "用中文输出所有内容。" : ""}`;
             await acpClient.setModel(session.sessionId, resolved.model);
           }
 
-          controller.enqueue(encoder.encode(zh ? "AI 正在检查 git 提交...\n" : "AI inspecting git commits...\n"));
+          controller.enqueue(encoder.encode(zh
+            ? (type === "scheme" ? "AI 正在审查方案...\n" : "AI 正在检查代码变更...\n")
+            : (type === "scheme" ? "AI reviewing scheme...\n" : "AI inspecting code changes...\n")));
 
           await acpClient.prompt(session.sessionId, withLocale(acpPrompt, locale), (t, text) => {
             if (t === "text") {

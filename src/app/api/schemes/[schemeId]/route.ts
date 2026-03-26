@@ -29,11 +29,11 @@ export async function PUT(
 ) {
   const { schemeId } = await params;
   const body = await req.json();
-  const { title, content } = body;
+  const { title, content, structuredContent } = body;
   const db = getDb();
 
   // Save current version before update
-  if (title !== undefined || content !== undefined) {
+  if (title !== undefined || content !== undefined || structuredContent !== undefined) {
     saveSchemeVersion(schemeId);
   }
 
@@ -41,6 +41,7 @@ export async function PUT(
     .set({
       ...(title !== undefined && { title }),
       ...(content !== undefined && { content }),
+      ...(structuredContent !== undefined && { structuredContent }),
       updatedAt: new Date().toISOString(),
     })
     .where(eq(schemes.id, schemeId))

@@ -168,5 +168,33 @@
     "connected": "Connected",
     "connectionFailed": "Connection Failed",
     "link": "Link"
+  },
+  "subtask": {
+    "split": "Split into Subtasks",
+    "splitTitle": "Split Task",
+    "splitDescription": "Break this task into smaller subtasks for more granular execution",
+    "aiAssisted": "AI-Assisted",
+    "manual": "Manual",
+    "generate": "Generate Subtasks",
+    "addSubtask": "Add Subtask",
+    "confirmSplit": "Confirm Split",
+    "subtasks": "Subtasks",
+    "parentTask": "Parent Task"
+  },
+  "rollback": {
+    "title": "Confirm Rollback",
+    "description": "Revert all file changes from task #{order}: {title}",
+    "files": "Files to revert",
+    "restore": "Restore",
+    "delete": "Delete (created by task)",
+    "recreate": "Recreate (deleted by task)",
+    "conflictWarning": "Some files have been modified since this task ran. Rolling back will overwrite those changes.",
+    "dependencyWarning": "Later tasks also modified some of these files. Rolling back may break their changes:",
+    "noSnapshots": "No file snapshots recorded for this task.",
+    "confirm": "Confirm Rollback",
+    "success": "Rollback completed",
+    "button": "Rollback",
+    "loading": "Rolling back...",
+    "conflict": "Modified"
   }
 }

@@ -297,103 +297,205 @@ export function ReviewPanel({
         return;
       }
 
-      // Extract the specific section to edit
-      const schemeContent = schemeData.content as string;
-      const sectionMatch = sectionHint.match(/^section-(\d+)$/);
-      let sectionHeading = "";
-      let sectionContent = "";
+      // Determine if this is a structured scheme fix or markdown section fix
+      const structured = schemeData.structuredContent ? (() => {
+        try { return JSON.parse(schemeData.structuredContent); } catch { return null; }
+      })() : null;
 
-      if (sectionMatch) {
-        const sectionIdx = parseInt(sectionMatch[1], 10);
-        const headingRegex = /^(#{1,3})\s+(.+)/gm;
-        const starts: Array<{ title: string; start: number; heading: string }> = [];
-        let m;
-        while ((m = headingRegex.exec(schemeContent)) !== null) {
-          starts.push({ title: m[2].trim(), start: m.index, heading: m[0] });
+      // Structured scheme: fix specific field (overview, architecture, interface-N, decision-N, risk-N)
+      const structuredKey = sectionHint; // e.g. "overview", "architecture", "interface-0", "decision-1", "risk-2"
+      if (structured && structuredKey && !structuredKey.startsWith("section-")) {
+        let fieldLabel = structuredKey;
+        let fieldContent = "";
+
+        if (structuredKey === "overview") {
+          fieldLabel = isZh ? "概述" : "Overview";
+          fieldContent = structured.overview || "";
+        } else if (structuredKey === "architecture") {
+          fieldLabel = isZh ? "架构" : "Architecture";
+          fieldContent = JSON.stringify(structured.architecture, null, 2);
+        } else if (structuredKey.startsWith("interface-")) {
+          const idx = parseInt(structuredKey.split("-")[1], 10);
+          const iface = structured.interfaces?.[idx];
+          fieldLabel = iface ? `Interface: ${iface.name}` : structuredKey;
+          fieldContent = iface ? JSON.stringify(iface, null, 2) : "";
+        } else if (structuredKey.startsWith("decision-")) {
+          const idx = parseInt(structuredKey.split("-")[1], 10);
+          const dec = structured.decisions?.[idx];
+          fieldLabel = dec ? `Decision: ${dec.question}` : structuredKey;
+          fieldContent = dec ? JSON.stringify(dec, null, 2) : "";
+        } else if (structuredKey.startsWith("risk-")) {
+          const idx = parseInt(structuredKey.split("-")[1], 10);
+          const risk = structured.risks?.[idx];
+          fieldLabel = risk ? `Risk: ${risk.risk}` : structuredKey;
+          fieldContent = risk ? JSON.stringify(risk, null, 2) : "";
         }
-        if (sectionIdx < starts.length) {
-          const sec = starts[sectionIdx];
-          const nextStart = sectionIdx + 1 < starts.length ? starts[sectionIdx + 1].start : schemeContent.length;
-          sectionHeading = sec.heading;
-          sectionContent = schemeContent.slice(sec.start, nextStart).trim();
-        }
-      }
 
-      if (sectionContent) {
-        // Section-level fix: only modify the specific section
-        let fixMessage = `请根据以下审查意见修复方案中「${sectionHeading.replace(/^#+\s*/, "")}」段落：\n\n**${item.title}**\n${item.content || ""}`;
-        if (userNote) fixMessage += `\n\n用户补充说明：${userNote}`;
-        fixMessage += `\n\n当前该段落内容：\n${sectionContent}`;
+        if (fieldContent) {
+          let fixMessage = isZh
+            ? `请根据以下审查意见，只修改方案中「${fieldLabel}」部分。输出修改后的 JSON（只输出该字段的值，不要输出完整方案）。\n\n**${item.title}**\n${item.content || ""}`
+            : `Fix ONLY the "${fieldLabel}" section based on this review finding. Output the modified JSON value for this field only, NOT the entire scheme.\n\n**${item.title}**\n${item.content || ""}`;
+          if (userNote) fixMessage += `\n\n${isZh ? "用户补充说明" : "User note"}: ${userNote}`;
+          fixMessage += `\n\n${isZh ? "当前内容" : "Current content"}:\n\`\`\`json\n${fieldContent}\n\`\`\``;
 
-        const chatRes = await fetch("/api/schemes/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            schemeId: pureSchemeId,
-            message: fixMessage,
-            sectionOnly: true,
-            ...(reviewProvider && { provider: reviewProvider }),
-            ...(reviewModel && { model: reviewModel }),
-          }),
-        });
+          const chatRes = await fetch("/api/schemes/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              schemeId: pureSchemeId,
+              message: fixMessage,
+              sectionOnly: true,
+              ...(reviewProvider && { provider: reviewProvider }),
+              ...(reviewModel && { model: reviewModel }),
+            }),
+          });
 
-        if (chatRes.ok && chatRes.body) {
-          const reader = chatRes.body.getReader();
-          const decoder = new TextDecoder();
-          let aiContent = "";
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            aiContent += decoder.decode(value, { stream: true });
-            updateContent(aiContent);
-          }
-
-          // Replace the section in the full scheme
-          if (aiContent.trim()) {
-            const sectionIdx = parseInt(sectionMatch![1], 10);
-            const headingRegex2 = /^(#{1,3})\s+(.+)/gm;
-            const starts2: Array<{ start: number; heading: string }> = [];
-            let m2;
-            while ((m2 = headingRegex2.exec(schemeContent)) !== null) {
-              starts2.push({ start: m2.index, heading: m2[0] });
+          if (chatRes.ok && chatRes.body) {
+            const reader = chatRes.body.getReader();
+            const decoder = new TextDecoder();
+            let aiContent = "";
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              aiContent += decoder.decode(value, { stream: true });
+              updateContent(aiContent);
             }
-            if (sectionIdx < starts2.length) {
-              const secStart = starts2[sectionIdx].start;
-              const secEnd = sectionIdx + 1 < starts2.length ? starts2[sectionIdx + 1].start : schemeContent.length;
-              const newContent = schemeContent.slice(0, secStart) + starts2[sectionIdx].heading + "\n" + aiContent.trim() + "\n\n" + schemeContent.slice(secEnd);
-              await fetch(`/api/schemes/${pureSchemeId}`, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ content: newContent.trim() }),
-              });
+
+            // Parse AI output and update the specific field in structuredContent
+            if (aiContent.trim()) {
+              const cleaned = aiContent.trim().replace(/^```(?:json)?\s*\n?/i, "").replace(/\n?```\s*$/, "").trim();
+              try {
+                const updated = { ...structured };
+                if (structuredKey === "overview") {
+                  updated.overview = cleaned;
+                } else if (structuredKey === "architecture") {
+                  updated.architecture = JSON.parse(cleaned);
+                } else if (structuredKey.startsWith("interface-")) {
+                  const idx = parseInt(structuredKey.split("-")[1], 10);
+                  if (updated.interfaces?.[idx]) updated.interfaces[idx] = JSON.parse(cleaned);
+                } else if (structuredKey.startsWith("decision-")) {
+                  const idx = parseInt(structuredKey.split("-")[1], 10);
+                  if (updated.decisions?.[idx]) updated.decisions[idx] = JSON.parse(cleaned);
+                } else if (structuredKey.startsWith("risk-")) {
+                  const idx = parseInt(structuredKey.split("-")[1], 10);
+                  if (updated.risks?.[idx]) updated.risks[idx] = JSON.parse(cleaned);
+                }
+                await fetch(`/api/schemes/${pureSchemeId}`, {
+                  method: "PUT",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ structuredContent: JSON.stringify(updated) }),
+                });
+              } catch {
+                // If JSON parse fails for overview, just use as plain text
+                if (structuredKey === "overview") {
+                  const updated = { ...structured, overview: cleaned };
+                  await fetch(`/api/schemes/${pureSchemeId}`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ structuredContent: JSON.stringify(updated) }),
+                  });
+                }
+              }
             }
           }
         }
       } else {
-        // Fallback: full scheme edit
-        let fixMessage = `Fix the following issue:\n\n**${item.title}**\n\n${item.content}`;
-        if (userNote) fixMessage += `\n\nAdditional instructions from user: ${userNote}`;
+        // Markdown scheme: extract section by heading index
+        const schemeContent = schemeData.content as string;
+        const sectionMatch = sectionHint.match(/^section-(\d+)$/);
+        let sectionHeading = "";
+        let sectionContent = "";
 
-        const chatRes2 = await fetch("/api/schemes/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            schemeId: pureSchemeId,
-            message: fixMessage,
-            ...(reviewProvider && { provider: reviewProvider }),
-            ...(reviewModel && { model: reviewModel }),
-          }),
-        });
+        if (sectionMatch) {
+          const sectionIdx = parseInt(sectionMatch[1], 10);
+          const headingRegex = /^(#{1,3})\s+(.+)/gm;
+          const starts: Array<{ title: string; start: number; heading: string }> = [];
+          let m;
+          while ((m = headingRegex.exec(schemeContent)) !== null) {
+            starts.push({ title: m[2].trim(), start: m.index, heading: m[0] });
+          }
+          if (sectionIdx < starts.length) {
+            const sec = starts[sectionIdx];
+            const nextStart = sectionIdx + 1 < starts.length ? starts[sectionIdx + 1].start : schemeContent.length;
+            sectionHeading = sec.heading;
+            sectionContent = schemeContent.slice(sec.start, nextStart).trim();
+          }
+        }
 
-        if (chatRes2.ok && chatRes2.body) {
-          const reader2 = chatRes2.body.getReader();
-          const decoder2 = new TextDecoder();
-          let content2 = "";
-          while (true) {
-            const { done, value } = await reader2.read();
-            if (done) break;
-            content2 += decoder2.decode(value, { stream: true });
-            updateContent(content2);
+        if (sectionContent) {
+          let fixMessage = `请根据以下审查意见修复方案中「${sectionHeading.replace(/^#+\s*/, "")}」段落：\n\n**${item.title}**\n${item.content || ""}`;
+          if (userNote) fixMessage += `\n\n用户补充说明：${userNote}`;
+          fixMessage += `\n\n当前该段落内容：\n${sectionContent}`;
+
+          const chatRes = await fetch("/api/schemes/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              schemeId: pureSchemeId,
+              message: fixMessage,
+              sectionOnly: true,
+              ...(reviewProvider && { provider: reviewProvider }),
+              ...(reviewModel && { model: reviewModel }),
+            }),
+          });
+
+          if (chatRes.ok && chatRes.body) {
+            const reader = chatRes.body.getReader();
+            const decoder = new TextDecoder();
+            let aiContent = "";
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              aiContent += decoder.decode(value, { stream: true });
+              updateContent(aiContent);
+            }
+
+            if (aiContent.trim()) {
+              const sectionIdx = parseInt(sectionMatch![1], 10);
+              const headingRegex2 = /^(#{1,3})\s+(.+)/gm;
+              const starts2: Array<{ start: number; heading: string }> = [];
+              let m2;
+              while ((m2 = headingRegex2.exec(schemeContent)) !== null) {
+                starts2.push({ start: m2.index, heading: m2[0] });
+              }
+              if (sectionIdx < starts2.length) {
+                const secStart = starts2[sectionIdx].start;
+                const secEnd = sectionIdx + 1 < starts2.length ? starts2[sectionIdx + 1].start : schemeContent.length;
+                const newContent = schemeContent.slice(0, secStart) + starts2[sectionIdx].heading + "\n" + aiContent.trim() + "\n\n" + schemeContent.slice(secEnd);
+                await fetch(`/api/schemes/${pureSchemeId}`, {
+                  method: "PUT",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ content: newContent.trim() }),
+                });
+              }
+            }
+          }
+        } else {
+          // Fallback: full scheme edit
+          let fixMessage = `Fix the following issue:\n\n**${item.title}**\n\n${item.content}`;
+          if (userNote) fixMessage += `\n\nAdditional instructions from user: ${userNote}`;
+
+          const chatRes2 = await fetch("/api/schemes/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              schemeId: pureSchemeId,
+              message: fixMessage,
+              ...(reviewProvider && { provider: reviewProvider }),
+              ...(reviewModel && { model: reviewModel }),
+            }),
+          });
+
+          if (chatRes2.ok && chatRes2.body) {
+            const reader2 = chatRes2.body.getReader();
+            const decoder2 = new TextDecoder();
+            let content2 = "";
+            while (true) {
+              const { done, value } = await reader2.read();
+              if (done) break;
+              content2 += decoder2.decode(value, { stream: true });
+              updateContent(content2);
+            }
           }
         }
       }

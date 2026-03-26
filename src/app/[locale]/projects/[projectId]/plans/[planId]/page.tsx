@@ -218,7 +218,7 @@ export default function PlanDetailPage({
   };
 
   return (
-    <div className="flex h-[calc(100vh-48px)]">
+    <div className="flex h-[calc(100vh-48px)]" style={{ maxWidth: "min(90vw, 1800px)", margin: "0 auto" }}>
       {/* ── Left Sidebar ── */}
       <aside
         className="w-[220px] shrink-0 flex flex-col overflow-y-auto"
@@ -387,7 +387,7 @@ export default function PlanDetailPage({
 
       {/* ── Main Content ── */}
       <div className="flex-1 overflow-y-auto" style={{ background: "var(--background)" }}>
-        <div className="max-w-6xl mx-auto px-8 py-6">
+        <div className="px-10 py-6">
           {renderContent()}
         </div>
       </div>

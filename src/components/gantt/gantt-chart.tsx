@@ -24,6 +24,8 @@ const STATUS_COLORS: Record<string, { bar: string; light: string }> = {
   subtask:           { bar: "#ffb783", light: "rgba(255,183,131,0.08)" },
   "completed subtask": { bar: "#86efac", light: "rgba(134,239,172,0.08)" },
   "failed subtask":  { bar: "#ffb4ab", light: "rgba(255,180,171,0.08)" },
+  rolled_back:       { bar: "#fde047", light: "rgba(253,224,71,0.08)" },
+  parent:            { bar: "#a78bfa", light: "rgba(167,139,250,0.08)" },
   "":                { bar: "#c0c1ff", light: "rgba(192,193,255,0.06)" },
 };
 

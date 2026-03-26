@@ -30,6 +30,19 @@ export async function GET(req: NextRequest) {
     .where(eq(scheduleItems.scheduleId, schedule.id))
     .all();
 
+  // Aggregate parent task status/progress from children
+  for (const item of items) {
+    const children = items.filter(c => c.parentId === item.id);
+    if (children.length > 0) {
+      item.progress = Math.round(children.reduce((sum, c) => sum + c.progress, 0) / children.length);
+      if (children.every(c => c.status === "completed")) item.status = "completed";
+      else if (children.some(c => c.status === "failed")) item.status = "failed";
+      else if (children.some(c => c.status === "in_progress")) item.status = "in_progress";
+      else if (children.some(c => c.status === "rolled_back")) item.status = "rolled_back";
+      else item.status = "pending";
+    }
+  }
+
   return NextResponse.json({ ...schedule, items });
 }
 
@@ -38,7 +51,7 @@ export async function POST(req: NextRequest) {
   const [body, errRes] = await parseJsonBody(req);
   if (errRes) return errRes;
 
-  const { planId, title, description, startDate, endDate, estimatedHours, afterItemId } = body as {
+  const { planId, title, description, startDate, endDate, estimatedHours, afterItemId, parentId } = body as {
     planId: string;
     title: string;
     description?: string;
@@ -46,6 +59,7 @@ export async function POST(req: NextRequest) {
     endDate?: string;
     estimatedHours?: number;
     afterItemId?: string;
+    parentId?: string;
   };
 
   if (!planId || !title) {
@@ -110,6 +124,7 @@ export async function POST(req: NextRequest) {
     id: itemId,
     scheduleId: schedule.id,
     schemeId: parentItem?.schemeId || null,
+    parentId: parentId || null,
     title,
     description: description || "",
     startDate: start,

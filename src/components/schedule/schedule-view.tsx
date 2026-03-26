@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { RunTaskDialog } from "./run-task-dialog";
+import { RollbackDialog } from "./rollback-dialog";
+import { SplitTaskDialog } from "./split-task-dialog";
 import { GanttChart } from "@/components/gantt/gantt-chart";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { MarkdownRenderer } from "@/components/markdown/markdown-renderer";
@@ -17,6 +19,7 @@ interface ScheduleItem {
   id: string;
   scheduleId: string;
   schemeId: string | null;
+  parentId: string | null;
   title: string;
   description: string | null;
   startDate: string;
@@ -73,6 +76,8 @@ export function ScheduleView({
   const [selectedItem, setSelectedItem] = useState<ScheduleItem | null>(null);
   const [executing, setExecuting] = useState<string | null>(null);
   const [runDialogItem, setRunDialogItem] = useState<ScheduleItem | null>(null);
+  const [rollbackItem, setRollbackItem] = useState<ScheduleItem | null>(null);
+  const [splitItem, setSplitItem] = useState<ScheduleItem | null>(null);
   const [autoExecute, setAutoExecute] = useState(false);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -284,7 +289,7 @@ export function ScheduleView({
   };
 
   const handleRetry = async (item: ScheduleItem) => {
-    if (item.status === "failed") {
+    if (item.status === "failed" || item.status === "rolled_back") {
       // Reset to pending first
       await fetch(`/api/schedule-items/${item.id}`, {
         method: "PUT",
@@ -447,43 +452,45 @@ export function ScheduleView({
     );
   }
 
-  // Sort items: regular tasks by order, fix tasks inserted after their parent
+  // Helper: check if an item has children (is a parent task)
+  const hasChildren = (itemId: string) => schedule?.items.some(i => i.parentId === itemId) || false;
+
+  // Sort items: top-level by order, children grouped after parent
   const sortedItems = (() => {
     if (!schedule) return [];
-    const regular = schedule.items.filter(i => !i.title.startsWith("[fix]")).sort((a, b) => a.order - b.order);
-    const fixes = schedule.items.filter(i => i.title.startsWith("[fix]"));
-    const result: typeof schedule.items = [];
-    for (const item of regular) {
-      result.push(item);
-      // Find fix tasks that start right after this item (within 1 hour) or share same start time
-      const itemEnd = new Date(item.endDate).getTime();
-      const childFixes = fixes.filter(f => {
-        const fStart = new Date(f.startDate).getTime();
-        return Math.abs(fStart - itemEnd) < 3600000 || f.order === item.order + 1;
-      });
-      // Also check fixes not yet matched
-      for (const fix of childFixes) {
-        if (!result.includes(fix)) result.push(fix);
-      }
+    const items = schedule.items;
+    const topLevel = items.filter(i => !i.parentId).sort((a, b) => a.order - b.order);
+    const result: typeof items = [];
+    for (const parent of topLevel) {
+      result.push(parent);
+      const children = items.filter(i => i.parentId === parent.id).sort((a, b) => a.order - b.order);
+      result.push(...children);
     }
-    // Append any remaining fixes not matched
-    for (const fix of fixes) {
-      if (!result.includes(fix)) result.push(fix);
+    // Append any orphaned items not yet included
+    for (const item of items) {
+      if (!result.includes(item)) result.push(item);
     }
     return result;
   })();
 
   const ganttTasks = sortedItems.map((item) => {
+    const isSubtask = !!item.parentId;
+    const isParent = !item.parentId && hasChildren(item.id);
     const isFix = item.title.startsWith("[fix]");
     return {
       id: item.id,
-      name: isFix ? `  ↳ ${item.title.replace("[fix] ", "")}` : `#${item.order} ${item.title}`,
+      name: (isSubtask || isFix)
+        ? `  ↳ ${item.title.replace("[fix] ", "")}`
+        : isParent
+          ? item.title
+          : `#${item.order} ${item.title}`,
       start: item.startDate,
       end: item.endDate,
       progress: item.progress,
       custom_class: [
-        item.status === "completed" ? "completed" : item.status === "failed" ? "failed" : "",
-        isFix ? "subtask" : "",
+        item.status === "completed" ? "completed" : item.status === "failed" ? "failed" : item.status === "rolled_back" ? "rolled_back" : "",
+        (isSubtask || isFix) ? "subtask" : "",
+        isParent ? "parent" : "",
       ].filter(Boolean).join(" "),
     };
   });
@@ -573,10 +580,15 @@ export function ScheduleView({
             const item = selectedItem;
             const isEditing = editingItem === item.id;
             const isFix = item.title.startsWith("[fix]");
-            // Find parent task (the task just before this fix task)
-            const parentTask = isFix && schedule
-              ? schedule.items.sort((a, b) => a.order - b.order).find(i => i.order === item.order - 1)
-              : null;
+            const isSubtask = !!item.parentId;
+            const isParentTask = hasChildren(item.id);
+            const childItems = schedule?.items.filter(i => i.parentId === item.id).sort((a, b) => a.order - b.order) || [];
+            // Find parent task
+            const parentTask = (isSubtask && schedule)
+              ? schedule.items.find(i => i.id === item.parentId)
+              : (isFix && schedule)
+                ? schedule.items.sort((a, b) => a.order - b.order).find(i => i.order === item.order - 1)
+                : null;
             return (
               <div className="mt-4 rounded-lg border p-4" style={{ background: "var(--surface-container-high)", borderColor: "var(--outline-variant)" }}>
                 {isEditing ? (
@@ -643,15 +655,25 @@ export function ScheduleView({
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="text-sm" style={{ color: "var(--outline)" }}>{item.progress}%</span>
-                        {canEdit && (item.status === "pending" || item.status === "failed") && (
+                        {canEdit && (item.status === "pending" || item.status === "failed" || item.status === "rolled_back") && !isParentTask && (
                           <>
                             <button onClick={() => startEditing(item)} className="text-xs px-2 py-1 rounded" style={{ color: "var(--outline)" }}>{t("common.edit")}</button>
                             <button onClick={() => handleDeleteItem(item.id)} className="text-xs px-2 py-1 rounded" style={{ color: "var(--error)" }}>{t("common.delete")}</button>
                           </>
                         )}
-                        {canExecute && (item.status === "pending" || item.status === "failed") && (
+                        {canEdit && item.status === "pending" && !item.parentId && !isParentTask && (
+                          <button onClick={() => setSplitItem(item)} className="text-xs px-2 py-1 rounded" style={{ color: "var(--primary)" }}>
+                            {t("subtask.split")}
+                          </button>
+                        )}
+                        {canExecute && item.status === "completed" && !isParentTask && (
+                          <Button variant="secondary" size="sm" onClick={() => setRollbackItem(item)} disabled={executing !== null}>
+                            <><RefreshIcon size={14} className="inline-block align-[-2px]" /> {t("rollback.button")}</>
+                          </Button>
+                        )}
+                        {canExecute && !isParentTask && (item.status === "pending" || item.status === "failed" || item.status === "rolled_back") && (
                           <Button size="sm" onClick={() => handleRetry(item)} disabled={executing !== null}>
-                            {executing === item.id ? t("common.loading") : item.status === "failed" ? <><RefreshIcon size={14} className="inline-block align-[-2px]" /> {isZh ? "重试" : "Retry"}</> : (isZh ? "运行" : "Run")}
+                            {executing === item.id ? t("common.loading") : (item.status === "failed" || item.status === "rolled_back") ? <><RefreshIcon size={14} className="inline-block align-[-2px]" /> {isZh ? "重试" : "Retry"}</> : (isZh ? "运行" : "Run")}
                           </Button>
                         )}
                         <button onClick={() => setSelectedItem(null)} className="text-xs px-2 py-1 rounded" style={{ color: "var(--outline)" }}><XIcon size={14} /></button>
@@ -670,6 +692,25 @@ export function ScheduleView({
                         </pre>
                       </div>
                     )}
+                    {isParentTask && childItems.length > 0 && (
+                      <div className="mt-3 border-t pt-3" style={{ borderColor: "var(--outline-variant)" }}>
+                        <h5 className="text-sm font-medium mb-2">{t("subtask.subtasks")} ({childItems.length})</h5>
+                        <div className="space-y-1">
+                          {childItems.map(child => (
+                            <button
+                              key={child.id}
+                              className="flex items-center gap-2 w-full text-left px-2 py-1.5 rounded hover:opacity-80"
+                              style={{ background: "var(--surface-container)" }}
+                              onClick={() => setSelectedItem(child)}
+                            >
+                              <StatusBadge status={child.status} label={child.status} />
+                              <span className="text-sm flex-1 truncate">{child.title}</span>
+                              <span className="text-xs" style={{ color: "var(--outline)" }}>{child.progress}%</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </>
                 )}
               </div>
@@ -684,6 +725,35 @@ export function ScheduleView({
           onClose={() => setRunDialogItem(null)}
           onRun={(skills, provider, model) => handleExecuteItem(runDialogItem.id, skills, undefined, provider, model)}
           taskTitle={runDialogItem.title}
+        />
+      )}
+
+      {rollbackItem && (
+        <RollbackDialog
+          open={!!rollbackItem}
+          itemId={rollbackItem.id}
+          itemTitle={rollbackItem.title}
+          itemOrder={rollbackItem.order}
+          onClose={() => setRollbackItem(null)}
+          onRollbackComplete={() => {
+            setRollbackItem(null);
+            setSelectedItem(null);
+            fetchSchedule();
+            onPlanStatusChange();
+          }}
+        />
+      )}
+
+      {splitItem && (
+        <SplitTaskDialog
+          open={!!splitItem}
+          item={splitItem}
+          onClose={() => setSplitItem(null)}
+          onSplitComplete={() => {
+            setSplitItem(null);
+            setSelectedItem(null);
+            fetchSchedule();
+          }}
         />
       )}
 

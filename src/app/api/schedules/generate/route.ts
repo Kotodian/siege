@@ -7,6 +7,14 @@ import { streamText } from "ai";
 import { AcpClient } from "@/lib/acp/client";
 import fs from "fs";
 
+function getDefaultEngine(): string {
+  const { provider } = resolveStepConfig("execute");
+  if (provider === "codex-acp") return "codex-acp";
+  if (provider === "copilot-acp") return "copilot-acp";
+  if (provider === "anthropic" || provider === "openai" || provider === "glm") return "claude-code";
+  return "acp";
+}
+
 function saveScheduleFromJson(planId: string, jsonText: string) {
   const jsonStr = jsonText.startsWith("[")
     ? jsonText
@@ -22,7 +30,14 @@ function saveScheduleFromJson(planId: string, jsonText: string) {
   const now = new Date();
   let currentHour = 0;
   const scheduleId = crypto.randomUUID();
-  const totalHours = items.reduce((sum: number, item: any) => sum + (item.estimatedHours || 4), 0);
+
+  // Calculate total hours (support both flat and hierarchical formats)
+  const totalHours = items.reduce((sum: number, item: any) => {
+    if (item.subtasks?.length > 0) {
+      return sum + item.subtasks.reduce((s: number, st: any) => s + (st.estimatedHours || 1), 0);
+    }
+    return sum + (item.estimatedHours || 4);
+  }, 0);
   const endDate = new Date(now);
   endDate.setHours(endDate.getHours() + totalHours);
 
@@ -32,29 +47,67 @@ function saveScheduleFromJson(planId: string, jsonText: string) {
     endDate: endDate.toISOString(),
   }).run();
 
+  const engine = getDefaultEngine();
+
   for (const item of items) {
-    const hours = item.estimatedHours || 4;
-    const itemStart = new Date(now);
-    itemStart.setHours(itemStart.getHours() + currentHour);
-    const itemEnd = new Date(now);
-    itemEnd.setHours(itemEnd.getHours() + currentHour + hours);
-    currentHour += hours;
-    db.insert(scheduleItems).values({
-      id: crypto.randomUUID(), scheduleId,
-      schemeId: item.schemeId || null,
-      title: item.title, description: item.description || "",
-      startDate: itemStart.toISOString(),
-      endDate: itemEnd.toISOString(),
-      order: item.order || 0, status: "pending", progress: 0,
-      engine: (() => {
-        const { provider } = resolveStepConfig("execute");
-        if (provider === "codex-acp") return "codex-acp";
-        if (provider === "copilot-acp") return "copilot-acp";
-        // Default to ACP — only use SDK if explicitly set to an SDK provider
-        if (provider === "anthropic" || provider === "openai" || provider === "glm") return "claude-code";
-        return "acp";
-      })(), skills: "[]",
-    }).run();
+    const hasSubtasks = item.subtasks && item.subtasks.length > 0;
+
+    if (hasSubtasks) {
+      // Hierarchical: insert parent + children
+      const parentHours = item.subtasks.reduce((s: number, st: any) => s + (st.estimatedHours || 1), 0);
+      const parentStart = new Date(now);
+      parentStart.setHours(parentStart.getHours() + currentHour);
+      const parentEnd = new Date(now);
+      parentEnd.setHours(parentEnd.getHours() + currentHour + parentHours);
+
+      const parentId = crypto.randomUUID();
+      db.insert(scheduleItems).values({
+        id: parentId, scheduleId,
+        schemeId: item.schemeId || null, parentId: null,
+        title: item.title, description: item.description || "",
+        startDate: parentStart.toISOString(), endDate: parentEnd.toISOString(),
+        order: item.order || 0, status: "pending", progress: 0,
+        engine, skills: "[]",
+      }).run();
+
+      // Insert subtasks
+      let childHour = currentHour;
+      for (let i = 0; i < item.subtasks.length; i++) {
+        const st = item.subtasks[i];
+        const stHours = st.estimatedHours || 1;
+        const stStart = new Date(now);
+        stStart.setHours(stStart.getHours() + childHour);
+        const stEnd = new Date(now);
+        stEnd.setHours(stEnd.getHours() + childHour + stHours);
+        childHour += stHours;
+
+        db.insert(scheduleItems).values({
+          id: crypto.randomUUID(), scheduleId,
+          schemeId: item.schemeId || null, parentId,
+          title: st.title, description: st.description || "",
+          startDate: stStart.toISOString(), endDate: stEnd.toISOString(),
+          order: (item.order || 0) * 100 + i + 1, status: "pending", progress: 0,
+          engine, skills: "[]",
+        }).run();
+      }
+      currentHour += parentHours;
+    } else {
+      // Flat: insert as leaf task (backward compatible)
+      const hours = item.estimatedHours || 4;
+      const itemStart = new Date(now);
+      itemStart.setHours(itemStart.getHours() + currentHour);
+      const itemEnd = new Date(now);
+      itemEnd.setHours(itemEnd.getHours() + currentHour + hours);
+      currentHour += hours;
+      db.insert(scheduleItems).values({
+        id: crypto.randomUUID(), scheduleId,
+        schemeId: item.schemeId || null, parentId: null,
+        title: item.title, description: item.description || "",
+        startDate: itemStart.toISOString(), endDate: itemEnd.toISOString(),
+        order: item.order || 0, status: "pending", progress: 0,
+        engine, skills: "[]",
+      }).run();
+    }
   }
 
   db.update(plans)
@@ -94,27 +147,29 @@ Output ONLY a JSON array. No conversation, no markdown fences, no explanation.
 Start directly with [ and end with ].
 </IMPORTANT>
 
-Break these confirmed schemes into executable IMPLEMENTATION tasks.
+Break these confirmed schemes into executable IMPLEMENTATION tasks with subtasks.
 These tasks will be executed by an AI coding agent (Claude Code / Codex), NOT a human developer.
 
 CRITICAL task granularity rules:
-- Each task = ONE COMPLETE FEATURE or functional module
-- Do NOT create separate tasks for definitions, types, structs, constants, or data models alone
-- Group related work: defining types + implementing logic + wiring up = ONE task
-- Aim for 3-8 tasks total. Fewer bigger tasks are BETTER than many tiny ones
-- Each task should produce a working, testable piece of functionality
+- Each PARENT task = ONE COMPLETE FEATURE or functional module
+- Each parent task MUST have 2-5 subtasks that break it into concrete steps
+- Aim for 3-8 parent tasks total
+- Each subtask should be a specific, actionable coding step (0.5-2 hours)
 
-Estimation: each task 1-3 hours (realistic for AI agent execution).
+Estimation: each subtask 0.5-2 hours (realistic for AI agent execution).
 
 IMPORTANT: Do NOT include testing tasks. Testing is handled in a separate phase.
 Focus only on implementation: code changes, new files, refactoring, configuration.
 
 JSON array format — each object has:
 - schemeId: scheme ID string or null
-- title: short task title describing the feature/module
-- description: markdown description — include ALL sub-steps (define types, implement logic, wire up, update imports) in one task description
-- estimatedHours: number (1-3)
+- title: short PARENT task title describing the feature/module
+- description: overall description of this task group
 - order: execution order starting from 1
+- subtasks: array of subtask objects (REQUIRED, 2-5 items):
+  - title: concise subtask title
+  - description: specific implementation details
+  - estimatedHours: number (0.5-2)
 
 Plan: ${plan.name}
 
@@ -178,44 +233,7 @@ Output the JSON array now:`;
   }
   const result = streamText({
     model: aiModel,
-    prompt: (() => {
-      const langNote2 = isZh
-        ? "\n\nIMPORTANT: Write task title and description in Chinese (中文), matching the language of the schemes."
-        : "";
-      return `<IMPORTANT>
-You are being called as an API. Do NOT use tools, read files, or ask questions.
-Output ONLY a JSON array. No conversation, no markdown fences, no explanation.
-Start directly with [ and end with ].
-</IMPORTANT>
-
-Break these confirmed schemes into executable IMPLEMENTATION tasks.
-These tasks will be executed by an AI coding agent (Claude Code / Codex), NOT a human developer.
-
-CRITICAL task granularity rules:
-- Each task = ONE COMPLETE FEATURE or functional module
-- Do NOT create separate tasks for definitions, types, structs, constants, or data models alone
-- Group related work: defining types + implementing logic + wiring up = ONE task
-- Aim for 3-8 tasks total. Fewer bigger tasks are BETTER than many tiny ones
-- Each task should produce a working, testable piece of functionality
-
-Estimation: each task 1-3 hours (realistic for AI agent execution).
-
-IMPORTANT: Do NOT include testing tasks. Testing is handled in a separate phase.
-Focus only on implementation: code changes, new files, refactoring, configuration.
-
-JSON array format — each object has:
-- schemeId: scheme ID string or null
-- title: short task title describing the feature/module
-- description: markdown description — include ALL sub-steps (define types, implement logic, wire up, update imports) in one task description
-- estimatedHours: number (1-3)
-- order: execution order starting from 1
-
-Plan: ${plan.name}
-
-${schemeSummary}${langNote2}
-
-Output the JSON array now:`;
-    })(),
+    prompt: schedulePrompt,
   });
 
   const textStream = result.textStream;

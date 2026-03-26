@@ -42,8 +42,21 @@ export async function POST() {
       }
     }
 
-    // Find first pending task
-    const nextPending = allItems.find(i => i.status === "pending");
+    // Build execution order: parents sorted by order, subtasks within each parent
+    // Parent tasks with children are never executed directly
+    const executionOrder: typeof allItems = [];
+    const topLevel = allItems.filter(i => !i.parentId).sort((a, b) => a.order - b.order);
+    for (const parent of topLevel) {
+      const children = allItems.filter(i => i.parentId === parent.id).sort((a, b) => a.order - b.order);
+      if (children.length > 0) {
+        executionOrder.push(...children);
+      } else {
+        executionOrder.push(parent);
+      }
+    }
+
+    // Find first pending task from execution order
+    const nextPending = executionOrder.find(i => i.status === "pending");
     if (!nextPending) continue;
 
     // Update plan status if needed

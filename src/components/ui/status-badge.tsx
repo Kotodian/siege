@@ -28,6 +28,7 @@ const statusStyles: Record<string, React.CSSProperties> = {
   test: { background: "rgba(192,193,255,0.15)", color: "var(--primary)" },
   chore: { background: "rgba(144,143,160,0.15)", color: "var(--outline)" },
   perf: { background: "rgba(253,224,71,0.12)", color: "var(--warning)" },
+  rolled_back: { background: "rgba(253,224,71,0.12)", color: "var(--warning)" },
 };
 
 const defaultStyle: React.CSSProperties = {

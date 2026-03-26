@@ -16,6 +16,21 @@ function measureText(text: string, fontSize: number): number {
   return w;
 }
 
+/** Truncate by pixel width instead of character count */
+function truncateByWidth(s: string, maxW: number, fontSize: number): string {
+  if (measureText(s, fontSize) <= maxW) return s;
+  let result = "";
+  let w = 0;
+  const ellipsisW = fontSize * 0.58;
+  for (const ch of s) {
+    const cw = ch.charCodeAt(0) > 0x2e80 ? fontSize * 0.95 : fontSize * 0.58;
+    if (w + cw > maxW - ellipsisW) { result += "…"; break; }
+    result += ch;
+    w += cw;
+  }
+  return result;
+}
+
 interface LayoutNode {
   id: string;
   name: string;
@@ -58,9 +73,7 @@ export function ArchitectureDiagram({ components }: ArchitectureDiagramProps) {
     layers.get(d)!.push(c);
   }
 
-  // Layer labels
   const layerTags = ["CONFIGURATION", "STATE DEFINITION", "IMPLEMENTATION"];
-
   const sorted = [...layers.entries()].sort((a, b) => a[0] - b[0]);
 
   // Size nodes
@@ -115,18 +128,18 @@ export function ArchitectureDiagram({ components }: ArchitectureDiagramProps) {
     }
   }
 
-  // Truncate text
-  const trunc = (s: string, max: number) => s.length > max ? s.slice(0, max - 1) + "…" : s;
-
   return (
-    <svg viewBox={`0 0 ${svgW} ${svgH}`} className="w-full" style={{ maxHeight: 560 }}>
+    <svg
+      viewBox={`0 0 ${svgW} ${svgH}`}
+      className="w-full"
+      style={{ maxHeight: 560 }}
+      preserveAspectRatio="xMidYMid meet"
+    >
       <defs>
-        {/* Gradient for connection lines */}
         <linearGradient id="line-grad" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#c0c1ff" stopOpacity="0.6" />
           <stop offset="100%" stopColor="#8083ff" stopOpacity="0.3" />
         </linearGradient>
-        {/* Glow filter for lines */}
         <filter id="line-glow" x="-20%" y="-20%" width="140%" height="140%">
           <feGaussianBlur stdDeviation="2" result="blur" />
           <feMerge>
@@ -134,7 +147,6 @@ export function ArchitectureDiagram({ components }: ArchitectureDiagramProps) {
             <feMergeNode in="SourceGraphic" />
           </feMerge>
         </filter>
-        {/* Arrow marker */}
         <marker id="arr" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
           <path d="M0,0.5 L7,3 L0,5.5" fill="#8083ff" stroke="none" />
         </marker>
@@ -146,13 +158,11 @@ export function ArchitectureDiagram({ components }: ArchitectureDiagramProps) {
         const fy = edge.from.y + edge.from.h;
         const tx = edge.to.x + edge.to.w / 2;
         const ty = edge.to.y;
-
         const cp = Math.max(Math.abs(fy - ty) * 0.4, 25);
         const fromBelow = fy > ty;
 
         return (
           <g key={i}>
-            {/* Glow line */}
             <path
               d={fromBelow
                 ? `M${fx},${fy} C${fx},${fy - cp} ${tx},${ty + cp} ${tx},${ty}`
@@ -160,7 +170,6 @@ export function ArchitectureDiagram({ components }: ArchitectureDiagramProps) {
               fill="none" stroke="url(#line-grad)" strokeWidth="2"
               strokeDasharray="6 4" markerEnd="url(#arr)"
               filter="url(#line-glow)" />
-            {/* Label on midpoint */}
             <text
               x={(fx + tx) / 2 + (fx === tx ? 12 : 0)}
               y={(fy + ty) / 2 - 4}
@@ -175,10 +184,10 @@ export function ArchitectureDiagram({ components }: ArchitectureDiagramProps) {
       {/* Nodes */}
       {nodes.map((n) => {
         const isRoot = n.layer === 0;
+        const textMaxW = n.w - 24;
 
         return (
           <g key={n.id}>
-            {/* Card background — subtle surface shift, no solid fill */}
             <rect x={n.x} y={n.y} width={n.w} height={n.h}
               rx="6" ry="6"
               fill={isRoot ? "#1c1b1b" : "#201f1f"}
@@ -186,7 +195,6 @@ export function ArchitectureDiagram({ components }: ArchitectureDiagramProps) {
               strokeWidth={isRoot ? 1.5 : 0.5}
               strokeOpacity={isRoot ? 0.8 : 0.3} />
 
-            {/* Tag label (e.g. CONFIGURATION) */}
             {n.tag && (
               <text x={n.x + n.w / 2} y={n.y + 16}
                 textAnchor="middle" fill={isRoot ? "#c0c1ff" : "#908fa0"}
@@ -196,20 +204,18 @@ export function ArchitectureDiagram({ components }: ArchitectureDiagramProps) {
               </text>
             )}
 
-            {/* Name — monospace */}
             <text x={n.x + n.w / 2} y={n.y + (n.tag ? 34 : 28)}
               textAnchor="middle" fill="#e5e2e1"
               fontSize="13" fontWeight="600"
               fontFamily="'Space Grotesk', ui-monospace, monospace">
-              {trunc(n.name, 26)}
+              {truncateByWidth(n.name, textMaxW, 13)}
             </text>
 
-            {/* Description */}
             <text x={n.x + n.w / 2} y={n.y + (n.tag ? 50 : 46)}
               textAnchor="middle" fill="#908fa0"
               fontSize="10" fontStyle="italic"
               fontFamily="Inter, system-ui, sans-serif">
-              {trunc(n.desc, 32)}
+              {truncateByWidth(n.desc, textMaxW, 10)}
             </text>
           </g>
         );

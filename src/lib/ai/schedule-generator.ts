@@ -9,12 +9,19 @@ interface ScheduleGenerationInput {
   sessionId?: string;
 }
 
+interface GeneratedSubtask {
+  title: string;
+  description: string;
+  estimatedHours: number;
+}
+
 interface GeneratedScheduleItem {
   schemeId: string | null;
   title: string;
   description: string;
   durationDays: number;
   order: number;
+  subtasks?: GeneratedSubtask[];
 }
 
 export async function generateSchedule(
@@ -28,24 +35,26 @@ export async function generateSchedule(
     provider: input.provider,
     model: input.model,
     sessionId: input.sessionId,
-    system: `You are a project manager. Break down confirmed schemes into executable schedule items.
+    system: `You are a project manager. Break down confirmed schemes into executable schedule items with subtasks.
 
 IMPORTANT task granularity rules:
-- Each task should represent a COMPLETE FEATURE or functional module, NOT a single definition/struct/type.
-- Do NOT create tasks for individual definitions, types, constants, or data structures alone.
-- Group related work together: defining types + implementing logic + wiring it up = ONE task.
-- Aim for 3-8 tasks total. Fewer, bigger tasks are better than many tiny ones.
-- Each task should produce a working, testable piece of functionality when completed.
+- Each PARENT task = ONE COMPLETE FEATURE or functional module
+- Each parent MUST have 2-5 subtasks breaking it into concrete steps
+- Aim for 3-8 parent tasks total
+- Each subtask should be a specific, actionable coding step (0.5-2 hours)
 
 Output a JSON array of objects with these fields:
 - schemeId: the scheme ID this task relates to (string or null)
-- title: short task title (string)
-- description: markdown description of what to do — include ALL sub-steps (define types, implement logic, wire up, etc.) in the description (string)
-- durationDays: estimated days to complete (number)
+- title: short parent task title (string)
+- description: overall description of this task group (string)
 - order: execution order starting from 1 (number)
+- subtasks: array of subtask objects (REQUIRED, 2-5 items):
+  - title: concise subtask title (string)
+  - description: specific implementation details (string)
+  - estimatedHours: number (0.5-2)
 
 Output ONLY the JSON array, no other text.`,
-    prompt: `Plan: ${input.planName}\n\n${schemeSummary}\n\nBreak these schemes into executable tasks. Group by feature/module — do NOT split definitions, types, or data structures into separate tasks. Each task should be a complete, independently testable unit of work.`,
+    prompt: `Plan: ${input.planName}\n\n${schemeSummary}\n\nBreak these schemes into executable parent tasks with subtasks. Group by feature/module.`,
   });
 
   try {

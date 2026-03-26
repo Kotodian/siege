@@ -404,6 +404,12 @@ export async function POST(req: NextRequest) {
   const item = db.select().from(scheduleItems).where(eq(scheduleItems.id, itemId)).get();
   if (!item) return NextResponse.json({ error: "Item not found" }, { status: 404 });
 
+  // Cannot execute parent tasks that have children — execute subtasks instead
+  const children = db.select().from(scheduleItems).where(eq(scheduleItems.parentId, itemId)).all();
+  if (children.length > 0) {
+    return NextResponse.json({ error: "Cannot execute parent task directly. Execute subtasks instead." }, { status: 400 });
+  }
+
   const schedule = db.select().from(schedules).where(eq(schedules.id, item.scheduleId)).get();
   if (!schedule) return NextResponse.json({ error: "Schedule not found" }, { status: 404 });
 

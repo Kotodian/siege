@@ -168,5 +168,33 @@
     "connected": "连接成功",
     "connectionFailed": "连接失败",
     "link": "链接"
+  },
+  "subtask": {
+    "split": "拆分子任务",
+    "splitTitle": "拆分任务",
+    "splitDescription": "将此任务拆分为更细粒度的子任务",
+    "aiAssisted": "AI 辅助",
+    "manual": "手动拆分",
+    "generate": "生成子任务",
+    "addSubtask": "添加子任务",
+    "confirmSplit": "确认拆分",
+    "subtasks": "子任务",
+    "parentTask": "父任务"
+  },
+  "rollback": {
+    "title": "确认回滚",
+    "description": "将还原任务 #{order}: {title} 的所有文件变更",
+    "files": "将还原的文件",
+    "restore": "还原",
+    "delete": "删除（任务新建的文件）",
+    "recreate": "重建（任务删除的文件）",
+    "conflictWarning": "部分文件在任务执行后被修改过，回滚将覆盖这些更改。",
+    "dependencyWarning": "后续任务也修改了部分相同文件，回滚可能影响它们的变更：",
+    "noSnapshots": "此任务没有记录文件快照。",
+    "confirm": "确认回滚",
+    "success": "回滚完成",
+    "button": "回滚",
+    "loading": "回滚中...",
+    "conflict": "已修改"
   }
 }

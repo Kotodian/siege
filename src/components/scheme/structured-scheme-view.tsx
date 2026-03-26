@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import type { StructuredScheme } from "@/lib/scheme-types";
 import hljs from "highlight.js";
 import { ArchitectureDiagram } from "@/components/ui/architecture-diagram";
+import { MindMap } from "@/components/ui/mind-map";
 
 const severityColors: Record<string, { bg: string; border: string; text: string; dot: string }> = {
   high: { bg: "var(--error-container)", border: "var(--error)", text: "var(--error)", dot: "var(--error)" },
@@ -71,7 +72,18 @@ export function StructuredSchemeView({ data, schemeId, findings = [], onFindings
   // Build slides
   const slides: Array<{ id: string; title: string; icon: string; content: React.ReactNode }> = [];
 
-  // Slide 0: Overview
+  // Slide 0: Mind Map (full scheme overview)
+  slides.push({
+    id: "mindmap",
+    title: isZh ? "思维导图" : "Mind Map",
+    icon: "🧠",
+    content: <MindMap data={data} locale={isZh ? "zh" : "en"} onNavigate={(slideId) => {
+      const idx = slides.findIndex(s => s.id === slideId);
+      if (idx >= 0) setCurrentSlide(idx);
+    }} />,
+  });
+
+  // Slide 1: Overview
   slides.push({
     id: "overview",
     title: isZh ? "概述" : "Overview",

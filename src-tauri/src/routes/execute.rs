@@ -15,7 +15,7 @@ use crate::ai::acp::{AcpClient, AcpUpdate};
 use crate::ai::config::resolve_step_config;
 use crate::ai::streaming::stream_ai_call;
 use crate::state::AppState;
-use crate::utils::process;
+use crate::utils::{git, process};
 
 // ---------------------------------------------------------------------------
 // POST /api/execute — Execute a schedule item (task)
@@ -280,7 +280,7 @@ pub async fn execute_task(
     };
 
     // Snapshot working tree before execution
-    let before_hash = get_head_hash(&cwd).await;
+    let before_hash = git::get_head_hash(&cwd).await.unwrap_or_default();
     let before_snapshot = snapshot_working_tree(&cwd).await;
 
     let locale = body.locale.clone();
@@ -688,14 +688,6 @@ fn load_memory_context(db: &rusqlite::Connection, project_id: &str) -> String {
     }
 }
 
-/// Get the HEAD commit hash.
-async fn get_head_hash(cwd: &str) -> String {
-    process::exec("git", &["rev-parse", "HEAD"], cwd)
-        .await
-        .map(|s| s.trim().to_string())
-        .unwrap_or_default()
-}
-
 /// Snapshot working tree state (dirty + untracked files) before execution.
 async fn snapshot_working_tree(cwd: &str) -> HashMap<String, String> {
     let mut snapshot = HashMap::new();
@@ -733,7 +725,7 @@ async fn capture_file_snapshots(
     before_hash: &str,
     before_snapshot: &HashMap<String, String>,
 ) {
-    let after_hash = get_head_hash(cwd).await;
+    let after_hash = git::get_head_hash(cwd).await.unwrap_or_default();
 
     // Committed changes
     let mut committed_files: Vec<String> = Vec::new();

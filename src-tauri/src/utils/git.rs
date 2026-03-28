@@ -75,14 +75,8 @@ pub async fn push(repo_path: &str, remote: &str, branch: &str) -> Result<String,
 }
 
 /// Get the HEAD commit hash.
-#[allow(dead_code)]
 pub async fn get_head_hash(repo_path: &str) -> Result<String, String> {
     let output = exec_git(repo_path, &["rev-parse", "HEAD"]).await?;
     Ok(output.trim().to_string())
 }
 
-/// Get the unified diff of the working tree.
-#[allow(dead_code)]
-pub async fn get_unified_diff(repo_path: &str) -> Result<String, String> {
-    exec_git(repo_path, &["diff"]).await
-}

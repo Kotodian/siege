@@ -161,7 +161,18 @@ async fn check_cli_status(tool: &str) -> Value {
     // For Claude: check if logged in via `claude auth status` or just assume usable
     // For Codex: similar
     // ACP handles auth internally, so if npx works, it's usable
-    json!({"installed": true, "loggedIn": direct})
+    let direct_err = if !direct {
+        exec(tool, &["--version"], ".").await.err().unwrap_or_default()
+    } else { String::new() };
+    let npx_err = if !npx_available {
+        exec("npx", &["--version"], ".").await.err().unwrap_or_default()
+    } else { String::new() };
+
+    json!({
+        "installed": installed,
+        "loggedIn": direct,
+        "debug": format!("direct={} npx={} direct_err={} npx_err={}", direct, npx_available, direct_err, npx_err)
+    })
 }
 
 fn mask_key(key: Option<&str>) -> String {

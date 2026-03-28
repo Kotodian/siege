@@ -101,7 +101,7 @@ pub async fn clone_repo(Json(body): Json<CloneBody>) -> (StatusCode, Json<Value>
 // GET /api/github/auth — check auth status
 pub async fn auth_status() -> Json<Value> {
     // Check if gh is installed
-    if exec("which", &["gh"], ".").await.is_err() {
+    if exec("gh", &["--version"], ".").await.is_err() {
         return Json(json!({"authenticated": false, "ghInstalled": false, "username": ""}));
     }
 
@@ -132,7 +132,7 @@ pub async fn auth_status() -> Json<Value> {
 // POST /api/github/auth — start device flow login
 pub async fn auth_login() -> (StatusCode, Json<Value>) {
     // Check if gh is installed
-    if exec("which", &["gh"], ".").await.is_err() {
+    if exec("gh", &["--version"], ".").await.is_err() {
         return (StatusCode::SERVICE_UNAVAILABLE, Json(json!({"error": "gh_not_installed"})));
     }
 

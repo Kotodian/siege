@@ -2,6 +2,7 @@ use rusqlite::Connection;
 use std::sync::{Arc, Mutex};
 
 #[derive(Clone)]
+#[allow(dead_code)]
 pub struct AppState {
     pub db: Arc<Mutex<Connection>>,
 }

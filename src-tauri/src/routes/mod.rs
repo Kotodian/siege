@@ -113,6 +113,7 @@ pub fn create_router(state: AppState) -> Router {
         .route("/api/github/auth", get(github::auth_status).post(github::auth_login))
         // Tailscale
         .route("/api/tailscale/status", get(tailscale::status))
+        .route("/api/tailscale/login", post(tailscale::login))
         .with_state(state)
         .layer(cors)
 }

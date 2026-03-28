@@ -165,6 +165,72 @@ pub async fn is_authenticated() -> bool {
     }
 }
 
+/// Call a POST endpoint on the Tailscale local API.
+async fn tailscale_api_post(path: &str, body: &str) -> Result<Value, String> {
+    let socket = get_socket_path();
+    if !socket.exists() {
+        return Err("Tailscale daemon not running".to_string());
+    }
+
+    let mut stream = UnixStream::connect(&socket)
+        .await
+        .map_err(|e| format!("Cannot connect to tailscaled: {}", e))?;
+
+    let request = format!(
+        "POST {} HTTP/1.1\r\nHost: local-tailscaled.sock\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+        path, body.len(), body
+    );
+    stream.write_all(request.as_bytes()).await.map_err(|e| e.to_string())?;
+    stream.shutdown().await.map_err(|e| e.to_string())?;
+
+    let mut response = String::new();
+    stream.read_to_string(&mut response).await.map_err(|e| e.to_string())?;
+
+    let body_str = response.split("\r\n\r\n").nth(1).unwrap_or("{}");
+    serde_json::from_str(body_str).map_err(|e| format!("Parse error: {}", e))
+}
+
+/// Start interactive Tailscale login. Returns an auth URL for the user to open.
+pub async fn start_login() -> Result<String, String> {
+    // First check current status
+    let status = get_status().await;
+    if let Ok(ref s) = status {
+        if s.running {
+            return Err("Already logged in".to_string());
+        }
+    }
+
+    // Call login-interactive to get auth URL
+    let result = tailscale_api_post("/localapi/v0/login-interactive", "").await;
+    match result {
+        Ok(data) => {
+            if let Some(url) = data.get("url").and_then(|v| v.as_str()) {
+                Ok(url.to_string())
+            } else {
+                // Check if AuthURL is in status
+                let status = tailscale_api("/localapi/v0/status").await?;
+                if let Some(url) = status.get("AuthURL").and_then(|v| v.as_str()) {
+                    if !url.is_empty() {
+                        return Ok(url.to_string());
+                    }
+                }
+                Err("No auth URL returned".to_string())
+            }
+        }
+        Err(e) => {
+            // login-interactive might not return JSON, check status for AuthURL
+            let status = tailscale_api("/localapi/v0/status").await
+                .map_err(|_| e.clone())?;
+            if let Some(url) = status.get("AuthURL").and_then(|v| v.as_str()) {
+                if !url.is_empty() {
+                    return Ok(url.to_string());
+                }
+            }
+            Err(e)
+        }
+    }
+}
+
 /// Parse a raw Tailscale status JSON into TailscaleStatus.
 /// Exposed for testing.
 pub fn parse_status(data: &Value) -> TailscaleStatus {

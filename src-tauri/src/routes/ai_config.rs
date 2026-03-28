@@ -139,22 +139,29 @@ fn upsert_setting(db: &rusqlite::Connection, key: &str, value: &str) {
     }
 }
 
-/// Check if a CLI tool (claude/codex) is installed and logged in.
+/// Check if a CLI tool (claude/codex) is available for ACP mode.
+/// ACP uses `npx -y <package>` so it only needs npx, not the CLI itself.
+/// But we also check if the CLI is directly installed for better UX.
 async fn check_cli_status(tool: &str) -> Value {
     use crate::utils::process::exec;
 
-    // Check if installed
-    let version_result = exec(tool, &["--version"], ".").await;
-    let installed = version_result.is_ok();
+    // Check if the CLI is directly installed
+    let direct = exec(tool, &["--version"], ".").await.is_ok();
+
+    // Check if npx is available (ACP downloads packages on demand via npx)
+    let npx_available = exec("npx", &["--version"], ".").await.is_ok();
+
+    // ACP mode works if npx is available, even without the CLI directly installed
+    let installed = direct || npx_available;
 
     if !installed {
         return json!({"installed": false, "loggedIn": false});
     }
 
-    // Check if logged in by running a quick command
-    // claude: `claude --version` succeeds = installed, auth status is harder to check
-    // For now, if installed, assume usable (ACP handles auth itself)
-    json!({"installed": true, "loggedIn": true})
+    // For Claude: check if logged in via `claude auth status` or just assume usable
+    // For Codex: similar
+    // ACP handles auth internally, so if npx works, it's usable
+    json!({"installed": true, "loggedIn": direct})
 }
 
 fn mask_key(key: Option<&str>) -> String {

@@ -139,39 +139,76 @@ fn upsert_setting(db: &rusqlite::Connection, key: &str, value: &str) {
     }
 }
 
+/// Find a command by trying absolute paths, then PATH lookup.
+fn find_cmd(name: &str) -> String {
+    let candidates = [
+        format!("/opt/homebrew/bin/{}", name),
+        format!("/usr/local/bin/{}", name),
+        format!("/usr/bin/{}", name),
+        format!("/bin/{}", name),
+    ];
+    for path in &candidates {
+        if std::path::Path::new(path).exists() {
+            return path.clone();
+        }
+    }
+    // Also check nvm/volta/fnm paths
+    if let Some(home) = dirs::home_dir() {
+        for dir in &[".nvm/versions/node", ".volta/bin", ".fnm/aliases/default/bin", ".local/bin"] {
+            let p = home.join(dir).join(name);
+            if p.exists() {
+                return p.to_string_lossy().to_string();
+            }
+        }
+        // nvm: find latest node version
+        let nvm_dir = home.join(".nvm/versions/node");
+        if nvm_dir.exists() {
+            if let Ok(entries) = std::fs::read_dir(&nvm_dir) {
+                let mut versions: Vec<_> = entries.flatten().collect();
+                versions.sort_by(|a, b| b.file_name().cmp(&a.file_name()));
+                if let Some(latest) = versions.first() {
+                    let p = latest.path().join("bin").join(name);
+                    if p.exists() {
+                        return p.to_string_lossy().to_string();
+                    }
+                }
+            }
+        }
+    }
+    name.to_string() // fallback to bare name
+}
+
 /// Check if a CLI tool (claude/codex) is available for ACP mode.
-/// ACP uses `npx -y <package>` so it only needs npx, not the CLI itself.
-/// But we also check if the CLI is directly installed for better UX.
 async fn check_cli_status(tool: &str) -> Value {
-    use crate::utils::process::exec;
+    let tool_path = find_cmd(tool);
+    let npx_path = find_cmd("npx");
 
-    // Check if the CLI is directly installed
-    let direct = exec(tool, &["--version"], ".").await.is_ok();
+    let direct = tokio::process::Command::new(&tool_path)
+        .args(["--version"])
+        .output()
+        .await
+        .map(|o| o.status.success())
+        .unwrap_or(false);
 
-    // Check if npx is available (ACP downloads packages on demand via npx)
-    let npx_available = exec("npx", &["--version"], ".").await.is_ok();
+    let npx_available = tokio::process::Command::new(&npx_path)
+        .args(["--version"])
+        .output()
+        .await
+        .map(|o| o.status.success())
+        .unwrap_or(false);
 
-    // ACP mode works if npx is available, even without the CLI directly installed
     let installed = direct || npx_available;
 
-    if !installed {
-        return json!({"installed": false, "loggedIn": false});
-    }
-
-    // For Claude: check if logged in via `claude auth status` or just assume usable
-    // For Codex: similar
-    // ACP handles auth internally, so if npx works, it's usable
     let direct_err = if !direct {
-        exec(tool, &["--version"], ".").await.err().unwrap_or_default()
-    } else { String::new() };
-    let npx_err = if !npx_available {
-        exec("npx", &["--version"], ".").await.err().unwrap_or_default()
+        tokio::process::Command::new(&tool_path).args(["--version"]).output().await
+            .map(|o| String::from_utf8_lossy(&o.stderr).to_string())
+            .unwrap_or_else(|e| e.to_string())
     } else { String::new() };
 
     json!({
         "installed": installed,
         "loggedIn": direct,
-        "debug": format!("direct={} npx={} direct_err={} npx_err={}", direct, npx_available, direct_err, npx_err)
+        "debug": format!("tool_path={} npx_path={} direct={} npx={} err={}", tool_path, npx_path, direct, npx_available, direct_err)
     })
 }
 

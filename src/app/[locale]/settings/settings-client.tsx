@@ -139,6 +139,24 @@ export default function SettingsClient({
     setSavingProvider(false);
   };
 
+  const [detectResult, setDetectResult] = useState<string | null>(null);
+
+  const handleRedetect = async () => {
+    const res = await apiFetch("/api/ai-config");
+    const data = await res.json();
+    setAiConfig(data);
+    const lines = [
+      `Claude Code: installed=${data.claude?.installed} loggedIn=${data.claude?.loggedIn}`,
+      data.claude?.debug ? `  debug: ${data.claude.debug}` : null,
+      `Codex: installed=${data.codex?.installed} loggedIn=${data.codex?.loggedIn}`,
+      data.codex?.debug ? `  debug: ${data.codex.debug}` : null,
+      `Anthropic: configured=${data.anthropic?.configured}`,
+      `OpenAI: configured=${data.openai?.configured}`,
+      `GLM: configured=${data.glm?.configured}`,
+    ].filter(Boolean).join("\n");
+    setDetectResult(lines);
+  };
+
   const saveSettings = async () => {
     await apiFetch("/api/settings", {
       method: "PUT",
@@ -198,10 +216,7 @@ export default function SettingsClient({
               <button
                 className="text-[10px] px-1.5 py-0.5 rounded hover:opacity-80"
                 style={{ color: "var(--primary)", background: "var(--surface-container)" }}
-                onClick={async () => {
-                  const res = await apiFetch("/api/ai-config");
-                  setAiConfig(await res.json());
-                }}
+                onClick={handleRedetect}
               >
                 {isZh ? "重新检测" : "Re-detect"}
               </button>
@@ -251,10 +266,7 @@ export default function SettingsClient({
               <button
                 className="text-[10px] px-1.5 py-0.5 rounded hover:opacity-80"
                 style={{ color: "var(--primary)", background: "var(--surface-container)" }}
-                onClick={async () => {
-                  const res = await apiFetch("/api/ai-config");
-                  setAiConfig(await res.json());
-                }}
+                onClick={handleRedetect}
               >
                 {isZh ? "重新检测" : "Re-detect"}
               </button>
@@ -526,6 +538,20 @@ export default function SettingsClient({
       <CollapsibleSection title="Tailscale" icon={<TailscaleLogo size={18} />}>
         <TailscaleSectionInner isZh={isZh} />
       </CollapsibleSection>
+
+      {/* Detect Result Dialog */}
+      <Dialog
+        open={!!detectResult}
+        onClose={() => setDetectResult(null)}
+        title={isZh ? "检测结果" : "Detection Result"}
+      >
+        <pre className="text-xs p-3 rounded overflow-auto max-h-60 whitespace-pre-wrap" style={{ background: "var(--background)", color: "var(--on-surface)" }}>
+          {detectResult}
+        </pre>
+        <div className="flex justify-end mt-4">
+          <Button onClick={() => setDetectResult(null)}>{isZh ? "关闭" : "Close"}</Button>
+        </div>
+      </Dialog>
     </div>
   );
 }

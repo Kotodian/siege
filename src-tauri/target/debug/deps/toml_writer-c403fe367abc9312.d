@@ -1,0 +1,10 @@
+/root/typescript/src/github.com/Kotodian/siege/src-tauri/target/debug/deps/toml_writer-c403fe367abc9312.d: /root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/toml_writer-1.1.0+spec-1.1.0/src/lib.rs /root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/toml_writer-1.1.0+spec-1.1.0/src/integer.rs /root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/toml_writer-1.1.0+spec-1.1.0/src/key.rs /root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/toml_writer-1.1.0+spec-1.1.0/src/string.rs /root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/toml_writer-1.1.0+spec-1.1.0/src/value.rs /root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/toml_writer-1.1.0+spec-1.1.0/src/write.rs
+
+/root/typescript/src/github.com/Kotodian/siege/src-tauri/target/debug/deps/libtoml_writer-c403fe367abc9312.rmeta: /root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/toml_writer-1.1.0+spec-1.1.0/src/lib.rs /root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/toml_writer-1.1.0+spec-1.1.0/src/integer.rs /root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/toml_writer-1.1.0+spec-1.1.0/src/key.rs /root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/toml_writer-1.1.0+spec-1.1.0/src/string.rs /root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/toml_writer-1.1.0+spec-1.1.0/src/value.rs /root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/toml_writer-1.1.0+spec-1.1.0/src/write.rs
+
+/root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/toml_writer-1.1.0+spec-1.1.0/src/lib.rs:
+/root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/toml_writer-1.1.0+spec-1.1.0/src/integer.rs:
+/root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/toml_writer-1.1.0+spec-1.1.0/src/key.rs:
+/root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/toml_writer-1.1.0+spec-1.1.0/src/string.rs:
+/root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/toml_writer-1.1.0+spec-1.1.0/src/value.rs:
+/root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/toml_writer-1.1.0+spec-1.1.0/src/write.rs:

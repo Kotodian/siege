@@ -1,0 +1,12 @@
+/root/typescript/src/github.com/Kotodian/siege/src-tauri/target/debug/deps/axum_macros-20f13d1e7c64e2d4.d: /root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/axum-macros-0.5.0/src/lib.rs /root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/axum-macros-0.5.0/src/attr_parsing.rs /root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/axum-macros-0.5.0/src/debug_handler.rs /root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/axum-macros-0.5.0/src/from_ref.rs /root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/axum-macros-0.5.0/src/from_request.rs /root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/axum-macros-0.5.0/src/from_request/attr.rs /root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/axum-macros-0.5.0/src/typed_path.rs /root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/axum-macros-0.5.0/src/with_position.rs
+
+/root/typescript/src/github.com/Kotodian/siege/src-tauri/target/debug/deps/libaxum_macros-20f13d1e7c64e2d4.so: /root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/axum-macros-0.5.0/src/lib.rs /root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/axum-macros-0.5.0/src/attr_parsing.rs /root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/axum-macros-0.5.0/src/debug_handler.rs /root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/axum-macros-0.5.0/src/from_ref.rs /root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/axum-macros-0.5.0/src/from_request.rs /root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/axum-macros-0.5.0/src/from_request/attr.rs /root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/axum-macros-0.5.0/src/typed_path.rs /root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/axum-macros-0.5.0/src/with_position.rs
+
+/root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/axum-macros-0.5.0/src/lib.rs:
+/root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/axum-macros-0.5.0/src/attr_parsing.rs:
+/root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/axum-macros-0.5.0/src/debug_handler.rs:
+/root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/axum-macros-0.5.0/src/from_ref.rs:
+/root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/axum-macros-0.5.0/src/from_request.rs:
+/root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/axum-macros-0.5.0/src/from_request/attr.rs:
+/root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/axum-macros-0.5.0/src/typed_path.rs:
+/root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/axum-macros-0.5.0/src/with_position.rs:

@@ -14,6 +14,8 @@ use tokio_stream::wrappers::ReceiverStream;
 use crate::ai::acp::{AcpClient, AcpUpdate};
 use crate::ai::config::resolve_step_config;
 use crate::ai::streaming::stream_ai_call;
+use crate::remote::remote_acp::start_remote_acp;
+use crate::remote::ssh::SshConfig;
 use crate::state::AppState;
 use crate::utils::{git, process};
 
@@ -107,10 +109,17 @@ pub async fn execute_task(
         };
 
         // Load project
-        let (target_repo_path, session_id): (String, Option<String>) = match db.query_row(
-            "SELECT target_repo_path, session_id FROM projects WHERE id = ?1",
+        let (target_repo_path, session_id, remote_host, remote_user, remote_repo_path, remote_enabled): (
+            String,
+            Option<String>,
+            Option<String>,
+            Option<String>,
+            Option<String>,
+            bool,
+        ) = match db.query_row(
+            "SELECT target_repo_path, session_id, remote_host, remote_user, remote_repo_path, remote_enabled FROM projects WHERE id = ?1",
             rusqlite::params![project_id],
-            |row| Ok((row.get(0)?, row.get(1)?)),
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?, row.get(4)?, row.get(5)?)),
         ) {
             Ok(p) => p,
             Err(_) => return error_response(404, "Project not found"),
@@ -180,6 +189,16 @@ pub async fn execute_task(
             .ok();
         }
 
+        let remote_config = if remote_enabled {
+            Some(SshConfig {
+                host: remote_host.unwrap_or_default(),
+                user: remote_user.unwrap_or_else(|| "root".to_string()),
+                repo_path: remote_repo_path.unwrap_or_else(|| target_repo_path.clone()),
+            })
+        } else {
+            None
+        };
+
         TaskData {
             item,
             plan_id,
@@ -189,6 +208,7 @@ pub async fn execute_task(
             previous_tasks: previous_tasks.join("\n"),
             scheme_context,
             memory_context,
+            remote_config,
         }
     };
 
@@ -280,8 +300,17 @@ pub async fn execute_task(
     };
 
     // Snapshot working tree before execution
-    let before_hash = git::get_head_hash(&cwd).await.unwrap_or_default();
-    let before_snapshot = snapshot_working_tree(&cwd).await;
+    let remote_config_for_snapshot = task_data.remote_config.clone();
+    let before_hash = if let Some(ref rc) = remote_config_for_snapshot {
+        crate::remote::ssh::remote_git(rc, "rev-parse HEAD")
+            .await
+            .unwrap_or_default()
+            .trim()
+            .to_string()
+    } else {
+        git::get_head_hash(&cwd).await.unwrap_or_default()
+    };
+    let before_snapshot = snapshot_working_tree(&cwd, remote_config_for_snapshot.as_ref()).await;
 
     let locale = body.locale.clone();
 
@@ -306,6 +335,7 @@ pub async fn execute_task(
         let cwd_clone = cwd.clone();
         let db_state = state.clone();
         let project_id = task_data.project_id.clone();
+        let remote_config = task_data.remote_config.clone();
 
         let (tx, rx) =
             tokio::sync::mpsc::channel::<Result<String, std::convert::Infallible>>(100);
@@ -321,15 +351,32 @@ pub async fn execute_task(
                 }
             };
 
-            send(&tx, "Connecting to ACP agent...\n".to_string()).await;
+            let connect_msg = if remote_config.is_some() {
+                "Connecting to remote ACP agent...\n"
+            } else {
+                "Connecting to ACP agent...\n"
+            };
+            send(&tx, connect_msg.to_string()).await;
 
-            let mut acp_client = match AcpClient::start(&cwd_clone, agent_type).await {
-                Ok(c) => c,
-                Err(e) => {
-                    full_log.push_str(&format!("\nError: {}", e));
-                    send(&tx, format!("\nError: {}", e)).await;
-                    update_item_status(&db_state, &item_id_clone, "failed", 0, &full_log);
-                    return;
+            let mut acp_client = if let Some(ref remote) = remote_config {
+                match start_remote_acp(remote, agent_type).await {
+                    Ok(c) => c,
+                    Err(e) => {
+                        full_log.push_str(&format!("\nError: {}", e));
+                        send(&tx, format!("\nError: {}", e)).await;
+                        update_item_status(&db_state, &item_id_clone, "failed", 0, &full_log);
+                        return;
+                    }
+                }
+            } else {
+                match AcpClient::start(&cwd_clone, agent_type).await {
+                    Ok(c) => c,
+                    Err(e) => {
+                        full_log.push_str(&format!("\nError: {}", e));
+                        send(&tx, format!("\nError: {}", e)).await;
+                        update_item_status(&db_state, &item_id_clone, "failed", 0, &full_log);
+                        return;
+                    }
                 }
             };
 
@@ -484,7 +531,7 @@ pub async fn execute_task(
             }
 
             // Capture file snapshots and resolve findings
-            capture_file_snapshots(&db_state, &item_id_clone, &cwd_clone, &before_hash, &before_snapshot).await;
+            capture_file_snapshots(&db_state, &item_id_clone, &cwd_clone, &before_hash, &before_snapshot, remote_config.as_ref()).await;
             resolve_related_findings(&db_state, &item_id_clone);
 
             acp_client.stop().await;
@@ -513,6 +560,7 @@ pub async fn execute_task(
     let item_id_clone = item_id.clone();
     let cwd_clone = cwd.clone();
     let db_state = state.clone();
+    let sdk_remote_config = task_data.remote_config.clone();
 
     let (tx, rx) = tokio::sync::mpsc::channel::<Result<String, std::convert::Infallible>>(100);
 
@@ -561,7 +609,7 @@ pub async fn execute_task(
             );
         }
 
-        capture_file_snapshots(&db_state, &item_id_clone, &cwd_clone, &before_hash, &before_snapshot).await;
+        capture_file_snapshots(&db_state, &item_id_clone, &cwd_clone, &before_hash, &before_snapshot, sdk_remote_config.as_ref()).await;
         resolve_related_findings(&db_state, &item_id_clone);
     });
 
@@ -642,6 +690,7 @@ struct TaskData {
     previous_tasks: String,
     scheme_context: String,
     memory_context: String,
+    remote_config: Option<SshConfig>,
 }
 
 // ---------------------------------------------------------------------------
@@ -689,27 +738,47 @@ fn load_memory_context(db: &rusqlite::Connection, project_id: &str) -> String {
 }
 
 /// Snapshot working tree state (dirty + untracked files) before execution.
-async fn snapshot_working_tree(cwd: &str) -> HashMap<String, String> {
+/// When `remote` is Some, uses SSH to read file state from the remote machine.
+async fn snapshot_working_tree(cwd: &str, remote: Option<&SshConfig>) -> HashMap<String, String> {
     let mut snapshot = HashMap::new();
 
-    // Tracked files with uncommitted changes
-    if let Ok(output) = process::exec("git", &["diff", "HEAD", "--name-only"], cwd).await {
-        for fp in output.trim().lines().filter(|l| !l.is_empty()) {
-            let abs_path = Path::new(cwd).join(fp);
-            if let Ok(content) = std::fs::read_to_string(&abs_path) {
-                snapshot.insert(fp.to_string(), content);
+    if let Some(rc) = remote {
+        // Remote: use SSH git commands
+        if let Ok(output) = crate::remote::ssh::remote_git(rc, "diff HEAD --name-only").await {
+            for fp in output.trim().lines().filter(|l| !l.is_empty()) {
+                let remote_path = format!("{}/{}", rc.repo_path, fp);
+                if let Ok(content) = crate::remote::ssh::read_remote_file(rc, &remote_path).await {
+                    snapshot.insert(fp.to_string(), content);
+                }
             }
         }
-    }
+        if let Ok(output) = crate::remote::ssh::remote_git(rc, "ls-files --others --exclude-standard").await {
+            for fp in output.trim().lines().filter(|l| !l.is_empty()) {
+                let remote_path = format!("{}/{}", rc.repo_path, fp);
+                if let Ok(content) = crate::remote::ssh::read_remote_file(rc, &remote_path).await {
+                    snapshot.insert(fp.to_string(), content);
+                }
+            }
+        }
+    } else {
+        // Local: use local git commands
+        if let Ok(output) = process::exec("git", &["diff", "HEAD", "--name-only"], cwd).await {
+            for fp in output.trim().lines().filter(|l| !l.is_empty()) {
+                let abs_path = Path::new(cwd).join(fp);
+                if let Ok(content) = std::fs::read_to_string(&abs_path) {
+                    snapshot.insert(fp.to_string(), content);
+                }
+            }
+        }
 
-    // Untracked files
-    if let Ok(output) =
-        process::exec("git", &["ls-files", "--others", "--exclude-standard"], cwd).await
-    {
-        for fp in output.trim().lines().filter(|l| !l.is_empty()) {
-            let abs_path = Path::new(cwd).join(fp);
-            if let Ok(content) = std::fs::read_to_string(&abs_path) {
-                snapshot.insert(fp.to_string(), content);
+        if let Ok(output) =
+            process::exec("git", &["ls-files", "--others", "--exclude-standard"], cwd).await
+        {
+            for fp in output.trim().lines().filter(|l| !l.is_empty()) {
+                let abs_path = Path::new(cwd).join(fp);
+                if let Ok(content) = std::fs::read_to_string(&abs_path) {
+                    snapshot.insert(fp.to_string(), content);
+                }
             }
         }
     }
@@ -718,20 +787,35 @@ async fn snapshot_working_tree(cwd: &str) -> HashMap<String, String> {
 }
 
 /// Capture file snapshots after task execution.
+/// When `remote` is Some, uses SSH to read file contents from the remote machine.
 async fn capture_file_snapshots(
     state: &AppState,
     item_id: &str,
     cwd: &str,
     before_hash: &str,
     before_snapshot: &HashMap<String, String>,
+    remote: Option<&SshConfig>,
 ) {
-    let after_hash = git::get_head_hash(cwd).await.unwrap_or_default();
+    let after_hash = if let Some(rc) = remote {
+        crate::remote::ssh::remote_git(rc, "rev-parse HEAD")
+            .await
+            .unwrap_or_default()
+            .trim()
+            .to_string()
+    } else {
+        git::get_head_hash(cwd).await.unwrap_or_default()
+    };
 
     // Committed changes
     let mut committed_files: Vec<String> = Vec::new();
     if !before_hash.is_empty() && !after_hash.is_empty() && before_hash != after_hash {
         let range = format!("{}..{}", before_hash, after_hash);
-        if let Ok(output) = process::exec("git", &["diff", "--name-only", &range], cwd).await {
+        let diff_output = if let Some(rc) = remote {
+            crate::remote::ssh::remote_git(rc, &format!("diff --name-only {}", range)).await.ok()
+        } else {
+            process::exec("git", &["diff", "--name-only", &range], cwd).await.ok()
+        };
+        if let Some(output) = diff_output {
             committed_files = output
                 .trim()
                 .lines()
@@ -743,10 +827,20 @@ async fn capture_file_snapshots(
 
     // Uncommitted changes that differ from pre-task snapshot
     let mut uncommitted_files: Vec<String> = Vec::new();
-    if let Ok(output) = process::exec("git", &["diff", "HEAD", "--name-only"], cwd).await {
+    let diff_head_output = if let Some(rc) = remote {
+        crate::remote::ssh::remote_git(rc, "diff HEAD --name-only").await.ok()
+    } else {
+        process::exec("git", &["diff", "HEAD", "--name-only"], cwd).await.ok()
+    };
+    if let Some(output) = diff_head_output {
         for fp in output.trim().lines().filter(|l| !l.is_empty()) {
-            let abs_path = Path::new(cwd).join(fp);
-            let current = std::fs::read_to_string(&abs_path).unwrap_or_default();
+            let current = if let Some(rc) = remote {
+                let remote_path = format!("{}/{}", rc.repo_path, fp);
+                crate::remote::ssh::read_remote_file(rc, &remote_path).await.unwrap_or_default()
+            } else {
+                let abs_path = Path::new(cwd).join(fp);
+                std::fs::read_to_string(&abs_path).unwrap_or_default()
+            };
             let prev = before_snapshot.get(fp).cloned().unwrap_or_default();
             if current != prev {
                 uncommitted_files.push(fp.to_string());
@@ -755,9 +849,12 @@ async fn capture_file_snapshots(
     }
 
     // New untracked files
-    if let Ok(output) =
-        process::exec("git", &["ls-files", "--others", "--exclude-standard"], cwd).await
-    {
+    let untracked_output = if let Some(rc) = remote {
+        crate::remote::ssh::remote_git(rc, "ls-files --others --exclude-standard").await.ok()
+    } else {
+        process::exec("git", &["ls-files", "--others", "--exclude-standard"], cwd).await.ok()
+    };
+    if let Some(output) = untracked_output {
         for fp in output.trim().lines().filter(|l| !l.is_empty()) {
             if !before_snapshot.contains_key(fp) {
                 uncommitted_files.push(fp.to_string());
@@ -775,49 +872,85 @@ async fn capture_file_snapshots(
         return;
     }
 
-    let db = state.db.lock().unwrap();
-    for file_path in &all_files {
-        // contentBefore
-        let mut content_before = before_snapshot.get(file_path).cloned().unwrap_or_default();
-        if content_before.is_empty() && !before_hash.is_empty() {
-            let show_ref = format!("{}:{}", before_hash, file_path);
-            // Use blocking exec for simplicity — we're already in an async context
-            // but we hold db lock so we can't easily use async. Use std::process instead.
-            if let Ok(output) = std::process::Command::new("git")
-                .args(["show", &show_ref])
-                .current_dir(cwd)
-                .output()
-            {
-                if output.status.success() {
-                    content_before = String::from_utf8_lossy(&output.stdout).to_string();
-                }
+    // For remote, pre-fetch content_before/content_after via SSH before taking db lock
+    let mut file_contents: HashMap<String, (String, String)> = HashMap::new();
+    if let Some(rc) = remote {
+        for file_path in &all_files {
+            let mut content_before = before_snapshot.get(file_path).cloned().unwrap_or_default();
+            if content_before.is_empty() && !before_hash.is_empty() {
+                let show_cmd = format!("show {}:{}", before_hash, file_path);
+                content_before = crate::remote::ssh::remote_git(rc, &show_cmd)
+                    .await
+                    .unwrap_or_default();
+            }
+
+            let content_after = if committed_files.contains(file_path) && !after_hash.is_empty() {
+                let show_cmd = format!("show {}:{}", after_hash, file_path);
+                crate::remote::ssh::remote_git(rc, &show_cmd)
+                    .await
+                    .unwrap_or_default()
+            } else {
+                let remote_path = format!("{}/{}", rc.repo_path, file_path);
+                crate::remote::ssh::read_remote_file(rc, &remote_path)
+                    .await
+                    .unwrap_or_default()
+            };
+
+            if content_before != content_after {
+                file_contents.insert(file_path.clone(), (content_before, content_after));
             }
         }
+    }
 
-        // contentAfter
-        let content_after = if committed_files.contains(file_path) && !after_hash.is_empty() {
-            let show_ref = format!("{}:{}", after_hash, file_path);
-            if let Ok(output) = std::process::Command::new("git")
-                .args(["show", &show_ref])
-                .current_dir(cwd)
-                .output()
-            {
-                if output.status.success() {
-                    String::from_utf8_lossy(&output.stdout).to_string()
+    let db = state.db.lock().unwrap();
+    for file_path in &all_files {
+        let (content_before, content_after) = if remote.is_some() {
+            match file_contents.get(file_path) {
+                Some((before, after)) => (before.clone(), after.clone()),
+                None => continue, // Skipped because content_before == content_after
+            }
+        } else {
+            // Local path: contentBefore
+            let mut content_before = before_snapshot.get(file_path).cloned().unwrap_or_default();
+            if content_before.is_empty() && !before_hash.is_empty() {
+                let show_ref = format!("{}:{}", before_hash, file_path);
+                if let Ok(output) = std::process::Command::new("git")
+                    .args(["show", &show_ref])
+                    .current_dir(cwd)
+                    .output()
+                {
+                    if output.status.success() {
+                        content_before = String::from_utf8_lossy(&output.stdout).to_string();
+                    }
+                }
+            }
+
+            // contentAfter
+            let content_after = if committed_files.contains(file_path) && !after_hash.is_empty() {
+                let show_ref = format!("{}:{}", after_hash, file_path);
+                if let Ok(output) = std::process::Command::new("git")
+                    .args(["show", &show_ref])
+                    .current_dir(cwd)
+                    .output()
+                {
+                    if output.status.success() {
+                        String::from_utf8_lossy(&output.stdout).to_string()
+                    } else {
+                        String::new()
+                    }
                 } else {
                     String::new()
                 }
             } else {
-                String::new()
-            }
-        } else {
-            let abs_path = Path::new(cwd).join(file_path);
-            std::fs::read_to_string(&abs_path).unwrap_or_default()
-        };
+                let abs_path = Path::new(cwd).join(file_path);
+                std::fs::read_to_string(&abs_path).unwrap_or_default()
+            };
 
-        if content_before == content_after {
-            continue;
-        }
+            if content_before == content_after {
+                continue;
+            }
+            (content_before, content_after)
+        };
 
         let snap_id = uuid::Uuid::new_v4().to_string();
         db.execute(
@@ -890,4 +1023,92 @@ fn resolve_related_findings(state: &AppState, item_id: &str) {
 fn contains_chinese(text: &str) -> bool {
     text.chars()
         .any(|c| ('\u{4e00}'..='\u{9fff}').contains(&c))
+}
+
+/// Build an optional SshConfig from project remote fields.
+/// Exposed for testing.
+fn build_remote_config(
+    remote_enabled: bool,
+    remote_host: Option<String>,
+    remote_user: Option<String>,
+    remote_repo_path: Option<String>,
+    fallback_repo_path: &str,
+) -> Option<SshConfig> {
+    if remote_enabled {
+        Some(SshConfig {
+            host: remote_host.unwrap_or_default(),
+            user: remote_user.unwrap_or_else(|| "root".to_string()),
+            repo_path: remote_repo_path.unwrap_or_else(|| fallback_repo_path.to_string()),
+        })
+    } else {
+        None
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_build_remote_config_disabled() {
+        let config = build_remote_config(false, Some("host".into()), None, None, "/tmp");
+        assert!(config.is_none());
+    }
+
+    #[test]
+    fn test_build_remote_config_enabled_full() {
+        let config = build_remote_config(
+            true,
+            Some("my-host".into()),
+            Some("deploy".into()),
+            Some("/opt/app".into()),
+            "/fallback",
+        );
+        let cfg = config.unwrap();
+        assert_eq!(cfg.host, "my-host");
+        assert_eq!(cfg.user, "deploy");
+        assert_eq!(cfg.repo_path, "/opt/app");
+    }
+
+    #[test]
+    fn test_build_remote_config_enabled_defaults() {
+        let config = build_remote_config(true, None, None, None, "/fallback");
+        let cfg = config.unwrap();
+        assert_eq!(cfg.host, "");
+        assert_eq!(cfg.user, "root");
+        assert_eq!(cfg.repo_path, "/fallback");
+    }
+
+    #[test]
+    fn test_build_remote_config_user_default() {
+        let config = build_remote_config(
+            true,
+            Some("server".into()),
+            None,
+            Some("/repo".into()),
+            "/fallback",
+        );
+        let cfg = config.unwrap();
+        assert_eq!(cfg.user, "root");
+    }
+
+    #[test]
+    fn test_build_remote_config_repo_path_fallback() {
+        let config = build_remote_config(
+            true,
+            Some("server".into()),
+            Some("user".into()),
+            None,
+            "/my/local/path",
+        );
+        let cfg = config.unwrap();
+        assert_eq!(cfg.repo_path, "/my/local/path");
+    }
+
+    #[test]
+    fn test_contains_chinese() {
+        assert!(contains_chinese("hello \u{4e16}\u{754c}"));
+        assert!(!contains_chinese("hello world"));
+        assert!(contains_chinese("\u{4e2d}\u{6587}"));
+    }
 }

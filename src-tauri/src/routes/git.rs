@@ -6,16 +6,22 @@ use axum::{
 use serde::Deserialize;
 use serde_json::{json, Value};
 
+use crate::remote::ssh::{SshConfig, remote_git};
 use crate::utils::git as git_utils;
 use crate::utils::process;
 
 // ---------------------------------------------------------------------------
 // GET /api/git?path=X -- get git info
+// Supports remote via remoteHost/remoteUser query params.
 // ---------------------------------------------------------------------------
 
 #[derive(Deserialize)]
 pub struct GitInfoParams {
     path: Option<String>,
+    #[serde(rename = "remoteHost")]
+    remote_host: Option<String>,
+    #[serde(rename = "remoteUser")]
+    remote_user: Option<String>,
 }
 
 pub async fn info(
@@ -27,6 +33,40 @@ pub async fn info(
             Json(json!({"error": "path required"})),
         )
     })?;
+
+    // Remote path: use SSH for git info
+    if let Some(ref host) = params.remote_host {
+        if !host.is_empty() {
+            let config = SshConfig {
+                host: host.clone(),
+                user: params.remote_user.clone().unwrap_or_else(|| "root".to_string()),
+                repo_path: repo_path.clone(),
+            };
+
+            let branch = remote_git(&config, "rev-parse --abbrev-ref HEAD")
+                .await
+                .unwrap_or_default()
+                .trim()
+                .to_string();
+
+            let branches_raw = remote_git(&config, "branch --list")
+                .await
+                .unwrap_or_default();
+
+            let branches: Vec<String> = branches_raw
+                .lines()
+                .map(|l| l.trim().trim_start_matches("* ").to_string())
+                .filter(|b| !b.is_empty())
+                .collect();
+
+            return Ok(Json(json!({
+                "isGit": !branch.is_empty(),
+                "currentBranch": branch,
+                "branches": branches,
+                "remote": true,
+            })));
+        }
+    }
 
     let result = git_utils::get_git_info(&repo_path).await;
     Ok(Json(result))
@@ -302,5 +342,49 @@ pub async fn create_pr(
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(json!({"error": e.trim().to_string()})),
         )),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_git_info_params_deserialize_basic() {
+        let params: GitInfoParams = serde_json::from_str(r#"{"path": "/tmp/repo"}"#).unwrap();
+        assert_eq!(params.path.unwrap(), "/tmp/repo");
+        assert!(params.remote_host.is_none());
+        assert!(params.remote_user.is_none());
+    }
+
+    #[test]
+    fn test_git_info_params_deserialize_with_remote() {
+        let params: GitInfoParams = serde_json::from_str(
+            r#"{"path": "/tmp/repo", "remoteHost": "my-host", "remoteUser": "deploy"}"#,
+        )
+        .unwrap();
+        assert_eq!(params.path.unwrap(), "/tmp/repo");
+        assert_eq!(params.remote_host.unwrap(), "my-host");
+        assert_eq!(params.remote_user.unwrap(), "deploy");
+    }
+
+    fn parse_branch_list(raw: &str) -> Vec<String> {
+        raw.lines()
+            .map(|l| l.trim().trim_start_matches("* ").to_string())
+            .filter(|b| !b.is_empty())
+            .collect()
+    }
+
+    #[test]
+    fn test_parse_branch_list() {
+        let raw = "  main\n* develop\n  feature/foo\n";
+        let branches = parse_branch_list(raw);
+        assert_eq!(branches, vec!["main", "develop", "feature/foo"]);
+    }
+
+    #[test]
+    fn test_parse_branch_list_empty() {
+        let branches = parse_branch_list("");
+        assert!(branches.is_empty());
     }
 }

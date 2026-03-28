@@ -36,6 +36,7 @@ pub fn create_router(state: AppState) -> Router {
     Router::new()
         // Projects
         .route("/api/projects", get(projects::list).post(projects::create))
+        .route("/api/projects/test-connection", post(projects::test_connection))
         .route("/api/projects/{id}", get(projects::get_one).put(projects::update).delete(projects::delete_one))
         // Plans
         .route("/api/plans", get(plans::list).post(plans::create))

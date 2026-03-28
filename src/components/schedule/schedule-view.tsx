@@ -69,6 +69,7 @@ export function ScheduleView({
   const t = useTranslations();
   const [schedule, setSchedule] = useState<Schedule | null>(null);
   const [gitInfo, setGitInfo] = useState<{ isGit: boolean; currentBranch?: string; branches?: string[] } | null>(null);
+  const [project, setProject] = useState<{ remoteEnabled?: boolean; remoteHost?: string; targetRepoPath?: string } | null>(null);
   const [generating, setGenerating] = useState(false);
   const defaultProvider = useDefaultProvider();
   const [schedProvider, setSchedProvider] = useState("");
@@ -109,6 +110,7 @@ export function ScheduleView({
     apiFetch(`/api/projects/${projectId}`)
       .then(r => r.json())
       .then(p => {
+        setProject(p);
         if (p.targetRepoPath) {
           apiFetch(`/api/git?path=${encodeURIComponent(p.targetRepoPath)}`)
             .then(r => r.json())
@@ -505,6 +507,12 @@ export function ScheduleView({
           {t("plan.tabs.schedule")}
         </h3>
         <div className="flex items-center gap-2">
+          {project?.remoteEnabled && project.remoteHost && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded font-medium"
+              style={{ background: "rgba(192,193,255,0.12)", color: "var(--primary)" }}>
+              {"\uD83C\uDF10"} {project.remoteHost}
+            </span>
+          )}
           {gitInfo?.isGit && (
             <div className="flex items-center gap-1 text-xs">
               <span className="font-mono" style={{ color: "var(--outline)" }}>

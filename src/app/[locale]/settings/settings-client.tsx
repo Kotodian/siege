@@ -195,6 +195,18 @@ export default function SettingsClient({
                   {isZh ? "未安装" : "Not installed"}
                 </span>
               )}
+              <button
+                className="text-[10px] px-1.5 py-0.5 rounded hover:opacity-80"
+                style={{ color: "var(--primary)", background: "var(--surface-container)" }}
+                onClick={async () => {
+                  const res = await apiFetch("/api/ai-config");
+                  const data = await res.json();
+                  setAiConfig(data);
+                  alert(`claude: ${JSON.stringify(data.claude)}\ncodex: ${JSON.stringify(data.codex)}`);
+                }}
+              >
+                {isZh ? "重新检测" : "Re-detect"}
+              </button>
             </div>
           </div>
           {aiConfig?.claude?.loggedIn ? (
@@ -429,28 +441,6 @@ export default function SettingsClient({
           })}
         </div>
 
-        {/* Re-detect button with debug */}
-        <div className="flex items-center gap-2 mt-3">
-          <Button size="sm" variant="secondary" onClick={async () => {
-            try {
-              const res = await apiFetch("/api/ai-config");
-              const data = await res.json();
-              setAiConfig(data);
-              const debug = [
-                `claude: installed=${data.claude?.installed} loggedIn=${data.claude?.loggedIn} debug=${data.claude?.debug || 'n/a'}`,
-                `codex: installed=${data.codex?.installed} loggedIn=${data.codex?.loggedIn} debug=${data.codex?.debug || 'n/a'}`,
-                `anthropic: configured=${data.anthropic?.configured}`,
-                `openai: configured=${data.openai?.configured}`,
-                `glm: configured=${data.glm?.configured}`,
-              ].join('\n');
-              alert(debug);
-            } catch (e) {
-              alert(`Error: ${e}`);
-            }
-          }}>
-            {isZh ? "重新检测" : "Re-detect"}
-          </Button>
-        </div>
       </CollapsibleSection>
 
       {/* Per-Step AI Configuration */}

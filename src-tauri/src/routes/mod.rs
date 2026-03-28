@@ -18,9 +18,10 @@ pub mod ai_config;
 pub mod archive;
 pub mod git;
 pub mod filesystem;
+pub mod execute;
 pub mod rollback;
 
-use axum::{routing::{get, post, put}, Router};
+use axum::{routing::{delete, get, post, put}, Router};
 use tower_http::cors::{CorsLayer, Any};
 use crate::state::AppState;
 
@@ -99,6 +100,9 @@ pub fn create_router(state: AppState) -> Router {
         .route("/api/filesystem", get(filesystem::list_dir))
         // Snapshots backfill
         .route("/api/snapshots/backfill", post(snapshots::backfill))
+        // Execute
+        .route("/api/execute", post(execute::execute_task))
+        .route("/api/execute/{taskId}", delete(execute::cancel_task))
         // Rollback
         .route("/api/rollback", post(rollback::handle))
         .with_state(state)

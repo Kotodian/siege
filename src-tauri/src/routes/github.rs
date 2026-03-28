@@ -127,11 +127,13 @@ pub async fn auth_status() -> Json<Value> {
     Json(json!({"authenticated": false, "ghInstalled": true, "username": ""}))
 }
 
-// Siege's GitHub OAuth App client ID (public, safe to embed)
-const GITHUB_CLIENT_ID: &str = "Ov23liYVlMYCMfmpQ1dM";
+#[derive(Deserialize)]
+pub struct AuthLoginBody {
+    token: Option<String>,
+}
 
-// POST /api/github/auth — start GitHub device flow or verify token
-pub async fn auth_login() -> (StatusCode, Json<Value>) {
+// POST /api/github/auth — authenticate with token
+pub async fn auth_login(body: Option<Json<AuthLoginBody>>) -> (StatusCode, Json<Value>) {
     // Already authenticated?
     if let Some(octo) = build_octocrab() {
         if let Ok(user) = octo.current().user().await {
@@ -139,79 +141,29 @@ pub async fn auth_login() -> (StatusCode, Json<Value>) {
         }
     }
 
-    // Start device flow via GitHub API
-    let client = reqwest::Client::new();
-    let resp = client
-        .post("https://github.com/login/device/code")
-        .header("Accept", "application/json")
-        .form(&[
-            ("client_id", GITHUB_CLIENT_ID),
-            ("scope", "repo,read:org"),
-        ])
-        .send()
-        .await;
-
-    match resp {
-        Ok(r) => {
-            if let Ok(data) = r.json::<Value>().await {
-                let user_code = data.get("user_code").and_then(|v| v.as_str()).unwrap_or("");
-                let device_code = data.get("device_code").and_then(|v| v.as_str()).unwrap_or("");
-                let verification_uri = data.get("verification_uri").and_then(|v| v.as_str()).unwrap_or("https://github.com/login/device");
-                let interval = data.get("interval").and_then(|v| v.as_u64()).unwrap_or(5);
-
-                // Spawn background task to poll for token
-                let dc = device_code.to_string();
-                tokio::spawn(async move {
-                    poll_device_flow(dc, interval).await;
-                });
-
-                (StatusCode::OK, Json(json!({
-                    "status": "pending",
-                    "code": user_code,
-                    "verificationUrl": verification_uri,
-                })))
-            } else {
-                (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Failed to parse device code response"})))
-            }
-        }
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))),
-    }
-}
-
-/// Poll GitHub for device flow completion, save token when authorized.
-async fn poll_device_flow(device_code: String, interval: u64) {
-    let client = reqwest::Client::new();
-    let max_attempts = 60; // 5 minutes at 5s intervals
-
-    for _ in 0..max_attempts {
-        tokio::time::sleep(std::time::Duration::from_secs(interval)).await;
-
-        let resp = client
-            .post("https://github.com/login/oauth/access_token")
-            .header("Accept", "application/json")
-            .form(&[
-                ("client_id", GITHUB_CLIENT_ID),
-                ("device_code", device_code.as_str()),
-                ("grant_type", "urn:ietf:params:oauth:grant-type:device_code"),
-            ])
-            .send()
-            .await;
-
-        if let Ok(r) = resp {
-            if let Ok(data) = r.json::<Value>().await {
-                if let Some(token) = data.get("access_token").and_then(|v| v.as_str()) {
-                    // Save token to gh config
+    // Token provided → verify and save
+    if let Some(Json(AuthLoginBody { token: Some(ref token) })) = body {
+        if !token.is_empty() {
+            let octo = match Octocrab::builder().personal_token(token.clone()).build() {
+                Ok(o) => o,
+                Err(e) => return (StatusCode::BAD_REQUEST, Json(json!({"error": e.to_string()}))),
+            };
+            return match octo.current().user().await {
+                Ok(user) => {
                     save_github_token(token);
-                    return;
+                    (StatusCode::OK, Json(json!({"status": "authenticated", "username": user.login})))
                 }
-                let error = data.get("error").and_then(|v| v.as_str()).unwrap_or("");
-                if error == "expired_token" || error == "access_denied" {
-                    return;
-                }
-                // "authorization_pending" or "slow_down" — keep polling
-            }
+                Err(e) => (StatusCode::UNAUTHORIZED, Json(json!({"error": format!("Invalid token: {}", e)}))),
+            };
         }
     }
+
+    // No token → tell frontend to show token input
+    (StatusCode::OK, Json(json!({
+        "status": "need_token",
+        "message": "Please provide a GitHub Personal Access Token",
+        "helpUrl": "https://github.com/settings/tokens/new?scopes=repo,read:org&description=Siege"
+    })))
 }
 
 fn save_github_token(token: &str) {

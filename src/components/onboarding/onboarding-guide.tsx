@@ -101,6 +101,8 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
   const [githubLoginCode, setGithubLoginCode] = useState<string | null>(null);
   const [githubLoginError, setGithubLoginError] = useState<string | null>(null);
   const [githubLoggingIn, setGithubLoggingIn] = useState(false);
+  const [githubTokenInput, setGithubTokenInput] = useState("");
+  const [showTokenInput, setShowTokenInput] = useState(false);
 
   const checkGithubAuth = async () => {
     setCheckingGithub(true);
@@ -113,7 +115,7 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
     setCheckingGithub(false);
   };
 
-  // Start GitHub SSO login flow
+  // Start GitHub login — show token input or handle device flow
   const startGithubLogin = async () => {
     setGithubLoggingIn(true);
     setGithubLoginError(null);
@@ -121,21 +123,22 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
     try {
       const res = await apiFetch("/api/github/auth", { method: "POST" });
       const data = await res.json();
-      if (data.status === "already_authenticated") {
+      if (data.status === "already_authenticated" || data.status === "authenticated") {
         setGithubStatus({ authenticated: true, ghInstalled: true, username: data.username });
         setGithubLoggingIn(false);
+        setShowTokenInput(false);
         return;
       }
-      if (data.error === "gh_not_installed") {
-        setGithubStatus({ authenticated: false, ghInstalled: false, username: "" });
+      if (data.status === "need_token") {
+        // Show token input field
+        setShowTokenInput(true);
         setGithubLoggingIn(false);
+        if (data.helpUrl) window.open(data.helpUrl, "_blank");
         return;
       }
       if (data.code) {
         setGithubLoginCode(data.code);
-        // Open GitHub device auth page
         window.open(data.verificationUrl, "_blank");
-        // Poll for completion
         const poll = setInterval(async () => {
           try {
             const r = await apiFetch("/api/github/auth");
@@ -148,13 +151,10 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
             }
           } catch { /* keep polling */ }
         }, 2000);
-        // Stop polling after 5 minutes
         setTimeout(() => {
           clearInterval(poll);
-          if (githubLoggingIn) {
-            setGithubLoggingIn(false);
-            setGithubLoginError(isZh ? "授权超时，请重试" : "Authorization timed out, please retry");
-          }
+          setGithubLoggingIn(false);
+          setGithubLoginError(isZh ? "授权超时，请重试" : "Authorization timed out");
         }, 300000);
       } else {
         setGithubLoggingIn(false);
@@ -164,6 +164,31 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
       setGithubLoggingIn(false);
       setGithubLoginError(isZh ? "请求失败" : "Request failed");
     }
+  };
+
+  // Submit GitHub token
+  const submitGithubToken = async () => {
+    if (!githubTokenInput.trim()) return;
+    setGithubLoggingIn(true);
+    setGithubLoginError(null);
+    try {
+      const res = await apiFetch("/api/github/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: githubTokenInput.trim() }),
+      });
+      const data = await res.json();
+      if (data.status === "authenticated" || data.status === "already_authenticated") {
+        setGithubStatus({ authenticated: true, ghInstalled: true, username: data.username });
+        setShowTokenInput(false);
+        setGithubTokenInput("");
+      } else {
+        setGithubLoginError(data.error || (isZh ? "Token 无效" : "Invalid token"));
+      }
+    } catch {
+      setGithubLoginError(isZh ? "请求失败" : "Request failed");
+    }
+    setGithubLoggingIn(false);
   };
 
   const checkAiConfig = async () => {
@@ -311,23 +336,36 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
                     {isZh ? `已连接：${githubStatus.username}` : `Connected: ${githubStatus.username}`}
                   </p>
                 </div>
-              ) : githubStatus && !githubStatus.ghInstalled ? (
-                <div className="text-center space-y-4 py-4">
-                  <div className="text-4xl"><AlertTriangleIcon size={40} className="text-[var(--warning)]" /></div>
-                  <p className="text-[var(--outline)]">
+              ) : showTokenInput ? (
+                <div className="space-y-4 py-4">
+                  <p className="text-sm text-center text-[var(--outline)]">
                     {isZh
-                      ? "未检测到 GitHub CLI (gh)。安装后可以连接。"
-                      : "GitHub CLI (gh) not detected."}
+                      ? "请输入 GitHub Personal Access Token（需要 repo 权限）"
+                      : "Enter a GitHub Personal Access Token (needs repo scope)"}
                   </p>
-                  <a href="https://cli.github.com" target="_blank" rel="noopener noreferrer"
-                    className="text-[var(--primary)] hover:underline text-sm">
-                    https://cli.github.com
-                  </a>
-                  <div className="pt-2">
-                    <Button variant="secondary" onClick={checkGithubAuth}>
-                      {isZh ? "重新检测" : "Re-check"}
+                  <div className="flex gap-2">
+                    <input
+                      type="password"
+                      value={githubTokenInput}
+                      onChange={(e) => setGithubTokenInput(e.target.value)}
+                      placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+                      className="flex-1 rounded-md px-3 py-2 text-sm font-mono"
+                      style={{ background: "var(--surface-container)", color: "var(--on-surface)", border: "1px solid var(--outline-variant)" }}
+                      onKeyDown={(e) => e.key === "Enter" && submitGithubToken()}
+                    />
+                    <Button onClick={submitGithubToken} disabled={githubLoggingIn || !githubTokenInput.trim()}>
+                      {githubLoggingIn ? (isZh ? "验证中..." : "Verifying...") : (isZh ? "确认" : "Confirm")}
                     </Button>
                   </div>
+                  {githubLoginError && (
+                    <p className="text-sm text-[var(--error)] text-center">{githubLoginError}</p>
+                  )}
+                  <p className="text-xs text-center">
+                    <a href="https://github.com/settings/tokens/new?scopes=repo,read:org&description=Siege" target="_blank" rel="noopener noreferrer"
+                      className="text-[var(--primary)] hover:underline">
+                      {isZh ? "点此创建 Token →" : "Create a token here →"}
+                    </a>
+                  </p>
                 </div>
               ) : githubLoggingIn && githubLoginCode ? (
                 <div className="text-center space-y-4 py-4">

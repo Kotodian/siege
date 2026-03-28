@@ -7,6 +7,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { GitBranchIcon, CheckIcon, AlertTriangleIcon, SparklesIcon } from "@/components/ui/icons";
 import { useGlobalLoading } from "@/components/ui/global-loading";
+import { openExternal } from "@/lib/open-external";
 import { ProviderModelSelect, useDefaultProvider } from "@/components/ui/provider-model-select";
 import { apiFetch } from "@/lib/api";
 
@@ -154,7 +155,7 @@ export function PublishView({ planId, projectId }: PublishViewProps) {
         setPrTitle("");
         setPrBody("");
         await fetchStatus();
-        window.open(data.url, "_blank");
+        openExternal(data.url);
       } else {
         stopLoading(isZh ? `PR 创建失败: ${data.error}` : `PR failed: ${data.error}`, "error");
       }

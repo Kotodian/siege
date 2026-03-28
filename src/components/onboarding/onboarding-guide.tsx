@@ -8,6 +8,7 @@ import { MarkdownEditor } from "@/components/markdown/markdown-editor";
 import { RepoPicker } from "@/components/repo-picker/repo-picker";
 import { AnalyzePrompt } from "@/components/project/analyze-prompt";
 import { IconPicker } from "@/components/ui/icon-picker";
+import { openExternal } from "@/lib/open-external";
 import { ClipboardIcon, SearchIcon, BarChartIcon, ZapIcon, CodeIcon, CheckCircleIcon, AlertTriangleIcon } from "@/components/ui/icons";
 import { apiFetch } from "@/lib/api";
 
@@ -133,12 +134,12 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
         // Show token input field
         setShowTokenInput(true);
         setGithubLoggingIn(false);
-        if (data.helpUrl) window.open(data.helpUrl, "_blank");
+        if (data.helpUrl) openExternal(data.helpUrl);
         return;
       }
       if (data.code) {
         setGithubLoginCode(data.code);
-        window.open(data.verificationUrl, "_blank");
+        openExternal(data.verificationUrl);
         const poll = setInterval(async () => {
           try {
             const r = await apiFetch("/api/github/auth");
@@ -361,10 +362,12 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
                     <p className="text-sm text-[var(--error)] text-center">{githubLoginError}</p>
                   )}
                   <p className="text-xs text-center">
-                    <a href="https://github.com/settings/tokens/new?scopes=repo,read:org&description=Siege" target="_blank" rel="noopener noreferrer"
-                      className="text-[var(--primary)] hover:underline">
+                    <button
+                      className="text-[var(--primary)] hover:underline"
+                      onClick={() => openExternal("https://github.com/settings/tokens/new?scopes=repo,read:org&description=Siege")}
+                    >
                       {isZh ? "点此创建 Token →" : "Create a token here →"}
-                    </a>
+                    </button>
                   </p>
                 </div>
               ) : githubLoggingIn && githubLoginCode ? (
@@ -397,7 +400,7 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
                   <Button
                     variant="secondary"
                     size="sm"
-                    onClick={() => window.open("https://github.com/login/device", "_blank")}
+                    onClick={() => openExternal("https://github.com/login/device")}
                   >
                     {isZh ? "重新打开授权页面" : "Re-open authorization page"}
                   </Button>
@@ -847,7 +850,7 @@ function ProviderConfigCard({
           <Button
             variant="secondary"
             onClick={() => {
-              window.open(loginUrl, "_blank");
+              openExternal(loginUrl);
               setLoginOpened(true);
             }}
           >

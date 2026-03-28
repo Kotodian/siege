@@ -2,23 +2,66 @@ use serde_json::Value;
 use std::path::PathBuf;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
-/// macOS GUI app (App Store) uses TCP port instead of Unix socket.
-/// The port is read from /Library/Tailscale/ipnport symlink, default 41112.
-fn get_macos_tcp_port() -> Option<u16> {
-    // Check ipnport symlink
+fn base64_encode(input: &[u8]) -> String {
+    const CHARS: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut result = String::new();
+    for chunk in input.chunks(3) {
+        let b0 = chunk[0] as u32;
+        let b1 = if chunk.len() > 1 { chunk[1] as u32 } else { 0 };
+        let b2 = if chunk.len() > 2 { chunk[2] as u32 } else { 0 };
+        let triple = (b0 << 16) | (b1 << 8) | b2;
+        result.push(CHARS[((triple >> 18) & 0x3F) as usize] as char);
+        result.push(CHARS[((triple >> 12) & 0x3F) as usize] as char);
+        if chunk.len() > 1 { result.push(CHARS[((triple >> 6) & 0x3F) as usize] as char); } else { result.push('='); }
+        if chunk.len() > 2 { result.push(CHARS[(triple & 0x3F) as usize] as char); } else { result.push('='); }
+    }
+    result
+}
+
+/// macOS Tailscale credentials: port + auth token.
+/// Reads from /Library/Tailscale/ipnport (symlink → port number)
+/// and /Library/Tailscale/sameuserproof-{port} (token).
+/// For App Store version, searches ~/Library/Group Containers/ for sameuserproof files.
+struct MacCreds {
+    port: u16,
+    token: String,
+}
+
+fn get_macos_creds() -> Option<MacCreds> {
+    // Method 1: standalone/system install — /Library/Tailscale/
     let ipnport = PathBuf::from("/Library/Tailscale/ipnport");
     if let Ok(target) = std::fs::read_link(&ipnport) {
         if let Some(port_str) = target.to_str() {
             if let Ok(port) = port_str.parse::<u16>() {
-                return Some(port);
+                let proof_path = format!("/Library/Tailscale/sameuserproof-{}", port);
+                if let Ok(token) = std::fs::read_to_string(&proof_path) {
+                    return Some(MacCreds { port, token: token.trim().to_string() });
+                }
+                // Token file might not exist yet, try connecting without
+                return Some(MacCreds { port, token: String::new() });
             }
         }
     }
-    // Also check sameuserproof file which indicates GUI is running
-    let sameuserproof = PathBuf::from("/Library/Tailscale/sameuserproof");
-    if sameuserproof.exists() {
-        return Some(41112); // default port
+
+    // Method 2: App Store version — search Group Containers
+    if let Some(home) = dirs::home_dir() {
+        for container in &["io.tailscale.ipn.macos", "group.io.tailscale.ipn.macos"] {
+            let container_dir = home.join("Library/Group Containers").join(container);
+            if let Ok(entries) = std::fs::read_dir(&container_dir) {
+                for entry in entries.flatten() {
+                    let name = entry.file_name().to_string_lossy().to_string();
+                    if name.starts_with("sameuserproof-") {
+                        if let Ok(port) = name.strip_prefix("sameuserproof-").unwrap_or("").parse::<u16>() {
+                            if let Ok(token) = std::fs::read_to_string(entry.path()) {
+                                return Some(MacCreds { port, token: token.trim().to_string() });
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
+
     None
 }
 
@@ -80,37 +123,50 @@ impl tokio::io::AsyncWrite for TailscaleStream {
     }
 }
 
-/// Connect to tailscaled — tries Unix socket first, then macOS TCP fallback.
-async fn connect_tailscale() -> Result<TailscaleStream, String> {
-    // Try Unix socket first
+struct TailscaleConn {
+    stream: TailscaleStream,
+    token: Option<String>,
+}
+
+/// Connect to tailscaled — tries Unix socket first, then macOS TCP with auth.
+async fn connect_tailscale() -> Result<TailscaleConn, String> {
+    // Try Unix socket first (Linux, Homebrew on macOS)
     if let Some(socket_path) = get_socket_path() {
         if let Ok(stream) = tokio::net::UnixStream::connect(&socket_path).await {
-            return Ok(TailscaleStream::Unix(stream));
+            return Ok(TailscaleConn { stream: TailscaleStream::Unix(stream), token: None });
         }
     }
 
-    // macOS GUI app uses TCP via port from /Library/Tailscale/ipnport
-    if let Some(port) = get_macos_tcp_port() {
-        if let Ok(stream) = tokio::net::TcpStream::connect(format!("127.0.0.1:{}", port)).await {
-            return Ok(TailscaleStream::Tcp(stream));
+    // macOS GUI: read port + token from filesystem
+    if let Some(creds) = get_macos_creds() {
+        if let Ok(stream) = tokio::net::TcpStream::connect(format!("127.0.0.1:{}", creds.port)).await {
+            let token = if creds.token.is_empty() { None } else { Some(creds.token) };
+            return Ok(TailscaleConn { stream: TailscaleStream::Tcp(stream), token });
         }
     }
 
-    // Last resort: try default macOS GUI port
-    if let Ok(stream) = tokio::net::TcpStream::connect("127.0.0.1:41112").await {
-        return Ok(TailscaleStream::Tcp(stream));
-    }
+    Err("Cannot connect to Tailscale daemon (tried Unix sockets and macOS TCP)".to_string())
+}
 
-    Err("Cannot connect to Tailscale daemon (tried Unix sockets and TCP)".to_string())
+fn make_auth_header(token: &Option<String>) -> String {
+    match token {
+        Some(t) if !t.is_empty() => {
+            let b64 = base64_encode(format!(":{}", t).as_bytes());
+            format!("Authorization: Basic {}\r\n", b64)
+        }
+        _ => String::new(),
+    }
 }
 
 /// Make an HTTP GET request to the Tailscale local API.
 async fn tailscale_api(path: &str) -> Result<Value, String> {
-    let mut stream = connect_tailscale().await?;
+    let conn = connect_tailscale().await?;
+    let mut stream = conn.stream;
+    let auth = make_auth_header(&conn.token);
 
     let request = format!(
-        "GET {} HTTP/1.1\r\nHost: local-tailscaled.sock\r\nConnection: close\r\n\r\n",
-        path
+        "GET {} HTTP/1.1\r\nHost: local-tailscaled.sock\r\n{}Connection: close\r\n\r\n",
+        path, auth
     );
     stream
         .write_all(request.as_bytes())
@@ -233,11 +289,13 @@ pub async fn get_status() -> Result<TailscaleStatus, String> {
 
 /// Call a POST endpoint on the Tailscale local API.
 async fn tailscale_api_post(path: &str, body: &str) -> Result<Value, String> {
-    let mut stream = connect_tailscale().await?;
+    let conn = connect_tailscale().await?;
+    let mut stream = conn.stream;
+    let auth = make_auth_header(&conn.token);
 
     let request = format!(
-        "POST {} HTTP/1.1\r\nHost: local-tailscaled.sock\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
-        path, body.len(), body
+        "POST {} HTTP/1.1\r\nHost: local-tailscaled.sock\r\n{}Content-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+        path, auth, body.len(), body
     );
     stream.write_all(request.as_bytes()).await.map_err(|e| e.to_string())?;
     stream.shutdown().await.map_err(|e| e.to_string())?;
@@ -415,8 +473,14 @@ mod tests {
     }
 
     #[test]
-    fn test_get_macos_tcp_port() {
+    fn test_get_macos_creds() {
         // On non-macOS or without Tailscale GUI, returns None — that's fine
-        let _port = get_macos_tcp_port();
+        let _creds = get_macos_creds();
+    }
+
+    #[test]
+    fn test_base64_encode() {
+        assert_eq!(base64_encode(b":mytoken"), "Om15dG9rZW4=");
+        assert_eq!(base64_encode(b""), "");
     }
 }

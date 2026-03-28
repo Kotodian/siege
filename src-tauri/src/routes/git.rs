@@ -10,7 +10,7 @@ use crate::utils::git as git_utils;
 use crate::utils::process;
 
 // ---------------------------------------------------------------------------
-// GET /api/git?path=X — get git info
+// GET /api/git?path=X -- get git info
 // ---------------------------------------------------------------------------
 
 #[derive(Deserialize)]
@@ -33,7 +33,7 @@ pub async fn info(
 }
 
 // ---------------------------------------------------------------------------
-// POST /api/git — checkout branch { repoPath, branchName, baseBranch? }
+// POST /api/git -- checkout branch { repoPath, branchName, baseBranch? }
 // ---------------------------------------------------------------------------
 
 #[derive(Deserialize)]
@@ -79,7 +79,7 @@ pub async fn checkout(
 }
 
 // ---------------------------------------------------------------------------
-// POST /api/git/clone — clone repo { url, targetDir? }
+// POST /api/git/clone -- clone repo { url, targetDir? }
 // ---------------------------------------------------------------------------
 
 #[derive(Deserialize)]
@@ -129,13 +129,13 @@ pub async fn clone_repo(
         )),
         Err(e) => Err((
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(json!({"error": e.trim().to_string()})),
+            Json(json!({"error": e})),
         )),
     }
 }
 
 // ---------------------------------------------------------------------------
-// POST /api/git/push — push { repoPath }
+// POST /api/git/push -- push { repoPath }
 // ---------------------------------------------------------------------------
 
 #[derive(Deserialize)]
@@ -161,8 +161,8 @@ pub async fn push(
         ));
     }
 
-    // Get current branch
-    let branch = git_utils::exec_git(&repo_path, &["rev-parse", "--abbrev-ref", "HEAD"])
+    // Get current branch using git2
+    let branch = git_utils::get_current_branch(&repo_path)
         .await
         .map_err(|e| {
             (
@@ -170,9 +170,9 @@ pub async fn push(
                 Json(json!({"error": e})),
             )
         })?;
-    let branch = branch.trim();
 
-    match git_utils::push(&repo_path, "origin", branch).await {
+    // Push still uses shell exec (git2 push requires complex credential callbacks)
+    match git_utils::push(&repo_path, "origin", &branch).await {
         Ok(output) => Ok(Json(json!({
             "success": true,
             "branch": branch,
@@ -186,7 +186,7 @@ pub async fn push(
 }
 
 // ---------------------------------------------------------------------------
-// GET /api/git/pr?repoPath=X — list PRs / check current branch PR
+// GET /api/git/pr?repoPath=X -- list PRs / check current branch PR
 // ---------------------------------------------------------------------------
 
 #[derive(Deserialize)]
@@ -203,6 +203,8 @@ pub async fn list_prs(
         _ => return Json(json!({"hasPR": false})),
     };
 
+    // PR operations require GitHub API context tied to the repo remote.
+    // Use gh CLI as it handles repo detection from the local checkout.
     match process::exec(
         "gh",
         &["pr", "view", "--json", "number,title,url,state,baseRefName,headRefName"],
@@ -222,7 +224,7 @@ pub async fn list_prs(
 }
 
 // ---------------------------------------------------------------------------
-// POST /api/git/pr — create PR { repoPath, title, body?, baseBranch? }
+// POST /api/git/pr -- create PR { repoPath, title, body?, baseBranch? }
 // ---------------------------------------------------------------------------
 
 #[derive(Deserialize)]
@@ -258,6 +260,8 @@ pub async fn create_pr(
         ));
     }
 
+    // PR creation requires GitHub API context tied to the repo remote.
+    // Use gh CLI as it handles repo detection from the local checkout.
     let mut args: Vec<String> = vec![
         "pr".to_string(),
         "create".to_string(),

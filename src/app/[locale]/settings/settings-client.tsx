@@ -250,6 +250,18 @@ export default function SettingsClient({
                   {isZh ? "未安装" : "Not installed"}
                 </span>
               )}
+              <button
+                className="text-[10px] px-1.5 py-0.5 rounded hover:opacity-80"
+                style={{ color: "var(--primary)", background: "var(--surface-container)" }}
+                onClick={async () => {
+                  const res = await apiFetch("/api/ai-config");
+                  const data = await res.json();
+                  setAiConfig(data);
+                  alert(`codex: ${JSON.stringify(data.codex)}`);
+                }}
+              >
+                {isZh ? "重新检测" : "Re-detect"}
+              </button>
             </div>
           </div>
           {aiConfig?.codex?.loggedIn ? (

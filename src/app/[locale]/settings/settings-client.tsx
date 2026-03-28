@@ -428,6 +428,29 @@ export default function SettingsClient({
             );
           })}
         </div>
+
+        {/* Re-detect button with debug */}
+        <div className="flex items-center gap-2 mt-3">
+          <Button size="sm" variant="secondary" onClick={async () => {
+            try {
+              const res = await apiFetch("/api/ai-config");
+              const data = await res.json();
+              setAiConfig(data);
+              const debug = [
+                `claude: installed=${data.claude?.installed} loggedIn=${data.claude?.loggedIn} debug=${data.claude?.debug || 'n/a'}`,
+                `codex: installed=${data.codex?.installed} loggedIn=${data.codex?.loggedIn} debug=${data.codex?.debug || 'n/a'}`,
+                `anthropic: configured=${data.anthropic?.configured}`,
+                `openai: configured=${data.openai?.configured}`,
+                `glm: configured=${data.glm?.configured}`,
+              ].join('\n');
+              alert(debug);
+            } catch (e) {
+              alert(`Error: ${e}`);
+            }
+          }}>
+            {isZh ? "重新检测" : "Re-detect"}
+          </Button>
+        </div>
       </CollapsibleSection>
 
       {/* Per-Step AI Configuration */}

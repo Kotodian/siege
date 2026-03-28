@@ -1,5 +1,9 @@
 import { ProjectList } from "@/components/project/project-list";
 
+export function generateStaticParams() {
+  return [{ locale: "zh" }, { locale: "en" }];
+}
+
 export default async function HomePage({
   params,
 }: {

@@ -1,9 +1,17 @@
 import { NextIntlClientProvider } from "next-intl";
-import { getMessages } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { routing } from "@/i18n/routing";
 import { GlobalLoadingProvider } from "@/components/ui/global-loading";
 import { ConfirmProvider } from "@/components/ui/confirm-dialog";
+
+import zhMessages from "@/messages/zh.json";
+import enMessages from "@/messages/en.json";
+
+const messagesMap: Record<string, typeof zhMessages> = { zh: zhMessages, en: enMessages };
+
+export function generateStaticParams() {
+  return [{ locale: "zh" }, { locale: "en" }];
+}
 
 export default async function LocaleLayout({
   children,
@@ -18,7 +26,7 @@ export default async function LocaleLayout({
     notFound();
   }
 
-  const messages = await getMessages();
+  const messages = messagesMap[locale] ?? messagesMap.zh;
 
   return (
     <NextIntlClientProvider messages={messages}>

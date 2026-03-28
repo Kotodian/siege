@@ -3,6 +3,8 @@
   "identifier": "com.siege.app",
   "build": {
     "devUrl": "http://localhost:3002",
+    "beforeBuildCommand": "npm run build:static",
+    "beforeDevCommand": "npm run dev",
     "frontendDist": "../out"
   },
   "app": {

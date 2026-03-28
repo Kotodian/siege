@@ -1,1 +1,1 @@
-{}
+{"default":{"identifier":"default","description":"Default capabilities for Siege","local":true,"windows":["main"],"permissions":["core:default","shell:allow-open"]}}

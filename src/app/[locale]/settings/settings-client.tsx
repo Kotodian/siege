@@ -500,6 +500,11 @@ export default function SettingsClient({
           onSkillsChange={() => apiFetch("/api/skills").then((r) => r.json()).then(setSkills)}
         />
       </CollapsibleSection>
+
+      {/* Tailscale */}
+      <CollapsibleSection title="Tailscale" icon={<GlobeIcon size={18} />}>
+        <TailscaleSectionInner isZh={isZh} />
+      </CollapsibleSection>
     </div>
   );
 }
@@ -1141,5 +1146,137 @@ function MemorySectionInner({ isZh }: { isZh: boolean }) {
         </Dialog>
       )}
     </section>
+  );
+}
+
+function TailscaleSectionInner({ isZh }: { isZh: boolean }) {
+  const [status, setStatus] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [loggingIn, setLoggingIn] = useState(false);
+  const [authUrl, setAuthUrl] = useState("");
+
+  const fetchStatus = async () => {
+    setLoading(true);
+    try {
+      const res = await apiFetch("/api/tailscale/status");
+      setStatus(await res.json());
+    } catch {
+      setStatus({ running: false, error: "Failed to connect" });
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => { fetchStatus(); }, []);
+
+  const handleLogin = async () => {
+    setLoggingIn(true);
+    try {
+      const res = await apiFetch("/api/tailscale/login", { method: "POST" });
+      const data = await res.json();
+      if (data.status === "already_authenticated") {
+        await fetchStatus();
+      } else if (data.authUrl) {
+        setAuthUrl(data.authUrl);
+        // Open in system browser
+        import("@/lib/open-external").then(m => m.openExternal(data.authUrl));
+        // Poll for completion
+        const poll = setInterval(async () => {
+          const r = await apiFetch("/api/tailscale/status");
+          const s = await r.json();
+          if (s.running) {
+            clearInterval(poll);
+            setStatus(s);
+            setAuthUrl("");
+            setLoggingIn(false);
+          }
+        }, 3000);
+        setTimeout(() => { clearInterval(poll); setLoggingIn(false); }, 300000);
+        return;
+      }
+    } catch { /* ignore */ }
+    setLoggingIn(false);
+  };
+
+  if (loading) {
+    return <p className="text-sm py-4" style={{ color: "var(--outline)" }}>{isZh ? "检查中..." : "Checking..."}</p>;
+  }
+
+  return (
+    <div className="space-y-4 pb-4">
+      {/* Status */}
+      <div className="flex items-center gap-3">
+        <div
+          className="w-3 h-3 rounded-full"
+          style={{ background: status?.running ? "var(--success)" : "var(--error)" }}
+        />
+        <span className="text-sm font-medium" style={{ color: "var(--on-surface)" }}>
+          {status?.running
+            ? (isZh ? "已连接" : "Connected")
+            : (isZh ? "未连接" : "Not Connected")}
+        </span>
+        {status?.self?.hostname && (
+          <span className="text-xs" style={{ color: "var(--outline)" }}>
+            {status.self.hostname}
+          </span>
+        )}
+        {!status?.running && !loggingIn && (
+          <Button size="sm" onClick={handleLogin}>
+            {isZh ? "登录 Tailscale" : "Login to Tailscale"}
+          </Button>
+        )}
+        {loggingIn && authUrl && (
+          <span className="text-xs" style={{ color: "var(--warning)" }}>
+            {isZh ? "请在浏览器中完成授权..." : "Complete auth in browser..."}
+          </span>
+        )}
+        <Button size="sm" variant="ghost" onClick={fetchStatus}>
+          {isZh ? "刷新" : "Refresh"}
+        </Button>
+      </div>
+
+      {status?.error && (
+        <p className="text-xs" style={{ color: "var(--error)" }}>{status.error}</p>
+      )}
+
+      {/* Node list */}
+      {status?.running && status?.peers?.length > 0 && (
+        <div>
+          <h4 className="text-sm font-medium mb-2" style={{ color: "var(--on-surface)" }}>
+            {isZh ? `网络节点 (${status.peers.length})` : `Network Nodes (${status.peers.length})`}
+          </h4>
+          <div className="space-y-1">
+            {status.peers.map((peer: any) => (
+              <div
+                key={peer.id || peer.hostname}
+                className="flex items-center gap-3 px-3 py-2 rounded-md"
+                style={{ background: "var(--surface-container)" }}
+              >
+                <div
+                  className="w-2 h-2 rounded-full shrink-0"
+                  style={{ background: peer.online ? "var(--success)" : "var(--outline-variant)" }}
+                />
+                <div className="flex-1 min-w-0">
+                  <span className="text-sm font-medium truncate block" style={{ color: "var(--on-surface)" }}>
+                    {peer.hostname}
+                  </span>
+                  <span className="text-[10px]" style={{ color: "var(--outline)" }}>
+                    {peer.tailscale_ips?.[0] || peer.tailscaleIps?.[0] || ""} · {peer.os}
+                  </span>
+                </div>
+                <span className="text-[10px] shrink-0" style={{ color: peer.online ? "var(--success)" : "var(--outline)" }}>
+                  {peer.online ? (isZh ? "在线" : "Online") : (isZh ? "离线" : "Offline")}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {status?.running && (!status?.peers || status.peers.length === 0) && (
+        <p className="text-xs" style={{ color: "var(--outline)" }}>
+          {isZh ? "没有发现其他节点" : "No other nodes found"}
+        </p>
+      )}
+    </div>
   );
 }

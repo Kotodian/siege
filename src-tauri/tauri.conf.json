@@ -16,7 +16,15 @@
         "minWidth": 1024,
         "minHeight": 600
       }
-    ]
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "plugins": {
+    "shell": {
+      "open": true
+    }
   },
   "bundle": {
     "active": true,

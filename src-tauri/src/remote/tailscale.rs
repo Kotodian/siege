@@ -164,3 +164,135 @@ pub async fn is_authenticated() -> bool {
         Err(_) => false,
     }
 }
+
+/// Parse a raw Tailscale status JSON into TailscaleStatus.
+/// Exposed for testing.
+pub fn parse_status(data: &Value) -> TailscaleStatus {
+    let backend_state = data
+        .get("BackendState")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
+    let is_running = backend_state == "Running";
+    let self_node = parse_node(data.get("Self"));
+    let mut peers = Vec::new();
+    if let Some(peer_map) = data.get("Peer").and_then(|v| v.as_object()) {
+        for (_key, peer_data) in peer_map {
+            if let Some(node) = parse_node(Some(peer_data)) {
+                peers.push(node);
+            }
+        }
+    }
+    TailscaleStatus { running: is_running, backend_state, self_node, peers }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn test_parse_node_full() {
+        let data = json!({
+            "ID": "node123",
+            "HostName": "dev-server",
+            "DNSName": "dev-server.tail1234.ts.net.",
+            "OS": "linux",
+            "Online": true,
+            "TailscaleIPs": ["100.64.1.5", "fd7a:115c:a1e0::1"]
+        });
+        let node = parse_node(Some(&data)).unwrap();
+        assert_eq!(node.id, "node123");
+        assert_eq!(node.hostname, "dev-server");
+        assert_eq!(node.dns_name, "dev-server.tail1234.ts.net.");
+        assert_eq!(node.os, "linux");
+        assert!(node.online);
+        assert_eq!(node.tailscale_ips.len(), 2);
+        assert_eq!(node.tailscale_ips[0], "100.64.1.5");
+    }
+
+    #[test]
+    fn test_parse_node_minimal() {
+        let data = json!({"HostName": "minimal"});
+        let node = parse_node(Some(&data)).unwrap();
+        assert_eq!(node.hostname, "minimal");
+        assert_eq!(node.id, "");
+        assert!(!node.online);
+        assert!(node.tailscale_ips.is_empty());
+    }
+
+    #[test]
+    fn test_parse_node_none() {
+        assert!(parse_node(None).is_none());
+    }
+
+    #[test]
+    fn test_parse_status_running_with_peers() {
+        let data = json!({
+            "BackendState": "Running",
+            "Self": {
+                "ID": "self1",
+                "HostName": "my-mac",
+                "DNSName": "my-mac.tail.ts.net.",
+                "OS": "darwin",
+                "Online": true,
+                "TailscaleIPs": ["100.100.1.1"]
+            },
+            "Peer": {
+                "abc123": {
+                    "ID": "peer1",
+                    "HostName": "server-1",
+                    "DNSName": "server-1.tail.ts.net.",
+                    "OS": "linux",
+                    "Online": true,
+                    "TailscaleIPs": ["100.64.2.1"]
+                },
+                "def456": {
+                    "ID": "peer2",
+                    "HostName": "server-2",
+                    "DNSName": "server-2.tail.ts.net.",
+                    "OS": "linux",
+                    "Online": false,
+                    "TailscaleIPs": ["100.64.2.2"]
+                }
+            }
+        });
+        let status = parse_status(&data);
+        assert!(status.running);
+        assert_eq!(status.backend_state, "Running");
+        assert!(status.self_node.is_some());
+        assert_eq!(status.self_node.unwrap().hostname, "my-mac");
+        assert_eq!(status.peers.len(), 2);
+    }
+
+    #[test]
+    fn test_parse_status_not_running() {
+        let data = json!({
+            "BackendState": "NeedsLogin",
+            "Peer": {}
+        });
+        let status = parse_status(&data);
+        assert!(!status.running);
+        assert_eq!(status.backend_state, "NeedsLogin");
+        assert!(status.self_node.is_none());
+        assert!(status.peers.is_empty());
+    }
+
+    #[test]
+    fn test_parse_status_no_peers() {
+        let data = json!({
+            "BackendState": "Running",
+            "Self": {"HostName": "solo"},
+        });
+        let status = parse_status(&data);
+        assert!(status.running);
+        assert!(status.peers.is_empty());
+    }
+
+    #[test]
+    fn test_get_socket_path_returns_path() {
+        let path = get_socket_path();
+        // Should return a path (doesn't need to exist in test env)
+        assert!(path.to_str().unwrap().contains("tailscale"));
+    }
+}

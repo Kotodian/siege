@@ -203,3 +203,66 @@ pub async fn spawn_ssh_process(
         .spawn()
         .map_err(|e| format!("SSH spawn failed: {}", e))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_ssh_config_clone() {
+        let config = SshConfig {
+            host: "100.64.1.5".to_string(),
+            user: "root".to_string(),
+            repo_path: "/home/user/project".to_string(),
+        };
+        let cloned = config.clone();
+        assert_eq!(cloned.host, "100.64.1.5");
+        assert_eq!(cloned.user, "root");
+        assert_eq!(cloned.repo_path, "/home/user/project");
+    }
+
+    #[test]
+    fn test_ssh_config_debug() {
+        let config = SshConfig {
+            host: "dev-server".to_string(),
+            user: "deploy".to_string(),
+            repo_path: "/opt/app".to_string(),
+        };
+        let debug = format!("{:?}", config);
+        assert!(debug.contains("dev-server"));
+        assert!(debug.contains("deploy"));
+    }
+
+    #[tokio::test]
+    async fn test_ssh_exec_invalid_host() {
+        let config = SshConfig {
+            host: "192.0.2.1".to_string(), // TEST-NET, won't connect
+            user: "nobody".to_string(),
+            repo_path: "/tmp".to_string(),
+        };
+        let result = ssh_exec(&config, "echo hello").await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_check_connection_invalid_host() {
+        let config = SshConfig {
+            host: "192.0.2.1".to_string(),
+            user: "nobody".to_string(),
+            repo_path: "/tmp".to_string(),
+        };
+        let result = check_connection(&config).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_remote_git_invalid_host() {
+        let config = SshConfig {
+            host: "192.0.2.1".to_string(),
+            user: "nobody".to_string(),
+            repo_path: "/tmp".to_string(),
+        };
+        let result = remote_git(&config, "status").await;
+        assert!(result.is_err());
+    }
+}

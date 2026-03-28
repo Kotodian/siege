@@ -5,30 +5,40 @@ use tokio::net::UnixStream;
 
 /// Get the Tailscale daemon socket path for the current platform.
 fn get_socket_path() -> PathBuf {
-    // Linux
-    let linux_path = PathBuf::from("/var/run/tailscale/tailscaled.sock");
-    if linux_path.exists() {
-        return linux_path;
+    // Check all known socket paths
+    let mut candidates: Vec<PathBuf> = vec![
+        // Linux standard
+        PathBuf::from("/var/run/tailscale/tailscaled.sock"),
+        // Homebrew on macOS
+        PathBuf::from("/usr/local/var/run/tailscale/tailscaled.sock"),
+        // macOS system
+        PathBuf::from("/var/run/tailscaled.sock"),
+    ];
+
+    // macOS App Store / standalone (user-specific paths)
+    if let Some(home) = dirs::home_dir() {
+        candidates.push(home.join("Library/Group Containers/io.tailscale.ipn.macos/tailscaled.sock"));
+        candidates.push(home.join("Library/Group Containers/group.io.tailscale.ipn.macos/tailscaled.sock"));
     }
 
-    // macOS App Store / standalone app
-    if let Some(home) = dirs::home_dir() {
-        let macos_app_store =
-            home.join("Library/Group Containers/io.tailscale.ipn.macos/tailscaled.sock");
-        if macos_app_store.exists() {
-            return macos_app_store;
+    for path in &candidates {
+        if path.exists() {
+            return path.clone();
         }
     }
 
-    // Fallback to standard Linux path
-    linux_path
+    // Fallback
+    candidates[0].clone()
 }
 
 /// Make an HTTP GET request to the Tailscale local API via Unix socket.
 async fn tailscale_api(path: &str) -> Result<Value, String> {
     let socket = get_socket_path();
     if !socket.exists() {
-        return Err("Tailscale daemon not running (socket not found)".to_string());
+        return Err(format!(
+            "Tailscale daemon not running (checked: {})",
+            socket.display()
+        ));
     }
 
     let mut stream = UnixStream::connect(&socket)

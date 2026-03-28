@@ -181,6 +181,17 @@
     "subtasks": "Subtasks",
     "parentTask": "Parent Task"
   },
+  "remote": {
+    "enabled": "Remote Execution (Tailscale)",
+    "host": "Remote Host (Tailscale IP)",
+    "user": "SSH User",
+    "repoPath": "Remote Repo Path",
+    "testConnection": "Test Connection",
+    "connected": "Connected",
+    "failed": "Connection Failed",
+    "testing": "Testing...",
+    "indicator": "Remote"
+  },
   "rollback": {
     "title": "Confirm Rollback",
     "description": "Revert all file changes from task #{order}: {title}",

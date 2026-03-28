@@ -181,6 +181,17 @@
     "subtasks": "子任务",
     "parentTask": "父任务"
   },
+  "remote": {
+    "enabled": "远程执行 (Tailscale)",
+    "host": "远程主机 (Tailscale IP)",
+    "user": "SSH 用户",
+    "repoPath": "远程仓库路径",
+    "testConnection": "测试连接",
+    "connected": "连接成功",
+    "failed": "连接失败",
+    "testing": "测试中...",
+    "indicator": "远程"
+  },
   "rollback": {
     "title": "确认回滚",
     "description": "将还原任务 #{order}: {title} 的所有文件变更",

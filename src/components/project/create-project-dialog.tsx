@@ -20,6 +20,10 @@ interface CreateProjectDialogProps {
     description: string;
     guidelines: string;
     targetRepoPath: string;
+    remoteHost?: string;
+    remoteUser?: string;
+    remoteRepoPath?: string;
+    remoteEnabled?: boolean;
   }) => void;
 }
 
@@ -36,6 +40,36 @@ export function CreateProjectDialog({
   const [guidelines, setGuidelines] = useState("");
   const [targetRepoPath, setTargetRepoPath] = useState("");
   const [githubAuthed, setGithubAuthed] = useState(false);
+  const [remoteEnabled, setRemoteEnabled] = useState(false);
+  const [remoteHost, setRemoteHost] = useState("");
+  const [remoteUser, setRemoteUser] = useState("root");
+  const [remoteRepoPath, setRemoteRepoPath] = useState("");
+  const [connectionStatus, setConnectionStatus] = useState<"idle" | "testing" | "connected" | "failed">("idle");
+  const [connectionError, setConnectionError] = useState("");
+
+  const isZh = locale === "zh";
+
+  const testConnection = async () => {
+    setConnectionStatus("testing");
+    setConnectionError("");
+    try {
+      const res = await apiFetch("/api/projects/test-connection", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ remoteHost, remoteUser }),
+      });
+      const data = await res.json();
+      if (data.status === "connected") {
+        setConnectionStatus("connected");
+      } else {
+        setConnectionStatus("failed");
+        setConnectionError(data.error || "Connection failed");
+      }
+    } catch {
+      setConnectionStatus("failed");
+      setConnectionError("Request failed");
+    }
+  };
 
   useEffect(() => {
     if (open) {
@@ -48,12 +82,26 @@ export function CreateProjectDialog({
 
   const handleSubmit = () => {
     if (!name || !targetRepoPath) return;
-    onSubmit({ name, icon, description, guidelines, targetRepoPath });
+    onSubmit({
+      name, icon, description, guidelines, targetRepoPath,
+      ...(remoteEnabled && remoteHost && {
+        remoteHost,
+        remoteUser,
+        remoteRepoPath: remoteRepoPath || targetRepoPath,
+        remoteEnabled: true,
+      }),
+    });
     setName("");
     setIcon("📁");
     setDescription("");
     setGuidelines("");
     setTargetRepoPath("");
+    setRemoteEnabled(false);
+    setRemoteHost("");
+    setRemoteUser("root");
+    setRemoteRepoPath("");
+    setConnectionStatus("idle");
+    setConnectionError("");
     onClose();
   };
 
@@ -132,6 +180,64 @@ export function CreateProjectDialog({
                 }
               }}
             />
+          )}
+        </div>
+        {/* Remote Execution (Tailscale) */}
+        <div className="mt-4 space-y-3">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={remoteEnabled}
+              onChange={(e) => setRemoteEnabled(e.target.checked)}
+              className="rounded"
+            />
+            <span className="text-sm font-medium" style={{ color: "var(--on-surface)" }}>
+              {isZh ? "远程执行 (Tailscale)" : "Remote Execution (Tailscale)"}
+            </span>
+          </label>
+
+          {remoteEnabled && (
+            <div className="space-y-3 p-4 rounded-lg" style={{ background: "var(--surface-container)", border: "1px solid var(--outline-variant)" }}>
+              <Input
+                label={isZh ? "远程主机 (Tailscale IP)" : "Remote Host (Tailscale IP)"}
+                placeholder="100.64.1.5"
+                value={remoteHost}
+                onChange={(e) => { setRemoteHost(e.target.value); setConnectionStatus("idle"); }}
+              />
+              <Input
+                label={isZh ? "SSH 用户" : "SSH User"}
+                value={remoteUser}
+                onChange={(e) => setRemoteUser(e.target.value)}
+              />
+              <Input
+                label={isZh ? "远程仓库路径" : "Remote Repo Path"}
+                placeholder="/home/user/projects/my-app"
+                value={remoteRepoPath}
+                onChange={(e) => setRemoteRepoPath(e.target.value)}
+              />
+              <div className="flex items-center gap-3">
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={testConnection}
+                  disabled={!remoteHost || connectionStatus === "testing"}
+                >
+                  {connectionStatus === "testing"
+                    ? (isZh ? "测试中..." : "Testing...")
+                    : (isZh ? "测试连接" : "Test Connection")}
+                </Button>
+                {connectionStatus === "connected" && (
+                  <span className="text-xs font-medium" style={{ color: "var(--success)" }}>
+                    ✓ {isZh ? "连接成功" : "Connected"}
+                  </span>
+                )}
+                {connectionStatus === "failed" && (
+                  <span className="text-xs" style={{ color: "var(--error)" }}>
+                    ✗ {connectionError || (isZh ? "连接失败" : "Failed")}
+                  </span>
+                )}
+              </div>
+            </div>
           )}
         </div>
         <div className="flex justify-end gap-2 pt-2">

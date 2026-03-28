@@ -14,6 +14,8 @@ interface ProjectCardProps {
     description: string | null;
     targetRepoPath: string;
     updatedAt: string;
+    remoteEnabled?: boolean;
+    remoteHost?: string | null;
   };
   locale: string;
   onDelete: (id: string) => void;
@@ -40,6 +42,12 @@ export function ProjectCard({ project, locale, onDelete }: ProjectCardProps) {
         <div className="flex items-center gap-2">
           <span className="text-2xl">{project.icon || "📁"}</span>
           <h3 className="font-semibold text-lg">{project.name}</h3>
+          {project.remoteEnabled && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded font-medium"
+              style={{ background: "rgba(192,193,255,0.12)", color: "var(--primary)" }}>
+              🌐 {project.remoteHost}
+            </span>
+          )}
         </div>
         <button
           onClick={async (e) => {

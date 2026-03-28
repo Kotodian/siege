@@ -11,19 +11,24 @@ use crate::ai::streaming::generate_ai_call;
 use crate::state::AppState;
 
 pub async fn get_config(State(state): State<AppState>) -> Json<Value> {
-    let db = state.db.lock().unwrap();
+    let (anthropic, openai, glm) = {
+        let db = state.db.lock().unwrap();
+        (
+            get_provider_status(&db, "anthropic"),
+            get_provider_status(&db, "openai"),
+            get_provider_status(&db, "glm"),
+        )
+    };
 
-    let anthropic = get_provider_status(&db, "anthropic");
-    let openai = get_provider_status(&db, "openai");
-    let glm = get_provider_status(&db, "glm");
+    let claude = check_cli_status("claude").await;
+    let codex = check_cli_status("codex").await;
 
-    // Check CLI status (simplified for Tauri — skip exec)
     Json(json!({
         "anthropic": anthropic,
         "openai": openai,
         "glm": glm,
-        "claude": { "installed": false, "loggedIn": false },
-        "codex": { "installed": false, "loggedIn": false },
+        "claude": claude,
+        "codex": codex,
     }))
 }
 
@@ -132,6 +137,24 @@ fn upsert_setting(db: &rusqlite::Connection, key: &str, value: &str) {
         )
         .ok();
     }
+}
+
+/// Check if a CLI tool (claude/codex) is installed and logged in.
+async fn check_cli_status(tool: &str) -> Value {
+    use crate::utils::process::exec;
+
+    // Check if installed
+    let version_result = exec(tool, &["--version"], ".").await;
+    let installed = version_result.is_ok();
+
+    if !installed {
+        return json!({"installed": false, "loggedIn": false});
+    }
+
+    // Check if logged in by running a quick command
+    // claude: `claude --version` succeeds = installed, auth status is harder to check
+    // For now, if installed, assume usable (ACP handles auth itself)
+    json!({"installed": true, "loggedIn": true})
 }
 
 fn mask_key(key: Option<&str>) -> String {

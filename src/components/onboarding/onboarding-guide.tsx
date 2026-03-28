@@ -31,7 +31,7 @@ interface OnboardingGuideProps {
   }) => void;
 }
 
-const STEPS = ["welcome", "github", "ai", "concept", "create"] as const;
+const STEPS = ["welcome", "github", "tailscale", "ai", "concept", "create"] as const;
 type Step = (typeof STEPS)[number];
 
 interface GithubStatus {
@@ -79,6 +79,11 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
   const [claudeStatus, setClaudeStatus] = useState<{ installed: boolean; loggedIn: boolean; email?: string } | null>(null);
   const [openaiUrl, setOpenaiUrl] = useState("");
 
+  // Tailscale state
+  const [tsStatus, setTsStatus] = useState<{ running: boolean; peers: any[]; self?: any; error?: string } | null>(null);
+  const [checkingTs, setCheckingTs] = useState(false);
+  const [tsLoggingIn, setTsLoggingIn] = useState(false);
+
   const isZh = locale === "zh";
 
   // Auto-detect all configs on mount
@@ -96,6 +101,11 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
         setClaudeStatus(d.claude || null);
       })
       .catch(() => {});
+    // Check Tailscale
+    apiFetch("/api/tailscale/status")
+      .then((r) => r.json())
+      .then((d) => setTsStatus(d))
+      .catch(() => setTsStatus({ running: false, peers: [] }));
   }, []);
 
   // GitHub login flow state
@@ -424,7 +434,7 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
                   <Button
                     size="lg"
                     variant="ghost"
-                    onClick={() => { setStep("ai"); checkAiConfig(); }}
+                    onClick={() => setStep("tailscale")}
                   >
                     {isZh ? "跳过，只用本地目录" : "Skip, use local directories only"}
                   </Button>
@@ -435,11 +445,107 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
             {githubStatus?.authenticated && (
               <div className="flex justify-between">
                 <Button variant="ghost" onClick={() => setStep("welcome")}>{t("common.back")}</Button>
-                <Button size="lg" onClick={() => { setStep("ai"); checkAiConfig(); }}>
+                <Button size="lg" onClick={() => setStep("tailscale")}>
                   {isZh ? "继续" : "Continue"}
                 </Button>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Step: Tailscale */}
+        {step === "tailscale" && (
+          <div className="space-y-6">
+            <div className="text-center">
+              <h2 className="text-2xl font-bold inline-flex items-center gap-2 justify-center w-full">
+                🌐 Tailscale
+              </h2>
+              <p className="text-[var(--outline)] mt-1">
+                {isZh
+                  ? "连接 Tailscale 后可以在远程机器上执行 AI 任务。不需要可以跳过。"
+                  : "Connect Tailscale to execute AI tasks on remote machines. Skip if not needed."}
+              </p>
+            </div>
+
+            <div className="rounded-lg border bg-[var(--surface-container-high)] p-6">
+              {checkingTs ? (
+                <div className="text-center py-8 text-[var(--outline)]">
+                  {isZh ? "检查中..." : "Checking..."}
+                </div>
+              ) : tsStatus?.running ? (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3 justify-center">
+                    <div className="w-3 h-3 rounded-full" style={{ background: "var(--success)" }} />
+                    <span className="text-sm font-medium" style={{ color: "var(--success)" }}>
+                      {isZh ? "Tailscale 已连接" : "Tailscale Connected"}
+                    </span>
+                    {tsStatus.self?.hostname && (
+                      <span className="text-xs" style={{ color: "var(--outline)" }}>
+                        ({tsStatus.self.hostname})
+                      </span>
+                    )}
+                  </div>
+                  {tsStatus.peers.length > 0 && (
+                    <div className="space-y-1 max-h-48 overflow-y-auto">
+                      <p className="text-xs font-medium mb-1" style={{ color: "var(--outline)" }}>
+                        {isZh ? `网络节点 (${tsStatus.peers.length})` : `Nodes (${tsStatus.peers.length})`}
+                      </p>
+                      {tsStatus.peers.map((peer: any, i: number) => (
+                        <div key={i} className="flex items-center gap-2 px-3 py-1.5 rounded text-xs" style={{ background: "var(--surface-container)" }}>
+                          <div className="w-2 h-2 rounded-full" style={{ background: peer.online ? "var(--success)" : "var(--outline-variant)" }} />
+                          <span style={{ color: "var(--on-surface)" }}>{peer.hostname}</span>
+                          <span style={{ color: "var(--outline)" }}>{peer.tailscale_ips?.[0] || peer.tailscaleIps?.[0] || ""}</span>
+                          <span style={{ color: "var(--outline)" }}>{peer.os}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center space-y-4 py-4">
+                  <div className="text-4xl">🌐</div>
+                  <p className="text-sm" style={{ color: "var(--outline)" }}>
+                    {tsStatus?.error || (isZh ? "Tailscale 未连接" : "Tailscale not connected")}
+                  </p>
+                  <Button
+                    onClick={async () => {
+                      setTsLoggingIn(true);
+                      try {
+                        const res = await apiFetch("/api/tailscale/login", { method: "POST" });
+                        const data = await res.json();
+                        if (data.authUrl) {
+                          openExternal(data.authUrl);
+                          const poll = setInterval(async () => {
+                            const r = await apiFetch("/api/tailscale/status");
+                            const s = await r.json();
+                            if (s.running) {
+                              clearInterval(poll);
+                              setTsStatus(s);
+                              setTsLoggingIn(false);
+                            }
+                          }, 3000);
+                          setTimeout(() => { clearInterval(poll); setTsLoggingIn(false); }, 120000);
+                        } else if (data.status === "already_authenticated") {
+                          const r = await apiFetch("/api/tailscale/status");
+                          setTsStatus(await r.json());
+                          setTsLoggingIn(false);
+                        }
+                      } catch { setTsLoggingIn(false); }
+                    }}
+                    disabled={tsLoggingIn}
+                  >
+                    {tsLoggingIn ? (isZh ? "等待授权..." : "Waiting...") : (isZh ? "登录 Tailscale" : "Login to Tailscale")}
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between pt-4">
+              <Button variant="ghost" onClick={() => setStep("github")}>{t("common.back")}</Button>
+              <Button size="lg" onClick={() => { setStep("ai"); checkAiConfig(); }}>
+                {tsStatus?.running ? (isZh ? "继续" : "Continue") : (isZh ? "跳过" : "Skip")}
+              </Button>
+            </div>
           </div>
         )}
 

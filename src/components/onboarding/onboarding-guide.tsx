@@ -247,11 +247,14 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
     onComplete({ name, icon, description, guidelines, targetRepoPath });
   };
 
+  const codexStatus = (aiStatus as any)?.codex;
   const anyAiConfigured =
     aiStatus?.anthropic.configured ||
     aiStatus?.openai.configured ||
     aiStatus?.glm?.configured ||
-    claudeStatus?.loggedIn;
+    claudeStatus?.loggedIn ||
+    claudeStatus?.installed ||
+    codexStatus?.installed;
 
   return (
     <div className="min-h-[60vh] flex items-center justify-center">
@@ -648,7 +651,7 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
                     urlPlaceholder="https://open.bigmodel.cn/api/paas/v4"
                   />
 
-                  {!anyAiConfigured && !claudeStatus?.loggedIn && (
+                  {!anyAiConfigured && (
                     <p className="text-xs text-amber-600 text-center">
                       {isZh
                         ? <><AlertTriangleIcon size={12} className="inline-block align-[-1px]" /> 至少配置一个提供商才能使用 AI 功能</>
@@ -667,7 +670,8 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
                 </label>
                 <div className="flex gap-2 flex-wrap">
                   {[
-                    ...(claudeStatus?.loggedIn ? [{ id: "acp", label: "Claude Code", desc: isZh ? "推荐，无需 API Key" : "Recommended, no API key needed" }] : []),
+                    ...((claudeStatus?.loggedIn || claudeStatus?.installed) ? [{ id: "acp", label: "Claude Code (ACP)", desc: isZh ? "推荐，本地 CLI 模式" : "Recommended, local CLI mode" }] : []),
+                    ...(codexStatus?.installed ? [{ id: "codex-acp", label: "Codex (ACP)", desc: isZh ? "OpenAI Codex CLI" : "OpenAI Codex CLI" }] : []),
                     ...(aiStatus?.anthropic?.configured ? [{ id: "anthropic", label: "Anthropic API", desc: isZh ? "需要 API Key" : "Requires API key" }] : []),
                     ...(aiStatus?.openai?.configured ? [{ id: "openai", label: "OpenAI API", desc: isZh ? "需要 API Key" : "Requires API key" }] : []),
                     ...(aiStatus?.glm?.configured ? [{ id: "glm", label: "GLM API", desc: isZh ? "需要 API Key" : "Requires API key" }] : []),
@@ -705,7 +709,7 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
             )}
 
             <div className="flex justify-between">
-              <Button variant="ghost" onClick={() => setStep("github")}>{t("common.back")}</Button>
+              <Button variant="ghost" onClick={() => setStep("tailscale")}>{t("common.back")}</Button>
               <Button size="lg" onClick={() => setStep("create")} disabled={aiStatus !== null && !anyAiConfigured}>
                 {isZh ? "继续" : "Continue"}
               </Button>

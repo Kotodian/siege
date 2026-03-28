@@ -658,6 +658,35 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
                         : <><AlertTriangleIcon size={12} className="inline-block align-[-1px]" /> At least one provider is required for AI features</>}
                     </p>
                   )}
+
+                  {/* Re-detect + debug */}
+                  <div className="pt-2 space-y-2">
+                    <div className="flex items-center gap-2 justify-center">
+                      <Button size="sm" variant="secondary" onClick={async () => {
+                        setCheckingAi(true);
+                        try {
+                          const res = await apiFetch("/api/ai-config");
+                          const data = await res.json();
+                          setAiStatus(data);
+                          setClaudeStatus(data.claude || null);
+                          // Show debug alert
+                          const debugInfo = [
+                            `claude: installed=${data.claude?.installed} loggedIn=${data.claude?.loggedIn} debug=${data.claude?.debug || 'n/a'}`,
+                            `codex: installed=${data.codex?.installed} loggedIn=${data.codex?.loggedIn} debug=${data.codex?.debug || 'n/a'}`,
+                            `anthropic: configured=${data.anthropic?.configured}`,
+                            `openai: configured=${data.openai?.configured}`,
+                            `glm: configured=${data.glm?.configured}`,
+                          ].join('\n');
+                          alert(debugInfo);
+                        } catch (e) {
+                          alert(`Error: ${e}`);
+                        }
+                        setCheckingAi(false);
+                      }}>
+                        {isZh ? "重新检测" : "Re-detect"}
+                      </Button>
+                    </div>
+                  </div>
                 </>
               )}
             </div>

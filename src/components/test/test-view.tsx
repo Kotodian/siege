@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { ProviderModelSelect, useDefaultProvider } from "@/components/ui/provider-model-select";
 import { useGlobalLoading } from "@/components/ui/global-loading";
 import { useConfirm } from "@/components/ui/confirm-dialog";
+import { apiFetch } from "@/lib/api";
 
 interface TestResult {
   id: string;
@@ -100,13 +101,13 @@ export function TestView({ planId, planStatus, onPlanStatusChange }: TestViewPro
   }, [defaultProvider]);
 
   const fetchSuite = async () => {
-    const res = await fetch(`/api/test-suites?planId=${planId}`);
+    const res = await apiFetch(`/api/test-suites?planId=${planId}`);
     const data = await res.json();
     setSuite(data);
   };
 
   const fetchTasks = async () => {
-    const res = await fetch(`/api/snapshots/tasks?planId=${planId}`);
+    const res = await apiFetch(`/api/snapshots/tasks?planId=${planId}`);
     if (res.ok) {
       const data = await res.json();
       setTasks(data);
@@ -142,7 +143,7 @@ export function TestView({ planId, planStatus, onPlanStatusChange }: TestViewPro
     startLoading(isZh ? `生成测试用例 (${selectedTasks.size} 个任务)` : `Generating tests (${selectedTasks.size} tasks)`);
     updateContent(taskNames.join("\n"));
     try {
-      await fetch("/api/test-suites/generate", {
+      await apiFetch("/api/test-suites/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -174,7 +175,7 @@ export function TestView({ planId, planStatus, onPlanStatusChange }: TestViewPro
       if (provider) runParams.set("provider", provider);
       if (model) runParams.set("model", model);
       runParams.set("locale", isZh ? "zh" : "en");
-      const res = await fetch(`/api/test-cases/${caseId}/run?${runParams}`, { method: "POST" });
+      const res = await apiFetch(`/api/test-cases/${caseId}/run?${runParams}`, { method: "POST" });
       // Stream the response
       const reader = res.body?.getReader();
       const decoder = new TextDecoder();
@@ -188,7 +189,7 @@ export function TestView({ planId, planStatus, onPlanStatusChange }: TestViewPro
         }
       }
       // Refresh suite to get updated status
-      const freshRes = await fetch(`/api/test-suites?planId=${planId}`);
+      const freshRes = await apiFetch(`/api/test-suites?planId=${planId}`);
       const freshSuite = await freshRes.json() as TestSuite | null;
       setSuite(freshSuite);
       const freshCase = freshSuite?.cases.find(c => c.id === caseId);
@@ -234,7 +235,7 @@ export function TestView({ planId, planStatus, onPlanStatusChange }: TestViewPro
       if (provider) runParams.set("provider", provider);
       if (model) runParams.set("model", model);
       runParams.set("locale", isZh ? "zh" : "en");
-      const res = await fetch(`/api/test-cases/${tc.id}/run?${runParams}`, { method: "POST" });
+      const res = await apiFetch(`/api/test-cases/${tc.id}/run?${runParams}`, { method: "POST" });
       const reader = res.body?.getReader();
       const decoder = new TextDecoder();
       let content = "";
@@ -247,7 +248,7 @@ export function TestView({ planId, planStatus, onPlanStatusChange }: TestViewPro
         }
       }
       done++;
-      const suiteRes = await fetch(`/api/test-suites?planId=${planId}`);
+      const suiteRes = await apiFetch(`/api/test-suites?planId=${planId}`);
       const freshSuite = await suiteRes.json() as TestSuite | null;
       const freshCase = freshSuite?.cases.find(c => c.id === tc.id);
       if (freshCase?.status === "passed") {
@@ -258,7 +259,7 @@ export function TestView({ planId, planStatus, onPlanStatusChange }: TestViewPro
       }
     }
     setRunningCase(null);
-    const finalRes = await fetch(`/api/test-suites?planId=${planId}`);
+    const finalRes = await apiFetch(`/api/test-suites?planId=${planId}`);
     const finalSuite = await finalRes.json() as TestSuite | null;
     setSuite(finalSuite);
     onPlanStatusChange();
@@ -284,7 +285,7 @@ export function TestView({ planId, planStatus, onPlanStatusChange }: TestViewPro
   const handleCreateFixTasks = async (failedCases: TestCase[]) => {
     for (const tc of failedCases) {
       const lastResult = tc.results[tc.results.length - 1];
-      await fetch("/api/schedules", {
+      await apiFetch("/api/schedules", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -317,7 +318,7 @@ export function TestView({ planId, planStatus, onPlanStatusChange }: TestViewPro
 
   const saveEditCase = async () => {
     if (!editingCase) return;
-    await fetch(`/api/test-cases/${editingCase}`, {
+    await apiFetch(`/api/test-cases/${editingCase}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -333,7 +334,7 @@ export function TestView({ planId, planStatus, onPlanStatusChange }: TestViewPro
   };
 
   const deleteCase = async (caseId: string) => {
-    await fetch(`/api/test-cases/${caseId}`, { method: "DELETE" });
+    await apiFetch(`/api/test-cases/${caseId}`, { method: "DELETE" });
     setExpandedCase(null);
     await fetchSuite();
   };
@@ -344,7 +345,7 @@ export function TestView({ planId, planStatus, onPlanStatusChange }: TestViewPro
 
   const handleAddCase = async () => {
     if (!addForm.name.trim()) return;
-    await fetch("/api/test-cases", {
+    await apiFetch("/api/test-cases", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

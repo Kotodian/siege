@@ -9,6 +9,7 @@ import { CreatePlanDialog } from "./create-plan-dialog";
 import { ImportPlanDialog } from "./import-plan-dialog";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { apiFetch } from "@/lib/api";
 
 interface Plan {
   id: string;
@@ -50,7 +51,7 @@ export function PlanList({ projectId, locale }: PlanListProps) {
     const params = new URLSearchParams({ projectId });
     if (folderId) params.set("parentId", folderId);
 
-    const res = await fetch(`/api/plan-folders?${params}`);
+    const res = await apiFetch(`/api/plan-folders?${params}`);
     const data = await res.json();
     setFolders(data.folders);
     setPlans(data.plans);
@@ -78,7 +79,7 @@ export function PlanList({ projectId, locale }: PlanListProps) {
 
   const handleCreateFolder = async () => {
     if (!newFolderName) return;
-    await fetch("/api/plan-folders", {
+    await apiFetch("/api/plan-folders", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -93,7 +94,7 @@ export function PlanList({ projectId, locale }: PlanListProps) {
   };
 
   const handleDeleteFolder = async (folderId: string) => {
-    await fetch(`/api/plan-folders/${folderId}`, { method: "DELETE" });
+    await apiFetch(`/api/plan-folders/${folderId}`, { method: "DELETE" });
     fetchContents(currentFolderId);
   };
 
@@ -102,7 +103,7 @@ export function PlanList({ projectId, locale }: PlanListProps) {
     description: string;
     tag: string;
   }) => {
-    await fetch("/api/plans", {
+    await apiFetch("/api/plans", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -115,7 +116,7 @@ export function PlanList({ projectId, locale }: PlanListProps) {
   };
 
   const handleDeletePlan = async (id: string) => {
-    await fetch(`/api/plans/${id}`, { method: "DELETE" });
+    await apiFetch(`/api/plans/${id}`, { method: "DELETE" });
     fetchContents(currentFolderId);
   };
 

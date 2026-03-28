@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useGlobalLoading } from "@/components/ui/global-loading";
 import fs from "fs";
+import { apiFetch } from "@/lib/api";
 
 interface AnalyzePromptProps {
   repoPath: string;
@@ -20,7 +21,7 @@ export function AnalyzePrompt({ repoPath, onResult, isZh }: AnalyzePromptProps) 
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch("/api/projects/analyze", {
+        const res = await apiFetch("/api/projects/analyze", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ repoPath }),
@@ -44,7 +45,7 @@ export function AnalyzePrompt({ repoPath, onResult, isZh }: AnalyzePromptProps) 
     startLoading(isZh ? "AI 正在分析项目并生成 CLAUDE.md..." : "AI analyzing project, generating CLAUDE.md...");
     try {
       // Generate CLAUDE.md
-      const res = await fetch("/api/projects/generate-docs", {
+      const res = await apiFetch("/api/projects/generate-docs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ repoPath, type: "claude" }),
@@ -68,7 +69,7 @@ export function AnalyzePrompt({ repoPath, onResult, isZh }: AnalyzePromptProps) 
         stopLoading(isZh ? "CLAUDE.md 已生成，正在生成 AGENTS.md..." : "CLAUDE.md done, generating AGENTS.md...");
         startLoading(isZh ? "AI 正在生成 AGENTS.md..." : "Generating AGENTS.md...");
 
-        const res2 = await fetch("/api/projects/generate-docs", {
+        const res2 = await apiFetch("/api/projects/generate-docs", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ repoPath, type: "agents" }),
@@ -99,7 +100,7 @@ export function AnalyzePrompt({ repoPath, onResult, isZh }: AnalyzePromptProps) 
     const label = type === "claude" ? "CLAUDE.md" : "AGENTS.md";
     startLoading(isZh ? `正在重新生成 ${label}...` : `Regenerating ${label}...`);
     try {
-      const res = await fetch("/api/projects/generate-docs", {
+      const res = await apiFetch("/api/projects/generate-docs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ repoPath, type }),

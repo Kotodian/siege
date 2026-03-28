@@ -6,6 +6,7 @@ import { computeDiff } from "@/lib/diff";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { InlineComment } from "./inline-comment";
 import hljs from "highlight.js";
+import { apiFetch } from "@/lib/api";
 
 interface ReviewItem {
   id: string;
@@ -138,7 +139,7 @@ export function DiffViewer({
     if (fixingId || !finding.lineNumber) return;
     setFixingId(finding.id);
     try {
-      const res = await fetch("/api/review-comments", {
+      const res = await apiFetch("/api/review-comments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -168,7 +169,7 @@ export function DiffViewer({
     if (!result) return;
     setFixingId(findingId);
     try {
-      const res = await fetch(`/api/review-comments/${result.commentId}/apply`, {
+      const res = await apiFetch(`/api/review-comments/${result.commentId}/apply`, {
         method: "POST",
       });
       if (res.ok) {

@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog } from "@/components/ui/dialog";
+import { apiFetch } from "@/lib/api";
 
 interface ImportConfig {
   id: string;
@@ -129,7 +130,7 @@ function QuickSetupForm({
     setError("");
     try {
       // Create the config
-      const createRes = await fetch("/api/import-sources", {
+      const createRes = await apiFetch("/api/import-sources", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ source: sourceType, config: fields }),
@@ -149,7 +150,7 @@ function QuickSetupForm({
 
       if (!valData.valid) {
         // Delete the bad config
-        await fetch(`/api/import-sources?id=${created.id}`, {
+        await apiFetch(`/api/import-sources?id=${created.id}`, {
           method: "DELETE",
         });
         setError(
@@ -229,7 +230,7 @@ function MarkdownTab({
     if (!importPath) return;
     setLoading(true);
     try {
-      await fetch("/api/import", {
+      await apiFetch("/api/import", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ projectId, filePath: importPath }),
@@ -291,7 +292,7 @@ function SourceTab({
   const [configLoaded, setConfigLoaded] = useState(false);
 
   const fetchConfigs = () => {
-    fetch("/api/import-sources")
+    apiFetch("/api/import-sources")
       .then((r) => r.json())
       .then((all: ImportConfig[]) => {
         setConfigs(all.filter((c) => c.source === sourceType));
@@ -313,7 +314,7 @@ function SourceTab({
       const params = new URLSearchParams();
       if (query) params.set("q", query);
       params.set("projectId", projectId);
-      const res = await fetch(`/api/import-sources/${id}/items?${params}`);
+      const res = await apiFetch(`/api/import-sources/${id}/items?${params}`);
       const data = await res.json();
       setItems(data);
       setSelected(new Set());
@@ -342,7 +343,7 @@ function SourceTab({
     setLoading(true);
     try {
       for (const itemId of selected) {
-        await fetch("/api/import", {
+        await apiFetch("/api/import", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

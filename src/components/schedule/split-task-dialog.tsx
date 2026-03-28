@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs } from "@/components/ui/tabs";
 import { ProviderModelSelect, useDefaultProvider } from "@/components/ui/provider-model-select";
 import { SparklesIcon, PlusIcon, XIcon } from "@/components/ui/icons";
+import { apiFetch } from "@/lib/api";
 
 interface SubtaskForm {
   title: string;
@@ -42,7 +43,7 @@ export function SplitTaskDialog({ open, item, onClose, onSplitComplete }: SplitT
     setAiOutput("");
     setError("");
     try {
-      const res = await fetch(`/api/schedule-items/${item.id}/split`, {
+      const res = await apiFetch(`/api/schedule-items/${item.id}/split`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -79,7 +80,7 @@ export function SplitTaskDialog({ open, item, onClose, onSplitComplete }: SplitT
     setSaving(true);
     setError("");
     try {
-      const res = await fetch(`/api/schedule-items/${item.id}/split`, {
+      const res = await apiFetch(`/api/schedule-items/${item.id}/split`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

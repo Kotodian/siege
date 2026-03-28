@@ -13,6 +13,7 @@ import { severityIcons, FileStackIcon, CodeIcon, SearchIcon, RefreshIcon, Hourgl
 import { ProviderModelSelect } from "@/components/ui/provider-model-select";
 import { Dialog } from "@/components/ui/dialog";
 import { CheckCircleIcon, FlaskIcon } from "@/components/ui/icons";
+import { apiFetch } from "@/lib/api";
 
 interface ReviewComment {
   id: string;
@@ -100,14 +101,14 @@ export function ReviewPanel({
   const [selectedTask, setSelectedTask] = useState<string | null>(null); // null = all tasks
 
   const fetchReviews = async () => {
-    const res = await fetch(`/api/reviews?planId=${planId}&type=${type}`);
+    const res = await apiFetch(`/api/reviews?planId=${planId}&type=${type}`);
     const data = await res.json();
     setReviews(data);
     return data as Review[];
   };
 
   const fetchSnapshots = async () => {
-    const res = await fetch(`/api/snapshots?planId=${planId}`);
+    const res = await apiFetch(`/api/snapshots?planId=${planId}`);
     if (res.ok) {
       const data = await res.json();
       setSnapshots(data);
@@ -115,7 +116,7 @@ export function ReviewPanel({
   };
 
   const fetchComments = async (reviewId: string) => {
-    const res = await fetch(`/api/review-comments?reviewId=${reviewId}`);
+    const res = await apiFetch(`/api/review-comments?reviewId=${reviewId}`);
     if (res.ok) {
       const data = await res.json();
       // Update the review's comments in state
@@ -194,7 +195,7 @@ export function ReviewPanel({
     setGenerating(true);
     startElapsedTimer();
     try {
-      const res = await fetch("/api/reviews/generate", {
+      const res = await apiFetch("/api/reviews/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ planId, type, locale: isZh ? "zh" : "en", ...(reviewProvider && { provider: reviewProvider }), ...(reviewModel && { model: reviewModel }), ...(reviewTaskId && { scheduleItemId: reviewTaskId }) }),
@@ -235,7 +236,7 @@ export function ReviewPanel({
   };
 
   const handleResolve = async (itemId: string, resolved: boolean) => {
-    await fetch(`/api/review-items/${itemId}`, {
+    await apiFetch(`/api/review-items/${itemId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ resolved }),
@@ -289,7 +290,7 @@ export function ReviewPanel({
     setFixUserNote("");
     startLoading(isZh ? "AI 正在修复..." : "AI fixing...");
     try {
-      const schemeRes = await fetch(`/api/schemes/${pureSchemeId}`);
+      const schemeRes = await apiFetch(`/api/schemes/${pureSchemeId}`);
       const schemeData = schemeRes.ok ? await schemeRes.json() : null;
       if (!schemeData?.content) {
         stopLoading(isZh ? "找不到方案" : "Scheme not found", "error");
@@ -338,7 +339,7 @@ export function ReviewPanel({
           if (userNote) fixMessage += `\n\n${isZh ? "用户补充说明" : "User note"}: ${userNote}`;
           fixMessage += `\n\n${isZh ? "当前内容" : "Current content"}:\n\`\`\`json\n${fieldContent}\n\`\`\``;
 
-          const chatRes = await fetch("/api/schemes/chat", {
+          const chatRes = await apiFetch("/api/schemes/chat", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -380,7 +381,7 @@ export function ReviewPanel({
                   const idx = parseInt(structuredKey.split("-")[1], 10);
                   if (updated.risks?.[idx]) updated.risks[idx] = JSON.parse(cleaned);
                 }
-                await fetch(`/api/schemes/${pureSchemeId}`, {
+                await apiFetch(`/api/schemes/${pureSchemeId}`, {
                   method: "PUT",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({ structuredContent: JSON.stringify(updated) }),
@@ -389,7 +390,7 @@ export function ReviewPanel({
                 // If JSON parse fails for overview, just use as plain text
                 if (structuredKey === "overview") {
                   const updated = { ...structured, overview: cleaned };
-                  await fetch(`/api/schemes/${pureSchemeId}`, {
+                  await apiFetch(`/api/schemes/${pureSchemeId}`, {
                     method: "PUT",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ structuredContent: JSON.stringify(updated) }),
@@ -427,7 +428,7 @@ export function ReviewPanel({
           if (userNote) fixMessage += `\n\n用户补充说明：${userNote}`;
           fixMessage += `\n\n当前该段落内容：\n${sectionContent}`;
 
-          const chatRes = await fetch("/api/schemes/chat", {
+          const chatRes = await apiFetch("/api/schemes/chat", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -462,7 +463,7 @@ export function ReviewPanel({
                 const secStart = starts2[sectionIdx].start;
                 const secEnd = sectionIdx + 1 < starts2.length ? starts2[sectionIdx + 1].start : schemeContent.length;
                 const newContent = schemeContent.slice(0, secStart) + starts2[sectionIdx].heading + "\n" + aiContent.trim() + "\n\n" + schemeContent.slice(secEnd);
-                await fetch(`/api/schemes/${pureSchemeId}`, {
+                await apiFetch(`/api/schemes/${pureSchemeId}`, {
                   method: "PUT",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({ content: newContent.trim() }),
@@ -475,7 +476,7 @@ export function ReviewPanel({
           let fixMessage = `Fix the following issue:\n\n**${item.title}**\n\n${item.content}`;
           if (userNote) fixMessage += `\n\nAdditional instructions from user: ${userNote}`;
 
-          const chatRes2 = await fetch("/api/schemes/chat", {
+          const chatRes2 = await apiFetch("/api/schemes/chat", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -501,7 +502,7 @@ export function ReviewPanel({
       }
 
       // Mark as resolved
-      await fetch(`/api/review-items/${item.id}`, {
+      await apiFetch(`/api/review-items/${item.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ resolved: true, resolution: "approved" }),
@@ -556,7 +557,7 @@ export function ReviewPanel({
       item.filePath ? `\nFile: ${item.filePath}${item.lineNumber ? `:${item.lineNumber}` : ""}` : "",
     ].filter(Boolean).join("\n");
 
-    await fetch("/api/schedules", {
+    await apiFetch("/api/schedules", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -651,7 +652,7 @@ export function ReviewPanel({
               <button
                 onClick={async () => {
                   // Cancel: reset in_progress reviews for this plan
-                  await fetch("/api/reviews/cancel", {
+                  await apiFetch("/api/reviews/cancel", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ planId }),
@@ -733,13 +734,13 @@ export function ReviewPanel({
                   setReviewActing(true);
                   try {
                     if (type === "scheme") {
-                      await fetch(`/api/plans/${planId}/confirm`, {
+                      await apiFetch(`/api/plans/${planId}/confirm`, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ action: "confirm" }),
                       });
                     } else {
-                      await fetch(`/api/plans/${planId}/review-action`, {
+                      await apiFetch(`/api/plans/${planId}/review-action`, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ action: "accept" }),
@@ -768,13 +769,13 @@ export function ReviewPanel({
                   setReviewActing(true);
                   try {
                     if (type === "scheme") {
-                      await fetch(`/api/plans/${planId}/confirm`, {
+                      await apiFetch(`/api/plans/${planId}/confirm`, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ action: "revoke" }),
                       });
                     } else {
-                      await fetch(`/api/plans/${planId}/review-action`, {
+                      await apiFetch(`/api/plans/${planId}/review-action`, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ action: "rework" }),
@@ -1065,7 +1066,7 @@ export function ReviewPanel({
             variant="secondary"
             size="sm"
             onClick={async () => {
-              const res = await fetch(`/api/snapshots/backfill?planId=${planId}`, { method: "POST" });
+              const res = await apiFetch(`/api/snapshots/backfill?planId=${planId}`, { method: "POST" });
               if (res.ok) {
                 await fetchSnapshots();
               }
@@ -1110,7 +1111,7 @@ export function ReviewPanel({
                   onClick={async () => {
                     setAllResolvedPrompt(false);
                     // Confirm scheme → plan enters "confirmed" status → can generate schedule
-                    await fetch(`/api/plans/${planId}/confirm`, {
+                    await apiFetch(`/api/plans/${planId}/confirm`, {
                       method: "POST",
                       headers: { "Content-Type": "application/json" },
                       body: JSON.stringify({ action: "confirm" }),
@@ -1138,7 +1139,7 @@ export function ReviewPanel({
                   onClick={async () => {
                     setAllResolvedPrompt(false);
                     if (resolvedTaskInfo) {
-                      await fetch("/api/test-suites/generate", {
+                      await apiFetch("/api/test-suites/generate", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({

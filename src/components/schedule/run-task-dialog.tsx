@@ -6,6 +6,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ProviderModelSelect, useDefaultProvider } from "@/components/ui/provider-model-select";
 import { SkillPicker } from "@/components/ui/skill-picker";
+import { apiFetch } from "@/lib/api";
 
 interface SkillSummary {
   name: string;
@@ -35,7 +36,7 @@ export function RunTaskDialog({ open, onClose, onRun, taskTitle }: RunTaskDialog
 
   useEffect(() => {
     if (open) {
-      fetch("/api/skills").then(r => r.json()).then(setSkills).catch(() => {});
+      apiFetch("/api/skills").then(r => r.json()).then(setSkills).catch(() => {});
     }
   }, [open]);
 

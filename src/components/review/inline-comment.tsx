@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
+import { apiFetch } from "@/lib/api";
 
 interface InlineCommentProps {
   reviewId: string;
@@ -22,7 +23,7 @@ export function InlineComment({ reviewId, filePath, lineNumber, onClose, onSubmi
     if (!content.trim()) return;
     setSubmitting(true);
     try {
-      const res = await fetch("/api/review-comments", {
+      const res = await apiFetch("/api/review-comments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ reviewId, filePath, lineNumber, content }),

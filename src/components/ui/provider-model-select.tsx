@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { apiFetch } from "@/lib/api";
 
 interface ProviderConfig {
   id: string;
@@ -142,7 +143,7 @@ export function ProviderModelSelect({
   const [availableProviders, setAvailableProviders] = useState<ProviderConfig[]>(ACP_PROVIDERS);
 
   useEffect(() => {
-    fetch("/api/settings").then(r => r.json()).then(settings => {
+    apiFetch("/api/settings").then(r => r.json()).then(settings => {
       const providers: ProviderConfig[] = [...ACP_PROVIDERS];
       for (const [id, config] of Object.entries(SDK_PROVIDERS)) {
         const hasKey = settings[`${id}_api_key`] || settings[`${id}_base_url`];
@@ -231,7 +232,7 @@ export function ProviderModelSelect({
 export function useDefaultProvider() {
   const [provider, setProvider] = useState("");
   useEffect(() => {
-    fetch("/api/settings").then(r => r.json()).then(s => {
+    apiFetch("/api/settings").then(r => r.json()).then(s => {
       if (s.default_provider) setProvider(s.default_provider);
     }).catch(() => {});
   }, []);

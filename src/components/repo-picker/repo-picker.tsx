@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { apiFetch } from "@/lib/api";
 
 interface DirEntry {
   name: string;
@@ -76,7 +77,7 @@ function LocalBrowser({
   const browse = async (dirPath?: string) => {
     setLoading(true);
     const params = dirPath ? `?path=${encodeURIComponent(dirPath)}` : "";
-    const res = await fetch(`/api/filesystem${params}`);
+    const res = await apiFetch(`/api/filesystem${params}`);
     const data = await res.json();
     if (res.ok) {
       setCurrentPath(data.current);
@@ -181,7 +182,7 @@ function GitUrlCloner({
   const browseDir = async (dirPath?: string) => {
     setBrowseLoading(true);
     const params = dirPath ? `?path=${encodeURIComponent(dirPath)}` : "";
-    const res = await fetch(`/api/filesystem${params}`);
+    const res = await apiFetch(`/api/filesystem${params}`);
     const data = await res.json();
     if (res.ok) {
       setBrowsePath(data.current);
@@ -196,7 +197,7 @@ function GitUrlCloner({
     setCloning(true);
     setError("");
     try {
-      const res = await fetch("/api/git/clone", {
+      const res = await apiFetch("/api/git/clone", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url: url.trim(), targetDir: targetDir || undefined }),
@@ -299,7 +300,7 @@ function GitHubBrowser({
     setLoading(true);
     setError("");
     const params = query ? `?q=${encodeURIComponent(query)}` : "";
-    const res = await fetch(`/api/github${params}`);
+    const res = await apiFetch(`/api/github${params}`);
     const data = await res.json();
     if (res.ok) {
       setRepos(data);
@@ -315,7 +316,7 @@ function GitHubBrowser({
 
   const handleClone = async (repo: GitHubRepo) => {
     setCloning(repo.fullName);
-    const res = await fetch("/api/github", {
+    const res = await apiFetch("/api/github", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ repoUrl: repo.cloneUrl }),

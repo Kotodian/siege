@@ -11,6 +11,7 @@ import { SchemeQuestionDialog } from "./scheme-question-dialog";
 import { ReviewPanel } from "@/components/review/review-panel";
 import { useGlobalLoading } from "@/components/ui/global-loading";
 import { sseParseEvent } from "@/lib/ai/sse";
+import { apiFetch } from "@/lib/api";
 
 interface Scheme {
   id: string;
@@ -55,13 +56,13 @@ export function SchemeList({
   ].includes(planStatus);
 
   const fetchSchemes = async () => {
-    const res = await fetch(`/api/schemes?planId=${planId}`);
+    const res = await apiFetch(`/api/schemes?planId=${planId}`);
     const data = await res.json();
     setSchemes(data);
   };
 
   const fetchReviewFindings = async () => {
-    const res = await fetch(`/api/reviews?planId=${planId}&type=scheme`);
+    const res = await apiFetch(`/api/reviews?planId=${planId}&type=scheme`);
     if (!res.ok) return;
     const reviews = await res.json();
     const latest = reviews[reviews.length - 1];
@@ -76,7 +77,7 @@ export function SchemeList({
   }, [planId]);
 
   const handleCreate = async (data: { title: string; content: string }) => {
-    await fetch("/api/schemes", {
+    await apiFetch("/api/schemes", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...data, planId, sourceType: "manual" }),
@@ -89,7 +90,7 @@ export function SchemeList({
     id: string,
     data: { title: string; content: string }
   ) => {
-    await fetch(`/api/schemes/${id}`, {
+    await apiFetch(`/api/schemes/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -98,12 +99,12 @@ export function SchemeList({
   };
 
   const handleDelete = async (id: string) => {
-    await fetch(`/api/schemes/${id}`, { method: "DELETE" });
+    await apiFetch(`/api/schemes/${id}`, { method: "DELETE" });
     fetchSchemes();
   };
 
   const handleConfirm = async () => {
-    await fetch(`/api/plans/${planId}/confirm`, {
+    await apiFetch(`/api/plans/${planId}/confirm`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "confirm" }),
@@ -112,7 +113,7 @@ export function SchemeList({
   };
 
   const handleRevoke = async () => {
-    await fetch(`/api/plans/${planId}/confirm`, {
+    await apiFetch(`/api/plans/${planId}/confirm`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "revoke" }),
@@ -133,7 +134,7 @@ export function SchemeList({
   const handleAnswer = useCallback(async (questionId: string, answer: string) => {
     if (!generationId) return;
     setCurrentQuestion(null);
-    const res = await fetch("/api/schemes/generate/answer", {
+    const res = await apiFetch("/api/schemes/generate/answer", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ generationId, questionId, answer }),
@@ -153,7 +154,7 @@ export function SchemeList({
     const currentCount = schemes.length;
 
     try {
-      const res = await fetch("/api/schemes/generate", {
+      const res = await apiFetch("/api/schemes/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ planId, provider, skills, model, interactive, idea, locale: isZh ? "zh" : "en" }),
@@ -239,7 +240,7 @@ export function SchemeList({
       await new Promise((r) => setTimeout(r, 1000));
       await fetchSchemes();
       onPlanStatusChange();
-      const newSchemes = await fetch(`/api/schemes?planId=${planId}`).then(r => r.json());
+      const newSchemes = await apiFetch(`/api/schemes?planId=${planId}`).then(r => r.json());
       // Check if schemes were created OR updated (count may stay the same if updated)
       if (newSchemes.length > 0) {
         stopLoading(isZh ? "方案生成完成" : "Scheme generated");

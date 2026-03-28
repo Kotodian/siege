@@ -14,6 +14,7 @@ import { MarkdownRenderer } from "@/components/markdown/markdown-renderer";
 import { useGlobalLoading } from "@/components/ui/global-loading";
 import { GitBranchIcon, PlusIcon, RefreshIcon, PlayIcon, SparklesIcon, HourglassIcon, XIcon } from "@/components/ui/icons";
 import { ProviderModelSelect, useDefaultProvider } from "@/components/ui/provider-model-select";
+import { apiFetch } from "@/lib/api";
 
 interface ScheduleItem {
   id: string;
@@ -91,7 +92,7 @@ export function ScheduleView({
   const [addForm, setAddForm] = useState({ title: "", description: "", startDate: "", endDate: "", estimatedHours: "2" });
 
   const fetchSchedule = async () => {
-    const res = await fetch(`/api/schedules?planId=${planId}`);
+    const res = await apiFetch(`/api/schedules?planId=${planId}`);
     const data = await res.json();
     setSchedule(data);
     // Sync selectedItem with fresh data
@@ -105,11 +106,11 @@ export function ScheduleView({
 
   useEffect(() => {
     fetchSchedule();
-    fetch(`/api/projects/${projectId}`)
+    apiFetch(`/api/projects/${projectId}`)
       .then(r => r.json())
       .then(p => {
         if (p.targetRepoPath) {
-          fetch(`/api/git?path=${encodeURIComponent(p.targetRepoPath)}`)
+          apiFetch(`/api/git?path=${encodeURIComponent(p.targetRepoPath)}`)
             .then(r => r.json())
             .then(setGitInfo)
             .catch(() => {});
@@ -141,7 +142,7 @@ export function ScheduleView({
       let firstRun = true;
       while (!controller.signal.aborted) {
         try {
-          const res = await fetch("/api/schedules/tick", { method: "POST", signal: controller.signal });
+          const res = await apiFetch("/api/schedules/tick", { method: "POST", signal: controller.signal });
           if (!res.ok) break;
           const data = await res.json();
           if (!data.executed || !data.nextTask) break;
@@ -188,7 +189,7 @@ export function ScheduleView({
       await fetchSchedule();
     }
     setAutoExecute(newValue);
-    await fetch("/api/schedules/auto-execute", {
+    await apiFetch("/api/schedules/auto-execute", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ scheduleId: schedule.id, enabled: newValue }),
@@ -206,9 +207,9 @@ export function ScheduleView({
     if (!branchName.trim()) return;
     setCreatingBranch(true);
     try {
-      const projRes = await fetch(`/api/projects/${projectId}`);
+      const projRes = await apiFetch(`/api/projects/${projectId}`);
       const proj = await projRes.json();
-      const res = await fetch("/api/git", {
+      const res = await apiFetch("/api/git", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -233,7 +234,7 @@ export function ScheduleView({
     setGenerating(true);
     startLoading(isZh ? "AI 正在生成排期..." : "AI generating schedule...");
     try {
-      const res = await fetch("/api/schedules/generate", {
+      const res = await apiFetch("/api/schedules/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ planId, locale: isZh ? "zh" : "en", ...(schedProvider && { provider: schedProvider }), ...(schedModel && { model: schedModel }) }),
@@ -291,7 +292,7 @@ export function ScheduleView({
   const handleRetry = async (item: ScheduleItem) => {
     if (item.status === "failed" || item.status === "rolled_back") {
       // Reset to pending first
-      await fetch(`/api/schedule-items/${item.id}`, {
+      await apiFetch(`/api/schedule-items/${item.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "pending", progress: 0, executionLog: "" }),
@@ -305,7 +306,7 @@ export function ScheduleView({
     setExecuting(itemId);
     startLoading(progressLabel || (isZh ? "AI 正在执行任务..." : "AI executing task..."));
     try {
-      const res = await fetch("/api/execute", {
+      const res = await apiFetch("/api/execute", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ itemId, skills, locale: isZh ? "zh" : "en", ...(provider && { provider }), ...(model && { model }) }),
@@ -360,7 +361,7 @@ export function ScheduleView({
       const newEnd = new Date(cursor.getTime() + duration);
       cursor = newEnd;
 
-      await fetch(`/api/schedule-items/${item.id}`, {
+      await apiFetch(`/api/schedule-items/${item.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -390,7 +391,7 @@ export function ScheduleView({
 
   const saveEdit = async () => {
     if (!editingItem) return;
-    await fetch(`/api/schedule-items/${editingItem}`, {
+    await apiFetch(`/api/schedule-items/${editingItem}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -407,7 +408,7 @@ export function ScheduleView({
 
   // Delete task
   const handleDeleteItem = async (itemId: string) => {
-    await fetch(`/api/schedule-items/${itemId}`, { method: "DELETE" });
+    await apiFetch(`/api/schedule-items/${itemId}`, { method: "DELETE" });
     setSelectedItem(null);
     await fetchSchedule();
   };
@@ -415,7 +416,7 @@ export function ScheduleView({
   // Add task
   const handleAddTask = async () => {
     if (!addForm.title.trim()) return;
-    await fetch("/api/schedules", {
+    await apiFetch("/api/schedules", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -434,7 +435,7 @@ export function ScheduleView({
   };
 
   const handleDateChange = async (taskId: string, start: Date, end: Date) => {
-    await fetch(`/api/schedule-items/${taskId}`, {
+    await apiFetch(`/api/schedule-items/${taskId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ startDate: start.toISOString(), endDate: end.toISOString() }),

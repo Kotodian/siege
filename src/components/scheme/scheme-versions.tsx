@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { VersionTimeline } from "./version-timeline";
 import { VersionDiffPanel } from "./version-diff-panel";
+import { apiFetch } from "@/lib/api";
 
 interface Version {
   id: string;
@@ -38,7 +39,7 @@ export function SchemeVersions({
 
   useEffect(() => {
     if (open) {
-      fetch(`/api/schemes/${schemeId}/versions`)
+      apiFetch(`/api/schemes/${schemeId}/versions`)
         .then((r) => r.json())
         .then((data: Version[]) => {
           setVersions(data);

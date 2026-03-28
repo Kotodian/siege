@@ -6,6 +6,7 @@ import type { StructuredScheme } from "@/lib/scheme-types";
 import hljs from "highlight.js";
 import { ArchitectureDiagram } from "@/components/ui/architecture-diagram";
 import { MindMap } from "@/components/ui/mind-map";
+import { apiFetch } from "@/lib/api";
 
 const severityColors: Record<string, { bg: string; border: string; text: string; dot: string }> = {
   high: { bg: "var(--error-container)", border: "var(--error)", text: "var(--error)", dot: "var(--error)" },
@@ -61,7 +62,7 @@ export function StructuredSchemeView({ data, schemeId, findings = [], onFindings
   const findingsFor = (prefix: string) => findings.filter(f => f.targetId?.startsWith(`${schemeId}:${prefix}`));
 
   const handleResolution = async (fId: string, resolution: "approved" | "rejected") => {
-    await fetch(`/api/review-items/${fId}`, {
+    await apiFetch(`/api/review-items/${fId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ resolution, resolved: resolution === "rejected" }),

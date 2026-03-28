@@ -9,6 +9,7 @@ import { MarkdownEditor } from "@/components/markdown/markdown-editor";
 import { RepoPicker } from "@/components/repo-picker/repo-picker";
 import { AnalyzePrompt } from "./analyze-prompt";
 import { IconPicker } from "@/components/ui/icon-picker";
+import { apiFetch } from "@/lib/api";
 
 interface CreateProjectDialogProps {
   open: boolean;
@@ -38,7 +39,7 @@ export function CreateProjectDialog({
 
   useEffect(() => {
     if (open) {
-      fetch("/api/github/auth")
+      apiFetch("/api/github/auth")
         .then((r) => r.json())
         .then((d) => setGithubAuthed(d.authenticated))
         .catch(() => setGithubAuthed(false));

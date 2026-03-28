@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { GitBranchIcon, CheckIcon, AlertTriangleIcon, SparklesIcon } from "@/components/ui/icons";
 import { useGlobalLoading } from "@/components/ui/global-loading";
 import { ProviderModelSelect, useDefaultProvider } from "@/components/ui/provider-model-select";
+import { apiFetch } from "@/lib/api";
 
 interface GitStatus {
   isGit: boolean;
@@ -61,7 +62,7 @@ export function PublishView({ planId, projectId }: PublishViewProps) {
     setDeploying(true);
     startLoading(isZh ? "AI 正在执行部署..." : "AI deploying...");
     try {
-      const res = await fetch("/api/execute/deploy", {
+      const res = await apiFetch("/api/execute/deploy", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -96,7 +97,7 @@ export function PublishView({ planId, projectId }: PublishViewProps) {
   };
 
   const fetchStatus = async () => {
-    const projRes = await fetch(`/api/projects/${projectId}`);
+    const projRes = await apiFetch(`/api/projects/${projectId}`);
     const proj = await projRes.json();
     if (!proj.targetRepoPath) {
       setGitStatus({ isGit: false });
@@ -105,8 +106,8 @@ export function PublishView({ planId, projectId }: PublishViewProps) {
     setRepoPath(proj.targetRepoPath);
 
     const [gitRes, prRes] = await Promise.all([
-      fetch(`/api/git?path=${encodeURIComponent(proj.targetRepoPath)}`),
-      fetch(`/api/git/pr?repoPath=${encodeURIComponent(proj.targetRepoPath)}`),
+      apiFetch(`/api/git?path=${encodeURIComponent(proj.targetRepoPath)}`),
+      apiFetch(`/api/git/pr?repoPath=${encodeURIComponent(proj.targetRepoPath)}`),
     ]);
     const git = await gitRes.json();
     setGitStatus(git);
@@ -119,7 +120,7 @@ export function PublishView({ planId, projectId }: PublishViewProps) {
     setPushing(true);
     setPushResult(null);
     try {
-      const res = await fetch("/api/git/push", {
+      const res = await apiFetch("/api/git/push", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ repoPath }),
@@ -142,7 +143,7 @@ export function PublishView({ planId, projectId }: PublishViewProps) {
     if (!prTitle.trim()) return;
     setCreatingPR(true);
     try {
-      const res = await fetch("/api/git/pr", {
+      const res = await apiFetch("/api/git/pr", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ repoPath, title: prTitle, body: prBody, baseBranch: prBase || undefined }),

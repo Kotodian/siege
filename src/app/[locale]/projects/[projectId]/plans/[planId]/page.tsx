@@ -24,6 +24,7 @@ import { ScheduleView } from "@/components/schedule/schedule-view";
 import { TestView } from "@/components/test/test-view";
 import { ReviewPanel } from "@/components/review/review-panel";
 import { PublishView } from "@/components/plan/publish-view";
+import { apiFetch } from "@/lib/api";
 
 interface Plan {
   id: string;
@@ -132,7 +133,7 @@ export default function PlanDetailPage({
   const isZh = t("common.back") === "返回";
 
   const fetchPlan = async () => {
-    const res = await fetch(`/api/plans/${planId}`);
+    const res = await apiFetch(`/api/plans/${planId}`);
     const data = await res.json();
     setPlan(data);
   };
@@ -156,7 +157,7 @@ export default function PlanDetailPage({
   };
 
   const saveEdit = async () => {
-    await fetch(`/api/plans/${planId}`, {
+    await apiFetch(`/api/plans/${planId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: editName, description: editDesc }),
@@ -439,7 +440,7 @@ export default function PlanDetailPage({
                 onClick={async () => {
                   setCompleting(true);
                   try {
-                    await fetch(`/api/plans/${planId}`, {
+                    await apiFetch(`/api/plans/${planId}`, {
                       method: "PUT",
                       headers: { "Content-Type": "application/json" },
                       body: JSON.stringify({ status: "completed" }),

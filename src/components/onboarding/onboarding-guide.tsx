@@ -9,6 +9,7 @@ import { RepoPicker } from "@/components/repo-picker/repo-picker";
 import { AnalyzePrompt } from "@/components/project/analyze-prompt";
 import { IconPicker } from "@/components/ui/icon-picker";
 import { ClipboardIcon, SearchIcon, BarChartIcon, ZapIcon, CodeIcon, CheckCircleIcon, AlertTriangleIcon } from "@/components/ui/icons";
+import { apiFetch } from "@/lib/api";
 
 function GitHubIcon({ className }: { className?: string }) {
   return (
@@ -82,12 +83,12 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
   // Auto-detect all configs on mount
   useEffect(() => {
     // Check GitHub
-    fetch("/api/github/auth")
+    apiFetch("/api/github/auth")
       .then((r) => r.json())
       .then((d) => setGithubStatus(d))
       .catch(() => {});
     // Check AI
-    fetch("/api/ai-config")
+    apiFetch("/api/ai-config")
       .then((r) => r.json())
       .then((d) => {
         setAiStatus(d);
@@ -104,7 +105,7 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
   const checkGithubAuth = async () => {
     setCheckingGithub(true);
     try {
-      const res = await fetch("/api/github/auth");
+      const res = await apiFetch("/api/github/auth");
       setGithubStatus(await res.json());
     } catch {
       setGithubStatus({ authenticated: false, ghInstalled: false, username: "" });
@@ -118,7 +119,7 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
     setGithubLoginError(null);
     setGithubLoginCode(null);
     try {
-      const res = await fetch("/api/github/auth", { method: "POST" });
+      const res = await apiFetch("/api/github/auth", { method: "POST" });
       const data = await res.json();
       if (data.status === "already_authenticated") {
         setGithubStatus({ authenticated: true, ghInstalled: true, username: data.username });
@@ -137,7 +138,7 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
         // Poll for completion
         const poll = setInterval(async () => {
           try {
-            const r = await fetch("/api/github/auth");
+            const r = await apiFetch("/api/github/auth");
             const s = await r.json();
             if (s.authenticated) {
               clearInterval(poll);
@@ -168,7 +169,7 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
   const checkAiConfig = async () => {
     setCheckingAi(true);
     try {
-      const res = await fetch("/api/ai-config");
+      const res = await apiFetch("/api/ai-config");
       const data = await res.json();
       setAiStatus(data);
       setClaudeStatus(data.claude || null);
@@ -187,7 +188,7 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
 
     setSavingProvider(provider);
     try {
-      await fetch("/api/ai-config", {
+      await apiFetch("/api/ai-config", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -534,7 +535,7 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
                         });
                         (e.currentTarget as HTMLElement).style.borderColor = "var(--success)";
                         (e.currentTarget as HTMLElement).style.background = "rgba(34,197,94,0.1)";
-                        await fetch("/api/settings", {
+                        await apiFetch("/api/settings", {
                           method: "PUT",
                           headers: { "Content-Type": "application/json" },
                           body: JSON.stringify({ default_provider: p.id }),

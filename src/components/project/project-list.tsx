@@ -7,6 +7,7 @@ import { ProjectCard } from "./project-card";
 import { CreateProjectDialog } from "./create-project-dialog";
 import { OnboardingGuide } from "@/components/onboarding/onboarding-guide";
 import { getRecentProjectIds } from "@/lib/recent-projects";
+import { apiFetch } from "@/lib/api";
 
 interface Project {
   id: string;
@@ -28,7 +29,7 @@ export function ProjectList({ locale }: ProjectListProps) {
   const [loaded, setLoaded] = useState(false);
 
   const fetchProjects = async () => {
-    const res = await fetch("/api/projects");
+    const res = await apiFetch("/api/projects");
     const data = await res.json();
     setProjects(data);
     setLoaded(true);
@@ -45,7 +46,7 @@ export function ProjectList({ locale }: ProjectListProps) {
     guidelines: string;
     targetRepoPath: string;
   }) => {
-    await fetch("/api/projects", {
+    await apiFetch("/api/projects", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -54,7 +55,7 @@ export function ProjectList({ locale }: ProjectListProps) {
   };
 
   const handleDelete = async (id: string) => {
-    await fetch(`/api/projects/${id}`, { method: "DELETE" });
+    await apiFetch(`/api/projects/${id}`, { method: "DELETE" });
     fetchProjects();
   };
 

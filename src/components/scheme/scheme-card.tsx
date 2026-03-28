@@ -15,6 +15,7 @@ import { SchemeVersions } from "./scheme-versions";
 import { useGlobalLoading } from "@/components/ui/global-loading";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { FolderOpenIcon, PencilIcon, TrashIcon, ClipboardIcon, CheckIcon, SparklesIcon, HourglassIcon } from "@/components/ui/icons";
+import { apiFetch } from "@/lib/api";
 
 interface Scheme {
   id: string;
@@ -71,7 +72,7 @@ export function SchemeCard({
     setConverting(true);
     startLoading(isZh ? "正在转换为结构化格式..." : "Converting to structured format...");
     try {
-      const res = await fetch("/api/schemes/convert", {
+      const res = await apiFetch("/api/schemes/convert", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ schemeId: scheme.id, locale: isZh ? "zh" : "en" }),
@@ -95,7 +96,7 @@ export function SchemeCard({
       updateContent(isZh
         ? `AI 正在修改方案，已等待 ${(i + 1) * 3} 秒...`
         : `AI modifying scheme... ${(i + 1) * 3}s elapsed.`);
-      const res = await fetch(`/api/schemes/${scheme.id}`);
+      const res = await apiFetch(`/api/schemes/${scheme.id}`);
       if (res.ok) {
         const data = await res.json();
         if (data.updatedAt !== originalUpdatedAt) {
@@ -116,7 +117,7 @@ export function SchemeCard({
     setChatting(true);
 
     try {
-      const res = await fetch("/api/schemes/chat", {
+      const res = await apiFetch("/api/schemes/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ schemeId: scheme.id, message }),
@@ -140,7 +141,7 @@ export function SchemeCard({
             { role: "ai", text: isZh ? "修改完成" : "Done" },
           ]);
           // Refetch to get the saved version
-          const schemeRes = await fetch(`/api/schemes/${scheme.id}`);
+          const schemeRes = await apiFetch(`/api/schemes/${scheme.id}`);
           const updated = schemeRes.ok ? await schemeRes.json() : null;
           onUpdate(scheme.id, {
             title: updated?.title || scheme.title,

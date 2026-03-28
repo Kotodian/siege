@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { MarkdownEditor } from "@/components/markdown/markdown-editor";
 import { useGlobalLoading } from "@/components/ui/global-loading";
+import { apiFetch } from "@/lib/api";
 
 interface CreatePlanDialogProps {
   open: boolean;
@@ -33,7 +34,7 @@ export function CreatePlanDialog({
 
     startLoading(isZh ? "AI 正在生成标题..." : "AI generating title...");
     try {
-      const res = await fetch("/api/plans/suggest-title", {
+      const res = await apiFetch("/api/plans/suggest-title", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ description }),

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useGlobalLoading } from "@/components/ui/global-loading";
 import { LightbulbIcon, XIcon, HourglassIcon, HelpCircleIcon, PencilIcon } from "@/components/ui/icons";
 import { ProviderModelSelect, useDefaultProvider } from "@/components/ui/provider-model-select";
+import { apiFetch } from "@/lib/api";
 
 interface Section {
   title: string;
@@ -127,7 +128,7 @@ function FindingCard({
   const isPending = !f.resolution;
 
   const handleResolution = async (resolution: "approved" | "rejected") => {
-    await fetch(`/api/review-items/${f.id}`, {
+    await apiFetch(`/api/review-items/${f.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -264,7 +265,7 @@ export function SchemeSections({
 
     // Save to DB
     if (schemeId) {
-      await fetch(`/api/schemes/${schemeId}`, {
+      await apiFetch(`/api/schemes/${schemeId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ content: newFullContent }),
@@ -275,7 +276,7 @@ export function SchemeSections({
 
   const streamSectionEdit = async (prompt: string, sectionIndex: number): Promise<boolean> => {
     if (!schemeId) return false;
-    const res = await fetch("/api/schemes/chat", {
+    const res = await apiFetch("/api/schemes/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ schemeId, message: prompt, sectionOnly: true, ...(editProvider && { provider: editProvider }), ...(editModel && { model: editModel }) }),
@@ -315,7 +316,7 @@ export function SchemeSections({
 
     const ok = await streamSectionEdit(prompt, sectionIndex);
     if (ok) {
-      await fetch(`/api/review-items/${finding.id}`, {
+      await apiFetch(`/api/review-items/${finding.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ resolved: true }),
@@ -330,7 +331,7 @@ export function SchemeSections({
     setExplaining(sectionIndex);
     setExplanation((prev) => ({ ...prev, [sectionIndex]: isZh ? "AI 正在解释..." : "AI explaining..." }));
     try {
-      const res = await fetch("/api/schemes/chat", {
+      const res = await apiFetch("/api/schemes/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

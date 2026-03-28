@@ -29,6 +29,7 @@ function CollapsibleSection({ title, icon, defaultOpen = false, badge, children 
   );
 }
 import { BotIcon, MessageSquareIcon, PackageIcon, SettingsIcon, TargetIcon, InboxIcon, LayoutGridIcon, BrainIcon, GlobeIcon, SearchIcon, CalendarIcon, ZapIcon, FlaskIcon, FileTextIcon, AnthropicLogo, OpenAILogo, ZhipuLogo, ClaudeCodeLogo, CodexLogo } from "@/components/ui/icons";
+import { apiFetch } from "@/lib/api";
 
 interface ProviderStatus {
   configured: boolean;
@@ -103,15 +104,15 @@ export default function SettingsPage({
   const [testResult, setTestResult] = useState<Record<string, boolean | null>>({});
 
   useEffect(() => {
-    fetch("/api/ai-config").then((r) => r.json()).then(setAiConfig);
-    fetch("/api/settings").then((r) => r.json()).then(setSettings);
-    fetch("/api/skills").then((r) => r.json()).then(setSkills);
+    apiFetch("/api/ai-config").then((r) => r.json()).then(setAiConfig);
+    apiFetch("/api/settings").then((r) => r.json()).then(setSettings);
+    apiFetch("/api/skills").then((r) => r.json()).then(setSkills);
   }, []);
 
   const saveProvider = async (providerId: string) => {
     setSavingProvider(true);
     if (editKey || editUrl !== undefined) {
-      await fetch("/api/ai-config", {
+      await apiFetch("/api/ai-config", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -123,14 +124,14 @@ export default function SettingsPage({
     }
     // Save model setting
     if (editModel) {
-      await fetch("/api/settings", {
+      await apiFetch("/api/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ [`default_model_${providerId}`]: editModel }),
       });
       setSettings((s) => ({ ...s, [`default_model_${providerId}`]: editModel }));
     }
-    const res = await fetch("/api/ai-config");
+    const res = await apiFetch("/api/ai-config");
     setAiConfig(await res.json());
     setEditingProvider(null);
     setEditKey("");
@@ -140,7 +141,7 @@ export default function SettingsPage({
   };
 
   const saveSettings = async () => {
-    await fetch("/api/settings", {
+    await apiFetch("/api/settings", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(settings),
@@ -206,7 +207,7 @@ export default function SettingsPage({
           ) : aiConfig?.claude?.installed ? (
             <div className="mt-2 flex items-center gap-2">
               <code className="text-xs px-2 py-1 rounded font-mono select-all" style={{ background: "var(--background)", color: "var(--on-surface)" }}>claude login</code>
-              <Button variant="ghost" size="sm" onClick={() => fetch("/api/ai-config").then(r => r.json()).then(setAiConfig)}>
+              <Button variant="ghost" size="sm" onClick={() => apiFetch("/api/ai-config").then(r => r.json()).then(setAiConfig)}>
                 {isZh ? "刷新状态" : "Refresh"}
               </Button>
             </div>
@@ -249,7 +250,7 @@ export default function SettingsPage({
           ) : aiConfig?.codex?.installed ? (
             <div className="mt-2 flex items-center gap-2">
               <code className="text-xs px-2 py-1 rounded font-mono select-all" style={{ background: "var(--background)", color: "var(--on-surface)" }}>codex login</code>
-              <Button variant="ghost" size="sm" onClick={() => fetch("/api/ai-config").then(r => r.json()).then(setAiConfig)}>
+              <Button variant="ghost" size="sm" onClick={() => apiFetch("/api/ai-config").then(r => r.json()).then(setAiConfig)}>
                 {isZh ? "刷新状态" : "Refresh"}
               </Button>
             </div>
@@ -310,7 +311,7 @@ export default function SettingsPage({
                           onClick={async () => {
                             setTestingProvider(prov.id);
                             setTestResult((prev) => ({ ...prev, [prov.id]: null }));
-                            const res = await fetch("/api/ai-config/test", {
+                            const res = await apiFetch("/api/ai-config/test", {
                               method: "POST",
                               headers: { "Content-Type": "application/json" },
                               body: JSON.stringify({ provider: prov.id }),
@@ -328,16 +329,16 @@ export default function SettingsPage({
                           variant="ghost"
                           size="sm"
                           onClick={async () => {
-                            await fetch(`/api/ai-config?provider=${prov.id}`, { method: "DELETE" });
+                            await apiFetch(`/api/ai-config?provider=${prov.id}`, { method: "DELETE" });
                             const newSettings = { ...settings };
                             delete newSettings[`default_model_${prov.id}`];
                             setSettings(newSettings);
-                            await fetch("/api/settings", {
+                            await apiFetch("/api/settings", {
                               method: "PUT",
                               headers: { "Content-Type": "application/json" },
                               body: JSON.stringify({ [`default_model_${prov.id}`]: "" }),
                             });
-                            const res = await fetch("/api/ai-config");
+                            const res = await apiFetch("/api/ai-config");
                             setAiConfig(await res.json());
                           }}
                           className="text-[var(--error)] hover:text-[var(--error)] hover:bg-[var(--error-container)]"
@@ -497,7 +498,7 @@ export default function SettingsPage({
         skillsBySource={skillsBySource}
         isZh={isZh}
         hasAi={!!(aiConfig?.claude?.loggedIn || aiConfig?.anthropic?.configured || aiConfig?.openai?.configured || aiConfig?.glm?.configured)}
-          onSkillsChange={() => fetch("/api/skills").then((r) => r.json()).then(setSkills)}
+          onSkillsChange={() => apiFetch("/api/skills").then((r) => r.json()).then(setSkills)}
         />
       </CollapsibleSection>
     </div>
@@ -528,7 +529,7 @@ function SkillsSectionInner({
     setResult(null);
     startLoading(isZh ? "AI 正在生成技能..." : "Generating skill...");
     try {
-      const res = await fetch("/api/skills/generate", {
+      const res = await apiFetch("/api/skills/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt }),
@@ -570,7 +571,7 @@ function SkillsSectionInner({
   };
 
   const handleDelete = async (name: string) => {
-    await fetch(`/api/skills?name=${encodeURIComponent(name)}`, { method: "DELETE" });
+    await apiFetch(`/api/skills?name=${encodeURIComponent(name)}`, { method: "DELETE" });
     onSkillsChange();
   };
 
@@ -711,7 +712,7 @@ function ImportSourcesSectionInner({ isZh }: { isZh: boolean }) {
   const [validationResult, setValidationResult] = useState<Record<string, boolean | null>>({});
 
   const fetchConfigs = () => {
-    fetch("/api/import-sources")
+    apiFetch("/api/import-sources")
       .then((r) => r.json())
       .then(setConfigs);
   };
@@ -722,7 +723,7 @@ function ImportSourcesSectionInner({ isZh }: { isZh: boolean }) {
 
   const handleAdd = async () => {
     setSaving(true);
-    await fetch("/api/import-sources", {
+    await apiFetch("/api/import-sources", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ source: addSource, config: addFields }),
@@ -734,14 +735,14 @@ function ImportSourcesSectionInner({ isZh }: { isZh: boolean }) {
   };
 
   const handleDelete = async (id: string) => {
-    await fetch(`/api/import-sources?id=${id}`, { method: "DELETE" });
+    await apiFetch(`/api/import-sources?id=${id}`, { method: "DELETE" });
     fetchConfigs();
   };
 
   const handleValidate = async (id: string) => {
     setValidating(id);
     setValidationResult((prev) => ({ ...prev, [id]: null }));
-    const res = await fetch(`/api/import-sources/${id}/validate`, {
+    const res = await apiFetch(`/api/import-sources/${id}/validate`, {
       method: "POST",
     });
     const data = await res.json();
@@ -1013,20 +1014,20 @@ function MemorySectionInner({ isZh }: { isZh: boolean }) {
   const [form, setForm] = useState({ title: "", content: "", type: "user" });
 
   const fetch_ = () => {
-    fetch("/api/memories").then(r => r.json()).then(setItems).catch(() => {});
+    apiFetch("/api/memories").then(r => r.json()).then(setItems).catch(() => {});
   };
   useEffect(() => { fetch_(); }, []);
 
   const handleSave = async () => {
     if (!form.title.trim()) return;
     if (editId) {
-      await fetch(`/api/memories/${editId}`, {
+      await apiFetch(`/api/memories/${editId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       });
     } else {
-      await fetch("/api/memories", {
+      await apiFetch("/api/memories", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...form, source: "manual" }),
@@ -1039,7 +1040,7 @@ function MemorySectionInner({ isZh }: { isZh: boolean }) {
   };
 
   const handleDelete = async (id: string) => {
-    await fetch(`/api/memories/${id}`, { method: "DELETE" });
+    await apiFetch(`/api/memories/${id}`, { method: "DELETE" });
     fetch_();
   };
 

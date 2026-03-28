@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { AlertTriangleIcon } from "@/components/ui/icons";
+import { apiFetch } from "@/lib/api";
 
 interface FileInfo {
   filePath: string;
@@ -48,7 +49,7 @@ export function RollbackDialog({ open, itemId, itemTitle, itemOrder, onClose, on
       setLoading(true);
       setError("");
       setPreflight(null);
-      fetch("/api/rollback", {
+      apiFetch("/api/rollback", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ itemId, dryRun: true }),
@@ -70,7 +71,7 @@ export function RollbackDialog({ open, itemId, itemTitle, itemOrder, onClose, on
     setRolling(true);
     setError("");
     try {
-      const res = await fetch("/api/rollback", {
+      const res = await apiFetch("/api/rollback", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ itemId, confirm: true }),

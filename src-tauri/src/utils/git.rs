@@ -1,12 +1,6 @@
 use git2::{BranchType, Repository};
 use serde_json::{json, Value};
 use std::path::Path;
-use super::process::exec;
-
-/// Execute a git command in the given repo directory (fallback for complex operations).
-pub async fn exec_git(repo_path: &str, args: &[&str]) -> Result<String, String> {
-    exec("git", args, repo_path).await
-}
 
 /// Check if a directory is a git repo and return branch info using git2.
 pub async fn get_git_info(repo_path: &str) -> Value {
@@ -131,10 +125,57 @@ fn clone_repo_sync(url: &str, target: &str) -> Result<(), String> {
     Ok(())
 }
 
-/// Push current branch to remote.
-/// Kept as shell exec because git2 push requires complex credential callbacks.
-pub async fn push(repo_path: &str, remote: &str, branch: &str) -> Result<String, String> {
-    exec_git(repo_path, &["push", "-u", remote, branch]).await
+/// Push current branch to remote using git2 with credential callbacks.
+pub async fn push(repo_path: &str, remote_name: &str, branch: &str) -> Result<String, String> {
+    let path = repo_path.to_string();
+    let remote = remote_name.to_string();
+    let branch = branch.to_string();
+    tokio::task::spawn_blocking(move || push_sync(&path, &remote, &branch))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+fn push_sync(repo_path: &str, remote_name: &str, branch: &str) -> Result<String, String> {
+    let repo = Repository::open(repo_path).map_err(|e| e.to_string())?;
+    let mut remote = repo.find_remote(remote_name).map_err(|e| e.to_string())?;
+    let refspec = format!("refs/heads/{}:refs/heads/{}", branch, branch);
+
+    let mut callbacks = git2::RemoteCallbacks::new();
+    callbacks.credentials(|_url, username_from_url, allowed_types| {
+        // Try SSH agent first
+        if allowed_types.contains(git2::CredentialType::SSH_KEY) {
+            if let Some(username) = username_from_url {
+                return git2::Cred::ssh_key_from_agent(username);
+            }
+        }
+        // Try default credentials (macOS Keychain, credential helpers)
+        if allowed_types.contains(git2::CredentialType::USER_PASS_PLAINTEXT) {
+            return git2::Cred::credential_helper(
+                &repo.config().unwrap_or_else(|_| git2::Config::open_default().unwrap()),
+                _url,
+                username_from_url,
+            );
+        }
+        // Try default SSH key
+        if allowed_types.contains(git2::CredentialType::SSH_KEY) {
+            let user = username_from_url.unwrap_or("git");
+            return git2::Cred::ssh_key(
+                user,
+                None,
+                std::path::Path::new(&format!("{}/.ssh/id_rsa", dirs::home_dir().unwrap_or_default().display())),
+                None,
+            );
+        }
+        Err(git2::Error::from_str("no suitable credentials found"))
+    });
+
+    let mut push_options = git2::PushOptions::new();
+    push_options.remote_callbacks(callbacks);
+
+    remote.push(&[&refspec], Some(&mut push_options))
+        .map_err(|e| format!("Push failed: {}", e))?;
+
+    Ok(format!("Pushed {} to {}", branch, remote_name))
 }
 
 /// Get the HEAD commit hash using git2.

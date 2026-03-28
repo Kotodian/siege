@@ -20,6 +20,7 @@ pub mod git;
 pub mod filesystem;
 pub mod execute;
 pub mod rollback;
+pub mod github;
 
 use axum::{routing::{delete, get, post, put}, Router};
 use tower_http::cors::{CorsLayer, Any};
@@ -105,6 +106,9 @@ pub fn create_router(state: AppState) -> Router {
         .route("/api/execute/{taskId}", delete(execute::cancel_task))
         // Rollback
         .route("/api/rollback", post(rollback::handle))
+        // GitHub
+        .route("/api/github", get(github::list_repos).post(github::clone_repo))
+        .route("/api/github/auth", get(github::auth_status).post(github::auth_login))
         .with_state(state)
         .layer(cors)
 }

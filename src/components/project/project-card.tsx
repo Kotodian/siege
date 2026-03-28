@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { TimeAgo } from "@/components/ui/time-ago";
+import { TailscaleLogo } from "@/components/ui/icons";
 import { addRecentProject } from "@/lib/recent-projects";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 
@@ -45,7 +46,7 @@ export function ProjectCard({ project, locale, onDelete }: ProjectCardProps) {
           {project.remoteEnabled && (
             <span className="text-[10px] px-1.5 py-0.5 rounded font-medium"
               style={{ background: "rgba(192,193,255,0.12)", color: "var(--primary)" }}>
-              🌐 {project.remoteHost}
+              <TailscaleLogo size={12} className="inline-block align-[-1px]" /> {project.remoteHost}
             </span>
           )}
         </div>

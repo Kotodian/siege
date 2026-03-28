@@ -474,3 +474,19 @@ export function CodexLogo({ size = 16, className }: IconProps) {
     </svg>
   );
 }
+
+export function TailscaleLogo({ size = 16, className }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className}>
+      <circle cx="3.07" cy="3" r="3" opacity="0.2" />
+      <circle cx="12" cy="3" r="3" opacity="0.2" />
+      <circle cx="20.93" cy="3" r="3" opacity="0.2" />
+      <circle cx="3.07" cy="12" r="3" />
+      <circle cx="12" cy="12" r="3" />
+      <circle cx="20.93" cy="12" r="3" />
+      <circle cx="3.07" cy="21" r="3" opacity="0.2" />
+      <circle cx="12" cy="21" r="3" />
+      <circle cx="20.93" cy="21" r="3" opacity="0.2" />
+    </svg>
+  );
+}

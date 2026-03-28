@@ -9,7 +9,7 @@ import { RepoPicker } from "@/components/repo-picker/repo-picker";
 import { AnalyzePrompt } from "@/components/project/analyze-prompt";
 import { IconPicker } from "@/components/ui/icon-picker";
 import { openExternal } from "@/lib/open-external";
-import { ClipboardIcon, SearchIcon, BarChartIcon, ZapIcon, CodeIcon, CheckCircleIcon, AlertTriangleIcon } from "@/components/ui/icons";
+import { ClipboardIcon, SearchIcon, BarChartIcon, ZapIcon, CodeIcon, CheckCircleIcon, AlertTriangleIcon, TailscaleLogo } from "@/components/ui/icons";
 import { apiFetch } from "@/lib/api";
 
 function GitHubIcon({ className }: { className?: string }) {
@@ -458,7 +458,7 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
           <div className="space-y-6">
             <div className="text-center">
               <h2 className="text-2xl font-bold inline-flex items-center gap-2 justify-center w-full">
-                🌐 Tailscale
+                <TailscaleLogo size={28} /> Tailscale
               </h2>
               <p className="text-[var(--outline)] mt-1">
                 {isZh
@@ -503,7 +503,7 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
                 </div>
               ) : (
                 <div className="text-center space-y-4 py-4">
-                  <div className="text-4xl">🌐</div>
+                  <div className="flex justify-center"><TailscaleLogo size={40} /></div>
                   <p className="text-sm" style={{ color: "var(--outline)" }}>
                     {tsStatus?.error || (isZh ? "Tailscale 未连接" : "Tailscale not connected")}
                   </p>

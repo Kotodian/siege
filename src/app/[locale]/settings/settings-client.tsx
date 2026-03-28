@@ -28,7 +28,7 @@ function CollapsibleSection({ title, icon, defaultOpen = false, badge, children 
     </section>
   );
 }
-import { BotIcon, MessageSquareIcon, PackageIcon, SettingsIcon, TargetIcon, InboxIcon, LayoutGridIcon, BrainIcon, GlobeIcon, SearchIcon, CalendarIcon, ZapIcon, FlaskIcon, FileTextIcon, AnthropicLogo, OpenAILogo, ZhipuLogo, ClaudeCodeLogo, CodexLogo } from "@/components/ui/icons";
+import { BotIcon, MessageSquareIcon, PackageIcon, SettingsIcon, TargetIcon, InboxIcon, LayoutGridIcon, BrainIcon, GlobeIcon, SearchIcon, CalendarIcon, ZapIcon, FlaskIcon, FileTextIcon, AnthropicLogo, OpenAILogo, ZhipuLogo, ClaudeCodeLogo, CodexLogo, TailscaleLogo } from "@/components/ui/icons";
 import { apiFetch } from "@/lib/api";
 
 interface ProviderStatus {
@@ -502,7 +502,7 @@ export default function SettingsClient({
       </CollapsibleSection>
 
       {/* Tailscale */}
-      <CollapsibleSection title="Tailscale" icon={<GlobeIcon size={18} />}>
+      <CollapsibleSection title="Tailscale" icon={<TailscaleLogo size={18} />}>
         <TailscaleSectionInner isZh={isZh} />
       </CollapsibleSection>
     </div>

@@ -140,20 +140,40 @@ export default function SettingsClient({
   };
 
   const [detectResult, setDetectResult] = useState<string | null>(null);
+  const [detectProvider, setDetectProvider] = useState<string | null>(null);
 
-  const handleRedetect = async () => {
+  const handleRedetect = async (provider?: "claude" | "codex") => {
     const res = await apiFetch("/api/ai-config");
     const data = await res.json();
     setAiConfig(data);
-    const lines = [
-      `Claude Code: installed=${data.claude?.installed} loggedIn=${data.claude?.loggedIn}`,
-      data.claude?.debug ? `  debug: ${data.claude.debug}` : null,
-      `Codex: installed=${data.codex?.installed} loggedIn=${data.codex?.loggedIn}`,
-      data.codex?.debug ? `  debug: ${data.codex.debug}` : null,
-      `Anthropic: configured=${data.anthropic?.configured}`,
-      `OpenAI: configured=${data.openai?.configured}`,
-      `GLM: configured=${data.glm?.configured}`,
-    ].filter(Boolean).join("\n");
+    let lines: string;
+    if (provider === "claude") {
+      lines = [
+        `installed: ${data.claude?.installed}`,
+        `loggedIn: ${data.claude?.loggedIn}`,
+        data.claude?.email ? `email: ${data.claude.email}` : null,
+        data.claude?.subscriptionType ? `subscription: ${data.claude.subscriptionType}` : null,
+        data.claude?.debug ? `debug: ${data.claude.debug}` : null,
+      ].filter(Boolean).join("\n");
+    } else if (provider === "codex") {
+      lines = [
+        `installed: ${data.codex?.installed}`,
+        `loggedIn: ${data.codex?.loggedIn}`,
+        data.codex?.method ? `method: ${data.codex.method}` : null,
+        data.codex?.debug ? `debug: ${data.codex.debug}` : null,
+      ].filter(Boolean).join("\n");
+    } else {
+      lines = [
+        `Claude Code: installed=${data.claude?.installed} loggedIn=${data.claude?.loggedIn}`,
+        data.claude?.debug ? `  debug: ${data.claude.debug}` : null,
+        `Codex: installed=${data.codex?.installed} loggedIn=${data.codex?.loggedIn}`,
+        data.codex?.debug ? `  debug: ${data.codex.debug}` : null,
+        `Anthropic: configured=${data.anthropic?.configured}`,
+        `OpenAI: configured=${data.openai?.configured}`,
+        `GLM: configured=${data.glm?.configured}`,
+      ].filter(Boolean).join("\n");
+    }
+    setDetectProvider(provider === "claude" ? "Claude Code" : provider === "codex" ? "Codex" : null);
     setDetectResult(lines);
   };
 
@@ -216,7 +236,7 @@ export default function SettingsClient({
               <button
                 className="text-[10px] px-1.5 py-0.5 rounded hover:opacity-80"
                 style={{ color: "var(--primary)", background: "var(--surface-container)" }}
-                onClick={handleRedetect}
+                onClick={() => handleRedetect("claude")}
               >
                 {isZh ? "重新检测" : "Re-detect"}
               </button>
@@ -266,7 +286,7 @@ export default function SettingsClient({
               <button
                 className="text-[10px] px-1.5 py-0.5 rounded hover:opacity-80"
                 style={{ color: "var(--primary)", background: "var(--surface-container)" }}
-                onClick={handleRedetect}
+                onClick={() => handleRedetect("codex")}
               >
                 {isZh ? "重新检测" : "Re-detect"}
               </button>
@@ -543,7 +563,7 @@ export default function SettingsClient({
       <Dialog
         open={!!detectResult}
         onClose={() => setDetectResult(null)}
-        title={isZh ? "检测结果" : "Detection Result"}
+        title={detectProvider ? (isZh ? `${detectProvider} 检测结果` : `${detectProvider} Detection Result`) : (isZh ? "检测结果" : "Detection Result")}
       >
         <pre className="text-xs p-3 rounded overflow-auto max-h-60 whitespace-pre-wrap" style={{ background: "var(--background)", color: "var(--on-surface)" }}>
           {detectResult}

@@ -842,10 +842,15 @@ export function OnboardingGuide({ locale, onComplete }: OnboardingGuideProps) {
               </div>
             </div>
             <div className="flex justify-between">
-              <Button variant="ghost" onClick={() => setStep("create")}>{t("common.back")}</Button>
-              <Button size="lg" onClick={handleCreate} disabled={!name || !targetRepoPath}>
-                {t("common.create")}
-              </Button>
+              <Button variant="ghost" onClick={() => setStep("ai")}>{t("common.back")}</Button>
+              <div className="flex gap-2">
+                <Button variant="ghost" onClick={() => onComplete({ name: "", icon: "📁", description: "", guidelines: "", targetRepoPath: "" })}>
+                  {isZh ? "跳过" : "Skip"}
+                </Button>
+                <Button size="lg" onClick={handleCreate} disabled={!name || !targetRepoPath}>
+                  {t("common.create")}
+                </Button>
+              </div>
             </div>
           </div>
         )}

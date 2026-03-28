@@ -200,9 +200,7 @@ export default function SettingsClient({
                 style={{ color: "var(--primary)", background: "var(--surface-container)" }}
                 onClick={async () => {
                   const res = await apiFetch("/api/ai-config");
-                  const data = await res.json();
-                  setAiConfig(data);
-                  alert(`claude: ${JSON.stringify(data.claude)}\ncodex: ${JSON.stringify(data.codex)}`);
+                  setAiConfig(await res.json());
                 }}
               >
                 {isZh ? "重新检测" : "Re-detect"}
@@ -255,9 +253,7 @@ export default function SettingsClient({
                 style={{ color: "var(--primary)", background: "var(--surface-container)" }}
                 onClick={async () => {
                   const res = await apiFetch("/api/ai-config");
-                  const data = await res.json();
-                  setAiConfig(data);
-                  alert(`codex: ${JSON.stringify(data.codex)}`);
+                  setAiConfig(await res.json());
                 }}
               >
                 {isZh ? "重新检测" : "Re-detect"}

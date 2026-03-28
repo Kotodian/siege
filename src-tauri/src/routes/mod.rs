@@ -16,6 +16,9 @@ pub mod backup;
 pub mod import;
 pub mod ai_config;
 pub mod archive;
+pub mod git;
+pub mod filesystem;
+pub mod rollback;
 
 use axum::{routing::{get, post, put}, Router};
 use tower_http::cors::{CorsLayer, Any};
@@ -77,6 +80,17 @@ pub fn create_router(state: AppState) -> Router {
         .route("/api/ai-config", get(ai_config::get_config).put(ai_config::update_config))
         // Archive
         .route("/api/archive", post(archive::archive))
+        // Git
+        .route("/api/git", get(git::info).post(git::checkout))
+        .route("/api/git/clone", post(git::clone_repo))
+        .route("/api/git/push", post(git::push))
+        .route("/api/git/pr", get(git::list_prs).post(git::create_pr))
+        // Filesystem
+        .route("/api/filesystem", get(filesystem::list_dir))
+        // Snapshots backfill
+        .route("/api/snapshots/backfill", post(snapshots::backfill))
+        // Rollback
+        .route("/api/rollback", post(rollback::handle))
         .with_state(state)
         .layer(cors)
 }

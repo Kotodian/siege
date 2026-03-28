@@ -6,6 +6,7 @@ use tauri::Manager;
 mod state;
 mod db;
 mod routes;
+mod utils;
 
 fn find_available_port() -> u16 {
     let listener = TcpListener::bind("127.0.0.1:0").expect("Failed to bind");

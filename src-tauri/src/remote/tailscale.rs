@@ -159,15 +159,55 @@ fn make_auth_header(token: &Option<String>) -> String {
 }
 
 /// Make an HTTP GET request to the Tailscale local API.
+/// Falls back to `tailscale` CLI if socket/TCP connection fails (Mac App Store sandbox).
 async fn tailscale_api(path: &str) -> Result<Value, String> {
-    let conn = connect_tailscale().await?;
+    // Try socket/TCP first
+    match connect_tailscale().await {
+        Ok(conn) => return tailscale_api_via_stream(conn, "GET", path, "").await,
+        Err(_) => {}
+    }
+
+    // Fallback: use tailscale CLI (required for Mac App Store version due to XPC sandbox)
+    if path == "/localapi/v0/status" {
+        return tailscale_cli_status().await;
+    }
+
+    Err("Cannot connect to Tailscale daemon".to_string())
+}
+
+/// Get status via `tailscale status --json` CLI fallback.
+async fn tailscale_cli_status() -> Result<Value, String> {
+    let output = tokio::process::Command::new("tailscale")
+        .args(["status", "--json"])
+        .output()
+        .await
+        .map_err(|e| format!("tailscale CLI not found: {}", e))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(format!("tailscale status failed: {}", stderr));
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    serde_json::from_str(&stdout).map_err(|e| format!("JSON parse error: {}", e))
+}
+
+async fn tailscale_api_via_stream(conn: TailscaleConn, method: &str, path: &str, body: &str) -> Result<Value, String> {
     let mut stream = conn.stream;
     let auth = make_auth_header(&conn.token);
 
-    let request = format!(
-        "GET {} HTTP/1.1\r\nHost: local-tailscaled.sock\r\n{}Connection: close\r\n\r\n",
-        path, auth
-    );
+    let request = if body.is_empty() {
+        format!(
+            "{} {} HTTP/1.1\r\nHost: local-tailscaled.sock\r\n{}Connection: close\r\n\r\n",
+            method, path, auth
+        )
+    } else {
+        format!(
+            "{} {} HTTP/1.1\r\nHost: local-tailscaled.sock\r\n{}Content-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+            method, path, auth, body.len(), body
+        )
+    };
+
     stream
         .write_all(request.as_bytes())
         .await
@@ -289,22 +329,10 @@ pub async fn get_status() -> Result<TailscaleStatus, String> {
 
 /// Call a POST endpoint on the Tailscale local API.
 async fn tailscale_api_post(path: &str, body: &str) -> Result<Value, String> {
-    let conn = connect_tailscale().await?;
-    let mut stream = conn.stream;
-    let auth = make_auth_header(&conn.token);
-
-    let request = format!(
-        "POST {} HTTP/1.1\r\nHost: local-tailscaled.sock\r\n{}Content-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
-        path, auth, body.len(), body
-    );
-    stream.write_all(request.as_bytes()).await.map_err(|e| e.to_string())?;
-    stream.shutdown().await.map_err(|e| e.to_string())?;
-
-    let mut response = String::new();
-    stream.read_to_string(&mut response).await.map_err(|e| e.to_string())?;
-
-    let body_str = response.split("\r\n\r\n").nth(1).unwrap_or("{}");
-    serde_json::from_str(body_str).map_err(|e| format!("Parse error: {}", e))
+    match connect_tailscale().await {
+        Ok(conn) => tailscale_api_via_stream(conn, "POST", path, body).await,
+        Err(e) => Err(e),
+    }
 }
 
 /// Start interactive Tailscale login. Returns an auth URL for the user to open.
@@ -317,7 +345,7 @@ pub async fn start_login() -> Result<String, String> {
         }
     }
 
-    // Call login-interactive to get auth URL
+    // Try via local API first
     let result = tailscale_api_post("/localapi/v0/login-interactive", "").await;
     match result {
         Ok(data) => {
@@ -334,16 +362,38 @@ pub async fn start_login() -> Result<String, String> {
                 Err("No auth URL returned".to_string())
             }
         }
-        Err(e) => {
-            // login-interactive might not return JSON, check status for AuthURL
-            let status = tailscale_api("/localapi/v0/status").await
-                .map_err(|_| e.clone())?;
-            if let Some(url) = status.get("AuthURL").and_then(|v| v.as_str()) {
-                if !url.is_empty() {
-                    return Ok(url.to_string());
+        Err(_) => {
+            // Fallback: use `tailscale login` CLI (Mac App Store needs this)
+            let output = tokio::process::Command::new("tailscale")
+                .args(["login"])
+                .output()
+                .await
+                .map_err(|e| format!("tailscale CLI not found: {}", e))?;
+
+            let combined = format!(
+                "{}{}",
+                String::from_utf8_lossy(&output.stdout),
+                String::from_utf8_lossy(&output.stderr)
+            );
+
+            // Parse auth URL from output (usually contains https://login.tailscale.com/...)
+            for line in combined.lines() {
+                let trimmed = line.trim();
+                if trimmed.starts_with("https://") {
+                    return Ok(trimmed.to_string());
                 }
             }
-            Err(e)
+
+            // Check status for AuthURL as last resort
+            if let Ok(status) = tailscale_api("/localapi/v0/status").await {
+                if let Some(url) = status.get("AuthURL").and_then(|v| v.as_str()) {
+                    if !url.is_empty() {
+                        return Ok(url.to_string());
+                    }
+                }
+            }
+
+            Err("No auth URL obtained. Please run 'tailscale login' manually.".to_string())
         }
     }
 }

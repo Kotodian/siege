@@ -21,6 +21,7 @@ pub mod filesystem;
 pub mod execute;
 pub mod rollback;
 pub mod github;
+pub mod tailscale;
 
 use axum::{routing::{delete, get, post, put}, Router};
 use tower_http::cors::{CorsLayer, Any};
@@ -109,6 +110,8 @@ pub fn create_router(state: AppState) -> Router {
         // GitHub
         .route("/api/github", get(github::list_repos).post(github::clone_repo))
         .route("/api/github/auth", get(github::auth_status).post(github::auth_login))
+        // Tailscale
+        .route("/api/tailscale/status", get(tailscale::status))
         .with_state(state)
         .layer(cors)
 }

@@ -148,37 +148,6 @@ async fn connect_tailscale() -> Result<TailscaleConn, String> {
     Err("Cannot connect to Tailscale daemon (tried Unix sockets and macOS TCP)".to_string())
 }
 
-/// Decode HTTP chunked transfer encoding.
-fn decode_chunked(raw: &str) -> String {
-    let mut result = String::new();
-    let mut remaining = raw;
-    loop {
-        let remaining_trimmed = remaining.trim_start();
-        if remaining_trimmed.is_empty() || remaining_trimmed == "0" {
-            break;
-        }
-        // Find chunk size (hex number before \r\n or \n)
-        let size_end = remaining_trimmed.find('\n')
-            .or_else(|| remaining_trimmed.find('\r'))
-            .unwrap_or(remaining_trimmed.len());
-        let size_str = remaining_trimmed[..size_end].trim();
-        let chunk_size = usize::from_str_radix(size_str, 16).unwrap_or(0);
-        if chunk_size == 0 {
-            break;
-        }
-        // Skip past the size line
-        let data_start = remaining_trimmed[size_end..].find(|c: char| c != '\r' && c != '\n')
-            .map(|i| size_end + i)
-            .unwrap_or(remaining_trimmed.len());
-        let data = &remaining_trimmed[data_start..];
-        // Take chunk_size bytes (approximate for UTF-8)
-        let take = chunk_size.min(data.len());
-        result.push_str(&data[..take]);
-        remaining = &data[take..];
-    }
-    result
-}
-
 fn make_auth_header(token: &Option<String>) -> String {
     match token {
         Some(t) if !t.is_empty() => {
@@ -267,29 +236,21 @@ async fn tailscale_api_via_stream(conn: TailscaleConn, method: &str, path: &str,
         return Err("Empty response from tailscaled".to_string());
     }
 
-    // Decode chunked transfer encoding if present
-    // Chunked format: {hex_size}\r\n{data}\r\n ... 0\r\n
-    let body = if response.contains("Transfer-Encoding: chunked") || response.contains("transfer-encoding: chunked") {
-        decode_chunked(raw_body)
+    // Extract JSON object from response body.
+    // The body may be: plain JSON, chunked encoded (size\r\ndata\r\n0), or mixed.
+    // Strategy: find the first '{' and last '}' to extract the JSON object.
+    let json_str = if let Some(start) = raw_body.find('{') {
+        if let Some(end) = raw_body.rfind('}') {
+            &raw_body[start..=end]
+        } else {
+            raw_body
+        }
     } else {
-        raw_body.to_string()
+        raw_body
     };
 
-    // Try parsing as JSON, if fails try stripping leading number (chunked leftover)
-    match serde_json::from_str::<Value>(&body) {
-        Ok(v) => Ok(v),
-        Err(_) => {
-            // Strip leading chunk size line if present (e.g. "6139\n{...}\n0")
-            let cleaned = if let Some(start) = body.find('{') {
-                let end = body.rfind('}').map(|i| i + 1).unwrap_or(body.len());
-                &body[start..end]
-            } else {
-                &body
-            };
-            serde_json::from_str(cleaned)
-                .map_err(|e| format!("JSON parse error: {}", e))
-        }
-    }
+    serde_json::from_str(json_str)
+        .map_err(|e| format!("JSON parse error: {} (first 200 chars: {})", e, &json_str[..json_str.len().min(200)]))
 }
 
 #[derive(Clone, Debug, serde::Serialize)]

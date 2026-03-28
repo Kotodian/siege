@@ -1026,7 +1026,7 @@ fn contains_chinese(text: &str) -> bool {
 }
 
 /// Build an optional SshConfig from project remote fields.
-/// Exposed for testing.
+#[cfg(test)]
 fn build_remote_config(
     remote_enabled: bool,
     remote_host: Option<String>,

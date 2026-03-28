@@ -157,13 +157,6 @@ pub async fn get_status() -> Result<TailscaleStatus, String> {
     })
 }
 
-/// Check if Tailscale is running and authenticated.
-pub async fn is_authenticated() -> bool {
-    match get_status().await {
-        Ok(status) => status.running,
-        Err(_) => false,
-    }
-}
 
 /// Call a POST endpoint on the Tailscale local API.
 async fn tailscale_api_post(path: &str, body: &str) -> Result<Value, String> {
@@ -232,7 +225,7 @@ pub async fn start_login() -> Result<String, String> {
 }
 
 /// Parse a raw Tailscale status JSON into TailscaleStatus.
-/// Exposed for testing.
+#[cfg(test)]
 pub fn parse_status(data: &Value) -> TailscaleStatus {
     let backend_state = data
         .get("BackendState")

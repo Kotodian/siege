@@ -145,20 +145,6 @@ pub async fn read_remote_file(config: &SshConfig, path: &str) -> Result<String, 
     ssh_exec(config, &format!("cat '{}'", path)).await
 }
 
-pub async fn write_remote_file(
-    config: &SshConfig,
-    path: &str,
-    content: &str,
-) -> Result<(), String> {
-    let escaped = content.replace('\'', "'\\''");
-    ssh_exec(
-        config,
-        &format!("printf '%s' '{}' > '{}'", escaped, path),
-    )
-    .await?;
-    Ok(())
-}
-
 pub async fn list_remote_dir(config: &SshConfig, path: &str) -> Result<String, String> {
     ssh_exec(config, &format!("ls -la '{}'", path)).await
 }

@@ -134,6 +134,13 @@
       "when": 1774532273949,
       "tag": "0018_slippery_sugar_man",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "6",
+      "when": 1774688590146,
+      "tag": "0019_remarkable_jean_grey",
+      "breakpoints": true
     }
   ]
 }

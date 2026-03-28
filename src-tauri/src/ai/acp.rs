@@ -54,7 +54,7 @@ impl AcpClient {
             _ => ("npx", vec!["-y", "@zed-industries/claude-agent-acp@latest"]),
         };
 
-        let mut child = Command::new(cmd)
+        let child = Command::new(cmd)
             .args(&args)
             .current_dir(cwd)
             .stdin(std::process::Stdio::piped())
@@ -64,6 +64,24 @@ impl AcpClient {
             .spawn()
             .map_err(|e| format!("Failed to spawn ACP agent ({}): {}", agent, e))?;
 
+        Self::init_from_child(child, cwd, agent).await
+    }
+
+    /// Start the ACP client from an externally spawned child process (e.g. via SSH).
+    pub async fn start_with_child(
+        child: Child,
+        repo_path: &str,
+        agent: &str,
+    ) -> Result<Self, String> {
+        Self::init_from_child(child, repo_path, agent).await
+    }
+
+    /// Common initialization logic shared by local and remote (SSH) spawning.
+    async fn init_from_child(
+        mut child: Child,
+        repo_path: &str,
+        agent: &str,
+    ) -> Result<Self, String> {
         let stdin = child.stdin.take().ok_or("No stdin")?;
         let stdout = child.stdout.take().ok_or("No stdout")?;
         let stderr = child.stderr.take().ok_or("No stderr")?;
@@ -111,7 +129,7 @@ impl AcpClient {
         let write_tx_r = write_tx.clone();
         let terminals_r = terminals.clone();
         let stdin_r = stdin.clone();
-        let repo_path_owned = cwd.to_string();
+        let repo_path_owned = repo_path.to_string();
 
         let reader_task = tokio::spawn(async move {
             let mut reader = BufReader::new(stdout);
@@ -216,7 +234,7 @@ impl AcpClient {
             update_tx,
             write_tx,
             stderr_buffer,
-            repo_path: cwd.to_string(),
+            repo_path: repo_path.to_string(),
             agent_type: agent.to_string(),
             terminals,
         };

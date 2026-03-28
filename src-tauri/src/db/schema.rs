@@ -8,7 +8,11 @@ CREATE TABLE IF NOT EXISTS projects (
     session_id TEXT,
     target_repo_path TEXT NOT NULL,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    remote_host TEXT,
+    remote_user TEXT DEFAULT 'root',
+    remote_repo_path TEXT,
+    remote_enabled INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS plan_folders (

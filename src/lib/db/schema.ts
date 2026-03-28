@@ -15,6 +15,10 @@ export const projects = sqliteTable("projects", {
   updatedAt: text("updated_at")
     .default(sql`(datetime('now'))`)
     .notNull(),
+  remoteHost: text("remote_host"),
+  remoteUser: text("remote_user").default("root"),
+  remoteRepoPath: text("remote_repo_path"),
+  remoteEnabled: integer("remote_enabled", { mode: "boolean" }).notNull().default(false),
 });
 
 export const planFolders = sqliteTable("plan_folders", {

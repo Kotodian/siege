@@ -1,11 +1,15 @@
 use axum::{
+    body::Body,
     extract::{Path, Query, State},
     http::StatusCode,
+    response::Response,
     Json,
 };
 use serde::Deserialize;
 use serde_json::{json, Value};
 
+use crate::ai::config::resolve_step_config;
+use crate::ai::streaming::generate_ai_call;
 use crate::state::AppState;
 
 #[derive(Deserialize)]
@@ -357,6 +361,107 @@ pub async fn review_action(
     )
     .ok();
     Ok(Json(json!({"status": "executing"})))
+}
+
+// ---------------------------------------------------------------------------
+// POST /api/plans/suggest-title — Suggest plan title via AI (non-streaming)
+// ---------------------------------------------------------------------------
+
+#[derive(Deserialize)]
+pub struct SuggestTitleBody {
+    description: Option<String>,
+}
+
+pub async fn suggest_title(
+    State(state): State<AppState>,
+    Json(body): Json<SuggestTitleBody>,
+) -> Response {
+    let description = match body.description {
+        Some(ref d) if !d.trim().is_empty() => d.clone(),
+        _ => {
+            return Response::builder()
+                .status(400)
+                .header("content-type", "application/json")
+                .body(Body::from(r#"{"error":"description is required"}"#))
+                .unwrap();
+        }
+    };
+
+    let ai_config = {
+        let db = state.db.lock().unwrap();
+        match resolve_step_config(&db, "scheme", None, None) {
+            Ok(c) => c,
+            Err(e) => {
+                return Response::builder()
+                    .status(503)
+                    .header("content-type", "application/json")
+                    .body(Body::from(
+                        serde_json::to_string(&json!({"error": e})).unwrap(),
+                    ))
+                    .unwrap();
+            }
+        }
+    };
+
+    let prompt = format!(
+        r#"I need you to act as a title generator. Read the following plan description and output ONLY a short title (under 50 characters). No quotes, no markdown, no explanation, no code. Just the title. Match the language of the description.
+
+Plan description:
+"""
+{}
+"""
+
+Title:"#,
+        description
+    );
+
+    let system = "You are a title generator.".to_string();
+
+    match generate_ai_call(&ai_config, &system, &prompt).await {
+        Ok(text) => {
+            let title = clean_title(&text);
+            Response::builder()
+                .header("content-type", "text/plain; charset=utf-8")
+                .body(Body::from(title))
+                .unwrap()
+        }
+        Err(e) => Response::builder()
+            .status(500)
+            .header("content-type", "application/json")
+            .body(Body::from(
+                serde_json::to_string(&json!({"error": e})).unwrap(),
+            ))
+            .unwrap(),
+    }
+}
+
+fn clean_title(raw: &str) -> String {
+    let mut text = raw.to_string();
+    // Take only the first non-empty line
+    text = text
+        .lines()
+        .map(|l| l.trim())
+        .find(|l| !l.is_empty())
+        .unwrap_or(raw.trim())
+        .to_string();
+    // Strip markdown bold/italic
+    text = text.replace("**", "").replace('*', "");
+    // Strip leading/trailing quotes
+    text = text
+        .trim_start_matches(&['"', '\'', '\u{201C}', '\u{300C}', '\u{300E}'] as &[char])
+        .trim_end_matches(&['"', '\'', '\u{201D}', '\u{300D}', '\u{300F}'] as &[char])
+        .trim()
+        .to_string();
+    // Remove trailing punctuation
+    text = text
+        .trim_end_matches(&['.', '\u{3002}', ':', '\u{FF1A}'] as &[char])
+        .trim()
+        .to_string();
+    if text.len() > 50 {
+        text[..50].to_string()
+    } else {
+        text
+    }
 }
 
 fn plan_from_row(row: &rusqlite::Row) -> Value {

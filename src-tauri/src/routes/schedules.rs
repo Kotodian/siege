@@ -1,11 +1,17 @@
 use axum::{
+    body::Body,
     extract::{Query, State},
     http::StatusCode,
+    response::Response,
     Json,
 };
 use serde::Deserialize;
 use serde_json::{json, Value};
+use std::sync::Arc;
+use tokio_stream::wrappers::ReceiverStream;
 
+use crate::ai::config::resolve_step_config;
+use crate::ai::streaming::stream_ai_call;
 use crate::state::AppState;
 
 #[derive(Deserialize)]
@@ -499,4 +505,325 @@ fn add_ms_to_iso(_iso: &str, _ms: i64) -> String {
     // Simple fallback: just return current time
     // Full ISO date arithmetic not needed for basic CRUD
     chrono_now()
+}
+
+// ---------------------------------------------------------------------------
+// POST /api/schedules/generate — Generate schedule via AI
+// ---------------------------------------------------------------------------
+
+#[derive(Deserialize)]
+pub struct GenerateScheduleBody {
+    #[serde(rename = "planId")]
+    plan_id: Option<String>,
+    provider: Option<String>,
+    model: Option<String>,
+    locale: Option<String>,
+}
+
+fn save_schedule_from_json(db: &rusqlite::Connection, plan_id: &str, json_text: &str) -> Result<(), String> {
+    // Extract JSON array
+    let json_str = if json_text.starts_with('[') {
+        json_text.to_string()
+    } else {
+        let re_match = json_text.find('[').and_then(|start| {
+            let mut depth = 0i32;
+            let mut end = start;
+            for (i, c) in json_text[start..].char_indices() {
+                if c == '[' { depth += 1; }
+                else if c == ']' { depth -= 1; if depth == 0 { end = start + i + 1; break; } }
+            }
+            Some(json_text[start..end].to_string())
+        });
+        re_match.ok_or("No JSON array found")?
+    };
+
+    let items: Vec<Value> = serde_json::from_str(&json_str)
+        .map_err(|e| format!("JSON parse error: {}", e))?;
+
+    // Delete existing schedule
+    let existing_id: Option<String> = db.query_row(
+        "SELECT id FROM schedules WHERE plan_id = ?1",
+        rusqlite::params![plan_id],
+        |row| row.get(0),
+    ).ok();
+    if let Some(sid) = &existing_id {
+        db.execute("DELETE FROM schedule_items WHERE schedule_id = ?1", rusqlite::params![sid]).ok();
+        db.execute("DELETE FROM schedules WHERE id = ?1", rusqlite::params![sid]).ok();
+    }
+
+    let now = chrono_now();
+    let mut current_hour: f64 = 0.0;
+    let schedule_id = uuid::Uuid::new_v4().to_string();
+
+    // Calculate total hours
+    let total_hours: f64 = items.iter().map(|item| {
+        if let Some(subtasks) = item.get("subtasks").and_then(|v| v.as_array()) {
+            if !subtasks.is_empty() {
+                return subtasks.iter().map(|st| {
+                    st.get("estimatedHours").and_then(|v| v.as_f64()).unwrap_or(1.0)
+                }).sum::<f64>();
+            }
+        }
+        item.get("estimatedHours").and_then(|v| v.as_f64()).unwrap_or(4.0)
+    }).sum();
+
+    let now_secs = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs();
+    let end_secs = now_secs + (total_hours * 3600.0) as u64;
+
+    db.execute(
+        "INSERT INTO schedules (id, plan_id, start_date, end_date, auto_execute) VALUES (?1, ?2, ?3, ?4, 0)",
+        rusqlite::params![schedule_id, plan_id, now, format_timestamp(end_secs)],
+    ).map_err(|e| e.to_string())?;
+
+    for item in &items {
+        let has_subtasks = item.get("subtasks")
+            .and_then(|v| v.as_array())
+            .map(|a| !a.is_empty())
+            .unwrap_or(false);
+
+        let item_title = item.get("title").and_then(|v| v.as_str()).unwrap_or("Task");
+        let item_desc = item.get("description").and_then(|v| v.as_str()).unwrap_or("");
+        let item_order = item.get("order").and_then(|v| v.as_i64()).unwrap_or(0);
+        let scheme_id = item.get("schemeId").and_then(|v| v.as_str());
+
+        if has_subtasks {
+            let subtasks = item.get("subtasks").unwrap().as_array().unwrap();
+            let parent_hours: f64 = subtasks.iter().map(|st| {
+                st.get("estimatedHours").and_then(|v| v.as_f64()).unwrap_or(1.0)
+            }).sum();
+
+            let parent_start_secs = now_secs + (current_hour * 3600.0) as u64;
+            let parent_end_secs = now_secs + ((current_hour + parent_hours) * 3600.0) as u64;
+
+            let parent_id = uuid::Uuid::new_v4().to_string();
+            db.execute(
+                "INSERT INTO schedule_items (id, schedule_id, scheme_id, parent_id, title, description, start_date, end_date, \"order\", status, progress, engine, skills) VALUES (?1, ?2, ?3, NULL, ?4, ?5, ?6, ?7, ?8, 'pending', 0, 'claude-code', '[]')",
+                rusqlite::params![parent_id, schedule_id, scheme_id, item_title, item_desc, format_timestamp(parent_start_secs), format_timestamp(parent_end_secs), item_order],
+            ).ok();
+
+            let mut child_hour = current_hour;
+            for (i, st) in subtasks.iter().enumerate() {
+                let st_hours = st.get("estimatedHours").and_then(|v| v.as_f64()).unwrap_or(1.0);
+                let st_start = now_secs + (child_hour * 3600.0) as u64;
+                let st_end = now_secs + ((child_hour + st_hours) * 3600.0) as u64;
+                child_hour += st_hours;
+
+                let st_title = st.get("title").and_then(|v| v.as_str()).unwrap_or("Subtask");
+                let st_desc = st.get("description").and_then(|v| v.as_str()).unwrap_or("");
+                let st_id = uuid::Uuid::new_v4().to_string();
+                let st_order = item_order * 100 + i as i64 + 1;
+
+                db.execute(
+                    "INSERT INTO schedule_items (id, schedule_id, scheme_id, parent_id, title, description, start_date, end_date, \"order\", status, progress, engine, skills) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, 'pending', 0, 'claude-code', '[]')",
+                    rusqlite::params![st_id, schedule_id, scheme_id, parent_id, st_title, st_desc, format_timestamp(st_start), format_timestamp(st_end), st_order],
+                ).ok();
+            }
+            current_hour += parent_hours;
+        } else {
+            let hours = item.get("estimatedHours").and_then(|v| v.as_f64()).unwrap_or(4.0);
+            let item_start_secs = now_secs + (current_hour * 3600.0) as u64;
+            let item_end_secs = now_secs + ((current_hour + hours) * 3600.0) as u64;
+            current_hour += hours;
+
+            let item_id = uuid::Uuid::new_v4().to_string();
+            db.execute(
+                "INSERT INTO schedule_items (id, schedule_id, scheme_id, parent_id, title, description, start_date, end_date, \"order\", status, progress, engine, skills) VALUES (?1, ?2, ?3, NULL, ?4, ?5, ?6, ?7, ?8, 'pending', 0, 'claude-code', '[]')",
+                rusqlite::params![item_id, schedule_id, scheme_id, item_title, item_desc, format_timestamp(item_start_secs), format_timestamp(item_end_secs), item_order],
+            ).ok();
+        }
+    }
+
+    // Update plan status
+    db.execute(
+        "UPDATE plans SET status = 'scheduled', updated_at = datetime('now') WHERE id = ?1",
+        rusqlite::params![plan_id],
+    ).ok();
+
+    Ok(())
+}
+
+pub async fn generate(State(state): State<AppState>, Json(body): Json<GenerateScheduleBody>) -> Response {
+    let plan_id = match body.plan_id {
+        Some(id) => id,
+        None => {
+            return Response::builder()
+                .status(400)
+                .header("content-type", "application/json")
+                .body(Body::from(r#"{"error":"planId required"}"#))
+                .unwrap();
+        }
+    };
+
+    let (plan_name, scheme_summary) = {
+        let db = state.db.lock().unwrap();
+        let plan_name: String = match db.query_row(
+            "SELECT name FROM plans WHERE id = ?1",
+            rusqlite::params![plan_id],
+            |row| row.get(0),
+        ) {
+            Ok(n) => n,
+            Err(_) => {
+                return Response::builder()
+                    .status(404)
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"error":"Plan not found"}"#))
+                    .unwrap();
+            }
+        };
+
+        // Check plan status
+        let status: String = db.query_row(
+            "SELECT status FROM plans WHERE id = ?1",
+            rusqlite::params![plan_id],
+            |row| row.get(0),
+        ).unwrap_or_default();
+
+        if status != "confirmed" && status != "scheduled" {
+            return Response::builder()
+                .status(400)
+                .header("content-type", "application/json")
+                .body(Body::from(r#"{"error":"Plan must be confirmed or scheduled"}"#))
+                .unwrap();
+        }
+
+        let mut stmt = db
+            .prepare("SELECT id, title, content FROM schemes WHERE plan_id = ?1")
+            .unwrap();
+        let schemes: Vec<(String, String, Option<String>)> = stmt
+            .query_map(rusqlite::params![plan_id], |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, Option<String>>(2)?,
+                ))
+            })
+            .unwrap()
+            .filter_map(|r| r.ok())
+            .collect();
+
+        let summary = schemes
+            .iter()
+            .enumerate()
+            .map(|(i, (id, title, content))| {
+                format!(
+                    "### Scheme {}: {} (id: {})\n{}",
+                    i + 1,
+                    title,
+                    id,
+                    content.as_deref().unwrap_or("")
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("\n\n");
+
+        (plan_name, summary)
+    };
+
+    let is_zh = body.locale.as_deref().map(|l| l == "zh").unwrap_or(false);
+    let lang_note = if is_zh {
+        "\n\nIMPORTANT: Write task title and description in Chinese."
+    } else {
+        ""
+    };
+
+    let schedule_prompt = format!(
+        r#"<IMPORTANT>
+You are being called as an API. Do NOT use tools, read files, or ask questions.
+Output ONLY a JSON array. No conversation, no markdown fences, no explanation.
+Start directly with [ and end with ].
+</IMPORTANT>
+
+Break these confirmed schemes into executable IMPLEMENTATION tasks with subtasks.
+These tasks will be executed by an AI coding agent (Claude Code / Codex), NOT a human developer.
+
+CRITICAL task granularity rules:
+- Each PARENT task = ONE COMPLETE FEATURE or functional module
+- Each parent task MUST have 2-5 subtasks that break it into concrete steps
+- Aim for 3-8 parent tasks total
+- Each subtask should be a specific, actionable coding step (0.5-2 hours)
+
+Estimation: each subtask 0.5-2 hours (realistic for AI agent execution).
+
+IMPORTANT: Do NOT include testing tasks. Testing is handled in a separate phase.
+Focus only on implementation: code changes, new files, refactoring, configuration.
+
+JSON array format — each object has:
+- schemeId: scheme ID string or null
+- title: short PARENT task title describing the feature/module
+- description: overall description of this task group
+- order: execution order starting from 1
+- subtasks: array of subtask objects (REQUIRED, 2-5 items):
+  - title: concise subtask title
+  - description: specific implementation details
+  - estimatedHours: number (0.5-2)
+
+Plan: {}
+
+{}{}
+
+Output the JSON array now:"#,
+        plan_name, scheme_summary, lang_note
+    );
+
+    let ai_config = {
+        let db = state.db.lock().unwrap();
+        match resolve_step_config(
+            &db,
+            "schedule",
+            body.provider.as_deref(),
+            body.model.as_deref(),
+        ) {
+            Ok(c) => c,
+            Err(e) => {
+                return Response::builder()
+                    .status(503)
+                    .header("content-type", "application/json")
+                    .body(Body::from(serde_json::to_string(&json!({"error": e})).unwrap()))
+                    .unwrap();
+            }
+        }
+    };
+
+    let system = "You are an AI task planner.".to_string();
+    let db_clone = Arc::clone(&state.db);
+    let plan_id_clone = plan_id.clone();
+
+    let (tx, rx) = tokio::sync::mpsc::channel::<Result<String, std::convert::Infallible>>(100);
+
+    tokio::spawn(async move {
+        let (chunk_tx, mut chunk_rx) = tokio::sync::mpsc::channel::<String>(100);
+
+        let ai_handle = tokio::spawn(async move {
+            stream_ai_call(&ai_config, &system, &schedule_prompt, chunk_tx).await
+        });
+
+        let mut full_text = String::new();
+        while let Some(chunk) = chunk_rx.recv().await {
+            full_text.push_str(&chunk);
+            let _ = tx.send(Ok(chunk)).await;
+        }
+
+        let result = ai_handle.await;
+        if let Ok(Err(e)) = result {
+            let _ = tx.send(Ok(format!("\nError: {}", e))).await;
+        }
+
+        // Save schedule
+        if !full_text.trim().is_empty() {
+            let db = db_clone.lock().unwrap();
+            if let Err(e) = save_schedule_from_json(&db, &plan_id_clone, full_text.trim()) {
+                eprintln!("[schedule-generate] Save failed: {}", e);
+            }
+        }
+    });
+
+    let stream = ReceiverStream::new(rx);
+    let body = Body::from_stream(stream);
+    Response::builder()
+        .header("content-type", "text/plain; charset=utf-8")
+        .body(body)
+        .unwrap()
 }

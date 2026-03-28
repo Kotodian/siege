@@ -6,6 +6,8 @@ use axum::{
 use serde::Deserialize;
 use serde_json::{json, Value};
 
+use crate::ai::config::resolve_step_config;
+use crate::ai::streaming::generate_ai_call;
 use crate::state::AppState;
 
 pub async fn get_config(State(state): State<AppState>) -> Json<Value> {
@@ -142,5 +144,48 @@ fn mask_key(key: Option<&str>) -> String {
                 format!("{}***{}", &k[..4], &k[k.len() - 4..])
             }
         }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// POST /api/ai-config/test — Test AI provider connection
+// ---------------------------------------------------------------------------
+
+#[derive(Deserialize)]
+pub struct TestConfigBody {
+    provider: Option<String>,
+}
+
+pub async fn test_config(
+    State(state): State<AppState>,
+    Json(body): Json<TestConfigBody>,
+) -> Json<Value> {
+    let ai_config = {
+        let db = state.db.lock().unwrap();
+        match resolve_step_config(
+            &db,
+            "scheme",
+            body.provider.as_deref(),
+            None,
+        ) {
+            Ok(c) => c,
+            Err(e) => {
+                return Json(json!({"success": false, "error": e}));
+            }
+        }
+    };
+
+    let system = "You are a test assistant.".to_string();
+    let prompt = "Respond with exactly: OK".to_string();
+
+    match generate_ai_call(&ai_config, &system, &prompt).await {
+        Ok(text) => {
+            if text.trim().is_empty() {
+                Json(json!({"success": false, "error": "Empty response"}))
+            } else {
+                Json(json!({"success": true}))
+            }
+        }
+        Err(e) => Json(json!({"success": false, "error": e})),
     }
 }

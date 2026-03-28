@@ -1,11 +1,17 @@
 use axum::{
+    body::Body,
     extract::{Path, Query, State},
     http::StatusCode,
+    response::Response,
     Json,
 };
 use serde::Deserialize;
 use serde_json::{json, Value};
+use std::sync::Arc;
+use tokio_stream::wrappers::ReceiverStream;
 
+use crate::ai::config::resolve_step_config;
+use crate::ai::streaming::stream_ai_call;
 use crate::state::AppState;
 
 #[derive(Deserialize)]
@@ -287,6 +293,210 @@ pub async fn delete_one(
     )
     .ok();
     Json(json!({"ok": true}))
+}
+
+// ---------------------------------------------------------------------------
+// POST /api/test-cases/:id/run — Run test via AI, stream output
+// ---------------------------------------------------------------------------
+
+#[derive(Deserialize)]
+pub struct RunParams {
+    provider: Option<String>,
+    model: Option<String>,
+    locale: Option<String>,
+}
+
+pub async fn run(
+    State(state): State<AppState>,
+    Path(case_id): Path<String>,
+    Query(params): Query<RunParams>,
+) -> Response {
+    let (test_name, test_desc, test_code, test_file_path) = {
+        let db = state.db.lock().unwrap();
+        match db.query_row(
+            "SELECT name, description, generated_code, file_path FROM test_cases WHERE id = ?1",
+            rusqlite::params![case_id],
+            |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, Option<String>>(1)?,
+                    row.get::<_, Option<String>>(2)?,
+                    row.get::<_, Option<String>>(3)?,
+                ))
+            },
+        ) {
+            Ok(tc) => tc,
+            Err(_) => {
+                return Response::builder()
+                    .status(404)
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"error":"Test case not found"}"#))
+                    .unwrap();
+            }
+        }
+    };
+
+    // Set test case to running
+    {
+        let db = state.db.lock().unwrap();
+        db.execute(
+            "UPDATE test_cases SET status = 'running' WHERE id = ?1",
+            rusqlite::params![case_id],
+        )
+        .ok();
+    }
+
+    let ai_config = {
+        let db = state.db.lock().unwrap();
+        match resolve_step_config(
+            &db,
+            "test",
+            params.provider.as_deref(),
+            params.model.as_deref(),
+        ) {
+            Ok(c) => c,
+            Err(e) => {
+                let db2 = state.db.lock().unwrap();
+                db2.execute(
+                    "UPDATE test_cases SET status = 'failed' WHERE id = ?1",
+                    rusqlite::params![case_id],
+                )
+                .ok();
+                return Response::builder()
+                    .status(503)
+                    .header("content-type", "application/json")
+                    .body(Body::from(
+                        serde_json::to_string(&json!({"error": e})).unwrap(),
+                    ))
+                    .unwrap();
+            }
+        }
+    };
+
+    let is_zh = params.locale.as_deref().map(|l| l == "zh").unwrap_or(false);
+
+    let prompt = if is_zh {
+        format!(
+            r#"你是一个测试工程师。
+
+运行以下测试并报告结果。
+
+测试文件: {}
+测试名称: {}
+{}
+
+测试代码:
+```
+{}
+```
+
+如果测试文件不存在，先创建它，然后运行。
+
+重要：运行完测试后，你必须在回复的最后一行输出以下标记之一：
+- <!--TEST:PASSED--> 如果测试通过
+- <!--TEST:FAILED--> 如果测试失败或无法运行"#,
+            test_file_path.as_deref().unwrap_or("auto-detect"),
+            test_name,
+            test_desc
+                .as_ref()
+                .map(|d| format!("测试描述: {}", d))
+                .unwrap_or_default(),
+            test_code.as_deref().unwrap_or(""),
+        )
+    } else {
+        format!(
+            r#"Run the following test and report the results.
+
+Test file: {}
+Test name: {}
+{}
+
+Test code:
+```
+{}
+```
+
+If the test file doesn't exist, create it first, then run it.
+
+IMPORTANT: After running the test, you MUST end your response with exactly one of these markers on its own line:
+- <!--TEST:PASSED--> if the test passed
+- <!--TEST:FAILED--> if the test failed or could not run"#,
+            test_file_path.as_deref().unwrap_or("auto-detect"),
+            test_name,
+            test_desc
+                .as_ref()
+                .map(|d| format!("Description: {}", d))
+                .unwrap_or_default(),
+            test_code.as_deref().unwrap_or(""),
+        )
+    };
+
+    let system = "You are a test engineer.".to_string();
+    let db_clone = Arc::clone(&state.db);
+    let case_id_clone = case_id.clone();
+    let start_time = std::time::Instant::now();
+
+    let (tx, rx) = tokio::sync::mpsc::channel::<Result<String, std::convert::Infallible>>(100);
+
+    tokio::spawn(async move {
+        let (chunk_tx, mut chunk_rx) = tokio::sync::mpsc::channel::<String>(100);
+
+        let ai_handle = tokio::spawn(async move {
+            stream_ai_call(&ai_config, &system, &prompt, chunk_tx).await
+        });
+
+        let mut full_log = String::new();
+        while let Some(chunk) = chunk_rx.recv().await {
+            full_log.push_str(&chunk);
+            let _ = tx.send(Ok(chunk)).await;
+        }
+
+        let result = ai_handle.await;
+        if let Ok(Err(e)) = result {
+            let msg = format!("\nError: {}", e);
+            full_log.push_str(&msg);
+            let _ = tx.send(Ok(msg)).await;
+        }
+
+        // Determine pass/fail
+        let status = if full_log.contains("<!--TEST:PASSED-->") {
+            "passed"
+        } else {
+            "failed"
+        };
+
+        let duration_ms = start_time.elapsed().as_millis() as i64;
+
+        // Save result
+        let db = db_clone.lock().unwrap();
+        let result_id = uuid::Uuid::new_v4().to_string();
+        let clean_output = full_log
+            .replace("<!--TEST:PASSED-->", "")
+            .replace("<!--TEST:FAILED-->", "");
+        let error_msg = if status == "failed" {
+            Some(clean_output.trim())
+        } else {
+            None
+        };
+
+        db.execute(
+            "INSERT INTO test_results (id, test_case_id, status, output, error_message, duration_ms) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            rusqlite::params![result_id, case_id_clone, status, clean_output.trim(), error_msg, duration_ms],
+        ).ok();
+
+        db.execute(
+            "UPDATE test_cases SET status = ?1 WHERE id = ?2",
+            rusqlite::params![status, case_id_clone],
+        )
+        .ok();
+    });
+
+    let stream = ReceiverStream::new(rx);
+    let body = Body::from_stream(stream);
+    Response::builder()
+        .header("content-type", "text/plain; charset=utf-8")
+        .body(body)
+        .unwrap()
 }
 
 fn test_case_from_row(row: &rusqlite::Row) -> Value {

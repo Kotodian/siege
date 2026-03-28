@@ -3,6 +3,7 @@
 use std::net::TcpListener;
 use tauri::Manager;
 
+mod ai;
 mod state;
 mod db;
 mod routes;

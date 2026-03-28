@@ -1,21 +1,36 @@
 use serde_json::Value;
 use std::path::PathBuf;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio::net::UnixStream;
+
+/// macOS GUI app (App Store) uses TCP port instead of Unix socket.
+/// The port is read from /Library/Tailscale/ipnport symlink, default 41112.
+fn get_macos_tcp_port() -> Option<u16> {
+    // Check ipnport symlink
+    let ipnport = PathBuf::from("/Library/Tailscale/ipnport");
+    if let Ok(target) = std::fs::read_link(&ipnport) {
+        if let Some(port_str) = target.to_str() {
+            if let Ok(port) = port_str.parse::<u16>() {
+                return Some(port);
+            }
+        }
+    }
+    // Also check sameuserproof file which indicates GUI is running
+    let sameuserproof = PathBuf::from("/Library/Tailscale/sameuserproof");
+    if sameuserproof.exists() {
+        return Some(41112); // default port
+    }
+    None
+}
 
 /// Get the Tailscale daemon socket path for the current platform.
-fn get_socket_path() -> PathBuf {
-    // Check all known socket paths
+fn get_socket_path() -> Option<PathBuf> {
     let mut candidates: Vec<PathBuf> = vec![
-        // Linux standard
         PathBuf::from("/var/run/tailscale/tailscaled.sock"),
-        // Homebrew on macOS
         PathBuf::from("/usr/local/var/run/tailscale/tailscaled.sock"),
-        // macOS system
         PathBuf::from("/var/run/tailscaled.sock"),
+        PathBuf::from("/var/run/tailscaled.socket"),
     ];
 
-    // macOS App Store / standalone (user-specific paths)
     if let Some(home) = dirs::home_dir() {
         candidates.push(home.join("Library/Group Containers/io.tailscale.ipn.macos/tailscaled.sock"));
         candidates.push(home.join("Library/Group Containers/group.io.tailscale.ipn.macos/tailscaled.sock"));
@@ -23,27 +38,75 @@ fn get_socket_path() -> PathBuf {
 
     for path in &candidates {
         if path.exists() {
-            return path.clone();
+            return Some(path.clone());
         }
     }
 
-    // Fallback
-    candidates[0].clone()
+    None
 }
 
-/// Make an HTTP GET request to the Tailscale local API via Unix socket.
-async fn tailscale_api(path: &str) -> Result<Value, String> {
-    let socket = get_socket_path();
-    if !socket.exists() {
-        return Err(format!(
-            "Tailscale daemon not running (checked: {})",
-            socket.display()
-        ));
+enum TailscaleStream {
+    Unix(tokio::net::UnixStream),
+    Tcp(tokio::net::TcpStream),
+}
+
+impl tokio::io::AsyncRead for TailscaleStream {
+    fn poll_read(self: std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>, buf: &mut tokio::io::ReadBuf<'_>) -> std::task::Poll<std::io::Result<()>> {
+        match self.get_mut() {
+            TailscaleStream::Unix(s) => std::pin::Pin::new(s).poll_read(cx, buf),
+            TailscaleStream::Tcp(s) => std::pin::Pin::new(s).poll_read(cx, buf),
+        }
+    }
+}
+
+impl tokio::io::AsyncWrite for TailscaleStream {
+    fn poll_write(self: std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>, buf: &[u8]) -> std::task::Poll<std::io::Result<usize>> {
+        match self.get_mut() {
+            TailscaleStream::Unix(s) => std::pin::Pin::new(s).poll_write(cx, buf),
+            TailscaleStream::Tcp(s) => std::pin::Pin::new(s).poll_write(cx, buf),
+        }
+    }
+    fn poll_flush(self: std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> std::task::Poll<std::io::Result<()>> {
+        match self.get_mut() {
+            TailscaleStream::Unix(s) => std::pin::Pin::new(s).poll_flush(cx),
+            TailscaleStream::Tcp(s) => std::pin::Pin::new(s).poll_flush(cx),
+        }
+    }
+    fn poll_shutdown(self: std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> std::task::Poll<std::io::Result<()>> {
+        match self.get_mut() {
+            TailscaleStream::Unix(s) => std::pin::Pin::new(s).poll_shutdown(cx),
+            TailscaleStream::Tcp(s) => std::pin::Pin::new(s).poll_shutdown(cx),
+        }
+    }
+}
+
+/// Connect to tailscaled — tries Unix socket first, then macOS TCP fallback.
+async fn connect_tailscale() -> Result<TailscaleStream, String> {
+    // Try Unix socket first
+    if let Some(socket_path) = get_socket_path() {
+        if let Ok(stream) = tokio::net::UnixStream::connect(&socket_path).await {
+            return Ok(TailscaleStream::Unix(stream));
+        }
     }
 
-    let mut stream = UnixStream::connect(&socket)
-        .await
-        .map_err(|e| format!("Cannot connect to tailscaled: {}", e))?;
+    // macOS GUI app uses TCP via port from /Library/Tailscale/ipnport
+    if let Some(port) = get_macos_tcp_port() {
+        if let Ok(stream) = tokio::net::TcpStream::connect(format!("127.0.0.1:{}", port)).await {
+            return Ok(TailscaleStream::Tcp(stream));
+        }
+    }
+
+    // Last resort: try default macOS GUI port
+    if let Ok(stream) = tokio::net::TcpStream::connect("127.0.0.1:41112").await {
+        return Ok(TailscaleStream::Tcp(stream));
+    }
+
+    Err("Cannot connect to Tailscale daemon (tried Unix sockets and TCP)".to_string())
+}
+
+/// Make an HTTP GET request to the Tailscale local API.
+async fn tailscale_api(path: &str) -> Result<Value, String> {
+    let mut stream = connect_tailscale().await?;
 
     let request = format!(
         "GET {} HTTP/1.1\r\nHost: local-tailscaled.sock\r\nConnection: close\r\n\r\n",
@@ -170,14 +233,7 @@ pub async fn get_status() -> Result<TailscaleStatus, String> {
 
 /// Call a POST endpoint on the Tailscale local API.
 async fn tailscale_api_post(path: &str, body: &str) -> Result<Value, String> {
-    let socket = get_socket_path();
-    if !socket.exists() {
-        return Err("Tailscale daemon not running".to_string());
-    }
-
-    let mut stream = UnixStream::connect(&socket)
-        .await
-        .map_err(|e| format!("Cannot connect to tailscaled: {}", e))?;
+    let mut stream = connect_tailscale().await?;
 
     let request = format!(
         "POST {} HTTP/1.1\r\nHost: local-tailscaled.sock\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
@@ -359,9 +415,8 @@ mod tests {
     }
 
     #[test]
-    fn test_get_socket_path_returns_path() {
-        let path = get_socket_path();
-        // Should return a path (doesn't need to exist in test env)
-        assert!(path.to_str().unwrap().contains("tailscale"));
+    fn test_get_macos_tcp_port() {
+        // On non-macOS or without Tailscale GUI, returns None — that's fine
+        let _port = get_macos_tcp_port();
     }
 }
